@@ -152,7 +152,7 @@ export class PluginManager {
 
       // 解析依赖
       const dependencies = await this.resolveDependencies(metadata, options.version)
-      
+
       // 安装依赖
       if (!options.skipDeps && dependencies.length > 0) {
         this.logger.info('Installing dependencies...')
@@ -285,7 +285,7 @@ export class PluginManager {
       }
 
       const targetVersion = options.version || metadata.versions[0].version
-      
+
       // 检查是否需要更新
       if (installed.version === targetVersion) {
         return {
@@ -409,7 +409,7 @@ export class PluginManager {
   private async installDependency(dependency: string): Promise<void> {
     try {
       this.logger.debug(`Installing dependency: ${dependency}`)
-      execSync(`npm install ${dependency}`, { 
+      execSync(`npm install ${dependency}`, {
         cwd: process.cwd(),
         stdio: 'inherit'
       })
@@ -487,11 +487,15 @@ module.exports = {
    */
   private async checkDependents(pluginId: string): Promise<string[]> {
     const dependents: string[] = []
-    
+
     // 检查其他插件是否依赖此插件
     for (const [id, manifest] of this.installedPlugins) {
-      if (id !== pluginId) {
-        // TODO: 检查manifest中的依赖
+      const manifestAny = manifest as any
+      if (id !== pluginId && manifestAny.dependencies) {
+        // 检查这个插件的依赖列表中是否包含目标插件
+        if (Object.keys(manifestAny.dependencies).includes(pluginId)) {
+          dependents.push(id)
+        }
       }
     }
 
@@ -504,7 +508,7 @@ module.exports = {
   private async backupPlugin(pluginId: string): Promise<void> {
     const pluginPath = path.join(this.pluginsDir, pluginId.replace(/\//g, '-'))
     const backupPath = path.join(this.cacheDir, `${pluginId.replace(/\//g, '-')}.backup`)
-    
+
     if (await fs.pathExists(pluginPath)) {
       await fs.copy(pluginPath, backupPath)
     }
@@ -516,7 +520,7 @@ module.exports = {
   private async restorePlugin(pluginId: string): Promise<void> {
     const backupPath = path.join(this.cacheDir, `${pluginId.replace(/\//g, '-')}.backup`)
     const pluginPath = path.join(this.pluginsDir, pluginId.replace(/\//g, '-'))
-    
+
     if (await fs.pathExists(backupPath)) {
       await fs.copy(backupPath, pluginPath)
       await fs.remove(backupPath)
@@ -558,12 +562,93 @@ module.exports = {
     }
 
     // 检查依赖
-    // TODO: 验证依赖
+    const pluginAny = plugin as any
+    if (pluginAny.dependencies) {
+      for (const [depName, depVersion] of Object.entries(pluginAny.dependencies)) {
+        const depPlugin = this.installedPlugins.get(depName)
+
+        if (!depPlugin) {
+          issues.push(`缺少依赖: ${depName}@${depVersion as string}`)
+        } else {
+          // 验证依赖版本
+          if (!this.isVersionSatisfied(depPlugin.version, depVersion as string)) {
+            issues.push(
+              `依赖版本不匹配: ${depName} (需要 ${depVersion}, 当前 ${depPlugin.version})`
+            )
+          }
+        }
+      }
+    }
 
     return {
       valid: issues.length === 0,
       issues
     }
+  }
+
+  /**
+   * 检查版本是否满足要求
+   * @param installedVersion 已安装的版本
+   * @param requiredVersion 需要的版本（支持 semver 范围）
+   */
+  private isVersionSatisfied(installedVersion: string, requiredVersion: string): boolean {
+    try {
+      // 移除 'v' 前缀
+      const installed = installedVersion.replace(/^v/, '')
+      const required = requiredVersion.replace(/^v/, '')
+
+      // 处理不同的版本范围格式
+      if (required.startsWith('>=')) {
+        const minVersion = required.substring(2).trim()
+        return this.compareVersions(installed, minVersion) >= 0
+      }
+
+      if (required.startsWith('^')) {
+        // 兼容主版本号
+        const baseVersion = required.substring(1).trim()
+        const [instMajor] = installed.split('.')
+        const [reqMajor] = baseVersion.split('.')
+        return instMajor === reqMajor && this.compareVersions(installed, baseVersion) >= 0
+      }
+
+      if (required.startsWith('~')) {
+        // 兼容次版本号
+        const baseVersion = required.substring(1).trim()
+        const [instMajor, instMinor] = installed.split('.')
+        const [reqMajor, reqMinor] = baseVersion.split('.')
+        return instMajor === reqMajor && instMinor === reqMinor
+      }
+
+      if (required.includes('||')) {
+        // 支持多个版本范围
+        const ranges = required.split('||').map(r => r.trim())
+        return ranges.some(range => this.isVersionSatisfied(installedVersion, range))
+      }
+
+      // 精确版本匹配
+      return installed === required
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * 比较两个版本号
+   * @returns -1: v1 < v2, 0: v1 === v2, 1: v1 > v2
+   */
+  private compareVersions(v1: string, v2: string): number {
+    const parts1 = v1.split('.').map(Number)
+    const parts2 = v2.split('.').map(Number)
+
+    for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+      const p1 = parts1[i] || 0
+      const p2 = parts2[i] || 0
+
+      if (p1 > p2) return 1
+      if (p1 < p2) return -1
+    }
+
+    return 0
   }
 }
 

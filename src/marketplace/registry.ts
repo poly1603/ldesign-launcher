@@ -232,9 +232,44 @@ export class PluginRegistry {
   /**
    * 加载已安装插件
    */
-  private loadInstalledPlugins(): void {
-    // TODO: 从本地存储加载已安装插件信息
-    this.logger.debug('Loading installed plugins...')
+  private async loadInstalledPlugins(): Promise<void> {
+    try {
+      const PathUtils = (await import('../utils/path-utils')).PathUtils
+      const FileSystem = (await import('../utils/file-system')).FileSystem
+
+      // 已安装插件信息存储路径
+      const installedPluginsPath = PathUtils.join(
+        process.cwd(),
+        '.launcher/installed-plugins.json'
+      )
+
+      if (await FileSystem.exists(installedPluginsPath)) {
+        const content = await FileSystem.readFile(installedPluginsPath)
+        const installedData = JSON.parse(content)
+
+        // 加载每个已安装插件的元数据
+        for (const [pluginId, pluginInfo] of Object.entries(installedData)) {
+          const info = pluginInfo as {
+            version: string
+            installedAt: number
+            status: PluginStatus
+          }
+
+          // 从插件注册表获取完整元数据
+          const metadata = this.plugins.get(pluginId)
+          if (metadata) {
+            // 标记为已安装
+            this.logger.debug(`已安装插件: ${pluginId}@${info.version}`)
+          }
+        }
+
+        this.logger.info(`已加载 ${Object.keys(installedData).length} 个已安装插件`)
+      } else {
+        this.logger.debug('未找到已安装插件信息')
+      }
+    } catch (error) {
+      this.logger.error('加载已安装插件失败', error)
+    }
   }
 
   /**
@@ -251,16 +286,16 @@ export class PluginRegistry {
 
     for (const [id, metadata] of this.plugins) {
       // 匹配搜索条件
-      const matchesQuery = !query || 
+      const matchesQuery = !query ||
         id.toLowerCase().includes(queryLower) ||
         metadata.name.toLowerCase().includes(queryLower) ||
         metadata.description.toLowerCase().includes(queryLower) ||
         metadata.keywords.some(k => k.toLowerCase().includes(queryLower))
 
-      const matchesCategory = !options?.category || 
+      const matchesCategory = !options?.category ||
         metadata.category === options.category
 
-      const matchesTags = !options?.tags?.length || 
+      const matchesTags = !options?.tags?.length ||
         options.tags.some(tag => metadata.tags.includes(tag))
 
       if (matchesQuery && matchesCategory && matchesTags) {
@@ -280,10 +315,10 @@ export class PluginRegistry {
 
     // 排序和分页
     results.sort((a, b) => b.downloads - a.downloads)
-    
+
     const offset = options?.offset || 0
     const limit = options?.limit || 10
-    
+
     return results.slice(offset, offset + limit)
   }
 
@@ -315,12 +350,46 @@ export class PluginRegistry {
     }
 
     const issues: string[] = []
-    
-    // 检查launcher版本兼容性
-    // TODO: 实际检查版本
 
-    // 检查Node版本兼容性
-    // TODO: 实际检查版本
+    // 选择要检查的版本
+    const versionToCheck = version || plugin.versions[0].version
+    const versionMetadata = plugin.versions.find(v => v.version === versionToCheck)
+
+    if (!versionMetadata) {
+      issues.push(`版本 ${versionToCheck} 不存在`)
+      return { compatible: false, issues }
+    }
+
+    // 检查 launcher 版本兼容性
+    const versionMeta = versionMetadata as any
+    if (versionMeta.launcherVersion) {
+      const currentLauncherVersion = await this.getCurrentLauncherVersion()
+      if (!this.isVersionCompatible(currentLauncherVersion, versionMeta.launcherVersion)) {
+        issues.push(
+          `需要 launcher ${versionMeta.launcherVersion}，当前版本 ${currentLauncherVersion}`
+        )
+      }
+    }
+
+    // 检查 Node 版本兼容性
+    if (versionMeta.engines?.node) {
+      const currentNodeVersion = process.version
+      if (!this.isVersionCompatible(currentNodeVersion, versionMeta.engines.node)) {
+        issues.push(
+          `需要 Node.js ${versionMeta.engines.node}，当前版本 ${currentNodeVersion}`
+        )
+      }
+    }
+
+    // 检查依赖兼容性
+    if (versionMeta.dependencies) {
+      for (const [depName, depVersion] of Object.entries(versionMetadata.dependencies)) {
+        const depPlugin = this.plugins.get(depName)
+        if (!depPlugin) {
+          issues.push(`缺少依赖: ${depName}@${depVersion}`)
+        }
+      }
+    }
 
     return {
       compatible: issues.length === 0,
@@ -340,8 +409,43 @@ export class PluginRegistry {
    * 更新插件状态
    */
   async updatePluginStatus(pluginId: string, status: PluginStatus): Promise<void> {
-    // TODO: 实现状态更新逻辑
-    this.logger.info(`Plugin ${pluginId} status updated to: ${status}`)
+    try {
+      const PathUtils = (await import('../utils/path-utils')).PathUtils
+      const FileSystem = (await import('../utils/file-system')).FileSystem
+
+      // 已安装插件信息存储路径
+      const installedPluginsPath = PathUtils.join(
+        process.cwd(),
+        '.launcher/installed-plugins.json'
+      )
+
+      // 加载已安装插件信息
+      let installedData: Record<string, any> = {}
+      if (await FileSystem.exists(installedPluginsPath)) {
+        const content = await FileSystem.readFile(installedPluginsPath)
+        installedData = JSON.parse(content)
+      }
+
+      // 更新插件状态
+      if (installedData[pluginId]) {
+        installedData[pluginId].status = status
+        installedData[pluginId].updatedAt = Date.now()
+
+        // 保存更新后的信息
+        await FileSystem.ensureDir(PathUtils.dirname(installedPluginsPath))
+        await FileSystem.writeFile(
+          installedPluginsPath,
+          JSON.stringify(installedData, null, 2)
+        )
+
+        this.logger.info(`✅ 插件 ${pluginId} 状态已更新为: ${status}`)
+      } else {
+        this.logger.warn(`插件 ${pluginId} 未安装，无法更新状态`)
+      }
+    } catch (error) {
+      this.logger.error('更新插件状态失败', error)
+      throw error
+    }
   }
 
   /**
@@ -423,6 +527,88 @@ export class PluginRegistry {
       categories,
       popularTags
     }
+  }
+
+  /**
+   * 获取当前 launcher 版本
+   */
+  private async getCurrentLauncherVersion(): Promise<string> {
+    try {
+      const PathUtils = (await import('../utils/path-utils')).PathUtils
+      const FileSystem = (await import('../utils/file-system')).FileSystem
+
+      const packageJsonPath = PathUtils.join(__dirname, '../../package.json')
+      if (await FileSystem.exists(packageJsonPath)) {
+        const content = await FileSystem.readFile(packageJsonPath)
+        const packageJson = JSON.parse(content)
+        return packageJson.version || '1.0.0'
+      }
+
+      return '1.0.0'
+    } catch {
+      return '1.0.0'
+    }
+  }
+
+  /**
+   * 检查版本兼容性
+   * @param currentVersion 当前版本
+   * @param requiredVersion 需要的版本（支持 semver 范围）
+   */
+  private isVersionCompatible(currentVersion: string, requiredVersion: string): boolean {
+    try {
+      // 移除 'v' 前缀
+      const current = currentVersion.replace(/^v/, '')
+      const required = requiredVersion.replace(/^v/, '')
+
+      // 简化的版本比较逻辑
+      // 支持 ">=1.0.0", "^1.0.0", "~1.0.0", "1.0.0" 等格式
+
+      if (required.startsWith('>=')) {
+        const minVersion = required.substring(2).trim()
+        return this.compareVersions(current, minVersion) >= 0
+      }
+
+      if (required.startsWith('^')) {
+        // 主版本兼容
+        const baseVersion = required.substring(1).trim()
+        const [curMajor] = current.split('.')
+        const [reqMajor] = baseVersion.split('.')
+        return curMajor === reqMajor && this.compareVersions(current, baseVersion) >= 0
+      }
+
+      if (required.startsWith('~')) {
+        // 次版本兼容
+        const baseVersion = required.substring(1).trim()
+        const [curMajor, curMinor] = current.split('.')
+        const [reqMajor, reqMinor] = baseVersion.split('.')
+        return curMajor === reqMajor && curMinor === reqMinor
+      }
+
+      // 精确版本匹配
+      return current === required
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * 比较两个版本号
+   * @returns -1: v1 < v2, 0: v1 === v2, 1: v1 > v2
+   */
+  private compareVersions(v1: string, v2: string): number {
+    const parts1 = v1.split('.').map(Number)
+    const parts2 = v2.split('.').map(Number)
+
+    for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+      const p1 = parts1[i] || 0
+      const p2 = parts2[i] || 0
+
+      if (p1 > p2) return 1
+      if (p1 < p2) return -1
+    }
+
+    return 0
   }
 }
 

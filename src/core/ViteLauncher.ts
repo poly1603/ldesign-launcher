@@ -258,14 +258,18 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
       }
 
       if (specified) {
-        this.logger.info(`📋 使用指定配置文件: ${specified}`)
+        if (this.logger.getLevel() === 'debug') {
+          this.logger.debug(`使用指定配置文件: ${specified}`)
+        }
         // 加载并合并用户配置到当前配置（修复：之前未合并导致用户 plugins 等失效）
         const loaded = await this.configManager.loadConfig(specified)
         if (loaded && typeof loaded === 'object') {
           this.config = this.mergeConfig(this.config, loaded)
         }
       } else {
-        this.logger.info(`📋 使用自动配置加载`)
+        if (this.logger.getLevel() === 'debug') {
+          this.logger.debug(`使用自动配置加载`)
+        }
         try {
           // autoLoadConfig 内部已合并到 this.config
           await this.autoLoadConfig()
@@ -276,7 +280,9 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
       }
 
       this.initialized = true
-      this.logger.info('ViteLauncher 初始化完成')
+      if (this.logger.getLevel() === 'debug') {
+        this.logger.debug('ViteLauncher 初始化完成')
+      }
     } catch (error) {
       this.logger.error('配置文件加载失败，使用默认配置', { error: (error as Error).message })
     }
@@ -314,16 +320,8 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
       // 打印最终的Vite配置用于调试
       if (this.logger.getLevel() === 'debug') {
         this.displayFinalConfig(mergedConfig)
-      } else {
-        // 简洁模式只显示关键信息
-        const aliasCount = Array.isArray(mergedConfig.resolve?.alias) ? mergedConfig.resolve.alias.length : 0
-        if (aliasCount > 0) {
-          this.logger.info(`🔗 路径别名: ${aliasCount}个`)
-        }
-      }
 
-      // 只在debug模式下输出详细的watch配置信息
-      if (this.logger.getLevel() === 'debug') {
+        // 只在debug模式下输出详细的watch配置信息
         this.logger.debug(`server.watch配置:`, {
           ignoredType: typeof mergedConfig.server?.watch?.ignored,
           usePolling: mergedConfig.server?.watch?.usePolling,
@@ -331,9 +329,12 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
         })
       }
 
-      this.logger.info('正在启动开发服务器...')
-
       // 动态导入 Vite（优先从项目 cwd 解析）
+      // 激活警告抑制器以避免 Vite CJS API 警告
+      const { getGlobalSuppressor } = await import('../utils/warning-suppressor')
+      const suppressor = getGlobalSuppressor()
+      suppressor.activate()
+
       const { importViteFromCwd } = await import('../utils/vite-resolver')
       const viteMod = await importViteFromCwd(this.cwd)
       const { createServer } = viteMod
@@ -384,9 +385,9 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
         timestamp: Date.now()
       } as LauncherEventData[LauncherEvent.SERVER_READY])
 
-      // 简化启动成功日志，避免重复输出
-      if (!process.env.LAUNCHER_RESTART_MODE) {
-        this.logger.success('开发服务器启动成功')
+      // 简化启动成功日志，避免重复输出（compact 模式下不输出）
+      if (!process.env.LAUNCHER_RESTART_MODE && this.logger.getLevel() === 'debug') {
+        this.logger.debug('开发服务器启动成功')
       }
 
       return this.devServer as ViteDevServer
@@ -409,7 +410,9 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
 
       this.setStatus(LauncherStatus.STOPPING)
 
-      this.logger.info('正在停止开发服务器...')
+      if (this.logger.getLevel() === 'debug') {
+        this.logger.debug('正在停止开发服务器...')
+      }
 
       // 执行关闭前钩子
       await this.executeHook('beforeClose')
@@ -424,7 +427,9 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
       // 执行关闭后钩子
       await this.executeHook('afterClose')
 
-      this.logger.success('开发服务器已停止')
+      if (this.logger.getLevel() === 'debug') {
+        this.logger.debug('开发服务器已停止')
+      }
 
     } catch (error) {
       this.handleError(error as Error, '停止开发服务器失败')
@@ -519,10 +524,20 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
       try {
         const names = (mergedConfig.plugins || [])
           .map((p: any) => (p && typeof p === 'object' && 'name' in p) ? (p as any).name : String(p))
-        this.logger.info('已加载插件', { count: names.length, plugins: names })
+        // 只在 debug 模式显示
+        if (this.logger.getLevel() === 'debug') {
+          this.logger.debug('已加载插件', { count: names.length, plugins: names })
+        }
       } catch { }
 
-      this.logger.info('正在执行生产构建...')
+      if (this.logger.getLevel() === 'debug') {
+        this.logger.debug('正在执行生产构建...')
+      }
+
+      // 激活警告抑制器
+      const { getGlobalSuppressor } = await import('../utils/warning-suppressor')
+      const suppressor = getGlobalSuppressor()
+      suppressor.activate()
 
       // 触发构建开始事件
       this.emit(LauncherEvent.BUILD_START, {
@@ -807,7 +822,10 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
           this.logger.warn('配置警告', { warnings: validation.warnings })
         }
 
-        this.logger.success('配置文件加载成功')
+        // 只在 debug 模式显示
+        if (this.logger.getLevel() === 'debug') {
+          this.logger.debug('配置文件加载成功')
+        }
 
         return this.config
       } else {
@@ -1187,7 +1205,10 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
         })
       }
 
-      this.logger.success('配置文件加载成功')
+      // 只在 debug 模式显示
+      if (this.logger.getLevel() === 'debug') {
+        this.logger.debug('配置文件加载成功')
+      }
 
       return this.config
     } catch (error) {
@@ -1417,11 +1438,11 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
     // 应用过滤后的别名配置
     config.resolve.alias = filteredAliases
 
-    // 调试：输出最终的别名配置
-    const finalAliases = config.resolve?.alias || []
-    this.logger.info(`✅ 别名配置已处理 (${stage})，最终别名数量: ${Array.isArray(finalAliases) ? finalAliases.length : 0}`)
-
+    // 调试：输出最终的别名配置（只在 debug 模式）
     if (this.logger.getLevel() === 'debug') {
+      const finalAliases = config.resolve?.alias || []
+      this.logger.debug(`别名配置已处理 (${stage})，最终别名数量: ${Array.isArray(finalAliases) ? finalAliases.length : 0}`)
+
       this.logger.debug('最终别名配置', {
         stage,
         aliases: finalAliases
@@ -1441,10 +1462,16 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
    */
   private async enhanceConfigWithSmartPlugins(config: ViteLauncherConfig): Promise<ViteLauncherConfig> {
     try {
-      this.logger.info('开始智能插件检测...')
+      // 只在 debug 模式显示
+      if (this.logger.getLevel() === 'debug') {
+        this.logger.debug('开始智能插件检测...')
+      }
       // 获取智能检测的插件
       const smartPlugins = await this.smartPluginManager.getRecommendedPlugins()
-      this.logger.info('智能插件检测完成', { count: smartPlugins.length })
+      // 只在 debug 模式显示
+      if (this.logger.getLevel() === 'debug') {
+        this.logger.debug('智能插件检测完成', { count: smartPlugins.length })
+      }
 
       if (smartPlugins.length > 0) {
         // 合并用户配置的插件和智能检测的插件（按名称去重，避免重复注册）

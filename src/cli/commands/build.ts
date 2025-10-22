@@ -14,6 +14,7 @@ import { ViteLauncher } from '../../core/ViteLauncher'
 import type { CliCommandDefinition, CliContext } from '../../types'
 import { DEFAULT_OUT_DIR, DEFAULT_BUILD_TARGET } from '../../constants'
 import pc from 'picocolors'
+import { formatFileSize } from '../../utils/ui-components'
 
 /**
  * Build 命令类
@@ -211,32 +212,34 @@ export class BuildCommand implements CliCommandDefinition {
         }
       })
 
-      // 设置事件监听器
-      launcher.on('buildStart', (data) => {
-        logger.info('构建开始')
-      })
+      // 设置事件监听器（仅在 debug 模式下显示详细信息）
+      if (context.options.debug) {
+        launcher.on('buildStart', (data) => {
+          logger.debug('构建开始')
+        })
 
-      launcher.on('buildEnd', (data) => {
-        const duration = data.duration
-        logger.success(`构建完成 (${duration}ms)`)
+        launcher.on('buildEnd', (data) => {
+          const duration = data.duration
+          logger.debug(`构建完成 (${duration}ms)`)
 
-        // 显示构建统计信息
-        if (data.result && 'output' in data.result) {
-          const output = data.result.output
-          if (Array.isArray(output)) {
-            const jsFiles = output.filter(file => file.fileName.endsWith('.js'))
-            const cssFiles = output.filter(file => file.fileName.endsWith('.css'))
+          // 显示构建统计信息
+          if (data.result && 'output' in data.result) {
+            const output = data.result.output
+            if (Array.isArray(output)) {
+              const jsFiles = output.filter(file => file.fileName.endsWith('.js'))
+              const cssFiles = output.filter(file => file.fileName.endsWith('.css'))
 
-            logger.info(`生成了 ${output.length} 个文件`)
-            if (jsFiles.length > 0) {
-              logger.info(`JavaScript 文件: ${jsFiles.length} 个`)
-            }
-            if (cssFiles.length > 0) {
-              logger.info(`CSS 文件: ${cssFiles.length} 个`)
+              logger.debug(`生成了 ${output.length} 个文件`)
+              if (jsFiles.length > 0) {
+                logger.debug(`JavaScript 文件: ${jsFiles.length} 个`)
+              }
+              if (cssFiles.length > 0) {
+                logger.debug(`CSS 文件: ${cssFiles.length} 个`)
+              }
             }
           }
-        }
-      })
+        })
+      }
 
       launcher.onError((error) => {
         logger.error('构建错误: ' + error.message)
@@ -283,13 +286,14 @@ export class BuildCommand implements CliCommandDefinition {
         const duration = Date.now() - startTime
 
         // 显示构建结果
-        logger.success(`构建成功完成! (${duration}ms)`)
+        logger.success(`构建成功完成! (${(duration / 1000).toFixed(2)}s)`)
 
-        // 显示输出目录信息
+        // 显示输出目录信息（简洁模式）
         if (await FileSystem.exists(outDir)) {
           const dirSize = await getDirectorySize(outDir)
-          logger.info(`输出目录: ${outDir}`)
-          logger.info(`总大小: ${formatFileSize(dirSize)}`)
+          if (!context.options.silent) {
+            console.log(`${pc.dim('输出:')} ${pc.cyan(outDir)} ${pc.gray(`(${formatFileSize(dirSize)})`)}`)
+          }
         }
 
         // 生成分析报告
@@ -349,24 +353,6 @@ export class BuildCommand implements CliCommandDefinition {
   }
 }
 
-/**
- * 格式化文件大小
- * 
- * @param bytes - 字节数
- * @returns 格式化后的大小
- */
-function formatFileSize(bytes: number): string {
-  const units = ['B', 'KB', 'MB', 'GB']
-  let size = bytes
-  let unitIndex = 0
-
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024
-    unitIndex++
-  }
-
-  return `${size.toFixed(2)} ${units[unitIndex]}`
-}
 
 /**
  * 获取目录大小

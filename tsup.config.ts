@@ -1,4 +1,5 @@
 import { defineConfig } from 'tsup'
+import { cpus } from 'os'
 
 export default defineConfig({
   // 明确的入口点配置，避免打包每个.ts文件
@@ -38,6 +39,10 @@ export default defineConfig({
   target: 'node16',
   outDir: 'dist',
   shims: true,
+  // 性能优化：启用并行构建
+  concurrency: Math.max(cpus().length - 1, 1), // 使用多核CPU，预留1个核心
+  // 性能优化：启用增量构建缓存
+  incremental: true,
   // 将运行时依赖全部 external，减小产物体积
   external: [
     'vite',
@@ -135,14 +140,46 @@ export default defineConfig({
     options.conditions = ['node']
     options.chunkNames = 'chunks/[name]-[hash]'
     options.logLevel = 'error' // 只显示错误，减少警告输出
-    // 优化打包策略
+
+    // ===== 性能优化配置 =====
+
+    // 1. Tree-shaking 优化
     options.treeShaking = true
-    // 避免过大的bundle，设置分割阈值
-    options.mangleProps = undefined // 不混淆属性名以保证兼容性
-    options.keepNames = true // 保持函数名以便调试
-    // 减少不必要的警告
     options.ignoreAnnotations = false
+
+    // 2. 代码压缩优化（生产环境）
+    if (process.env.NODE_ENV === 'production') {
+      options.minify = true
+      options.minifyWhitespace = true
+      options.minifyIdentifiers = true
+      options.minifySyntax = true
+    }
+
+    // 3. 保持函数名以便调试和错误追踪
+    options.keepNames = true
+    options.mangleProps = undefined // 不混淆属性名以保证兼容性
+
+    // 4. 法律注释处理
     options.legalComments = 'none' // 不包含法律注释以减少输出
+
+    // 5. Sourcemap 优化
+    options.sourcemap = process.env.NODE_ENV !== 'production' // 生产环境禁用
+
+    // 6. 平台和格式优化
+    options.platform = 'node'
+    options.format = 'esm'
+
+    // 7. 并发优化（利用多核CPU）
+    // esbuild 内部已自动并行化，这里确保设置正确
+
+    // 8. 内存优化
+    // 对大型文件使用流式处理
+    options.write = true
+
+    // 9. Banner 注释优化
+    options.banner = {
+      js: '// @ldesign/launcher - Optimized Build'
+    }
   },
   // 使用 tsup 的 noDefaultExport 选项来避免混合导出警告
   noDefaultExport: false,

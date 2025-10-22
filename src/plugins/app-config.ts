@@ -170,9 +170,12 @@ export function createAppConfigPlugin(options: AppConfigPluginOptions = {}): Plu
       if (configFilePath) {
         const fileName = configFilePath.split(/[/\\]/).pop() || ''
         const relativePath = configFilePath.replace(cwd, '').replace(/^[/\\]/, '')
-        logger.info(`📄 找到应用配置文件: ${fileName} (${relativePath})`)
+        // 只在 debug 模式显示
+        if (logger.getLevel() === 'debug') {
+          logger.debug(`找到应用配置文件: ${fileName} (${relativePath})`)
+        }
         appConfig = await loadAppConfig(configFilePath, logger)
-      } else {
+      } else if (logger.getLevel() === 'debug') {
         logger.debug('未找到应用配置文件', { environment })
       }
 

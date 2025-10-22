@@ -36,6 +36,14 @@ process.on('unhandledRejection', (reason) => {
 // 动态导入 CLI 模块（优先 ESM，其次 CJS），兼容默认导出与具名导出
 async function main() {
   try {
+    // 激活全局警告抑制（在导入任何模块之前）
+    try {
+      const { activateGlobalSuppression } = await import('../dist/utils/warning-suppressor.js')
+      activateGlobalSuppression()
+    } catch (e) {
+      // 如果警告抑制器加载失败，继续运行
+    }
+
     let mod
     let createCli
 

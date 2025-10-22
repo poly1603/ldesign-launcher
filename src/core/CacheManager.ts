@@ -16,7 +16,7 @@ import { FileSystem } from '../utils/file-system'
 /**
  * 缓存类型
  */
-export type CacheType = 
+export type CacheType =
   | 'build'
   | 'deps'
   | 'modules'
@@ -149,38 +149,6 @@ export class CacheManager {
   }
 
   /**
-   * 获取缓存
-   */
-  async get<T = any>(key: string, type: CacheType): Promise<T | null> {
-    if (!this.config.enabled || !this.config.types.includes(type)) {
-      return null
-    }
-
-    const cacheKey = this.buildCacheKey(key, type)
-    let item: CacheItem | undefined | null = this.cache.get(cacheKey)
-
-    if (!item) {
-      // 从磁盘加载
-      item = await this.loadFromDisk(cacheKey)
-      if (item) {
-        this.cache.set(cacheKey, item)
-      }
-    }
-
-    if (!item || this.isExpired(item)) {
-      this.missCount++
-      return null
-    }
-
-    // 更新访问信息
-    item.lastAccessed = Date.now()
-    item.accessCount++
-    this.hitCount++
-
-    return item.data
-  }
-
-  /**
    * 设置缓存
    */
   async set(key: string, type: CacheType, data: any, ttl?: number): Promise<void> {
@@ -191,7 +159,7 @@ export class CacheManager {
     const cacheKey = this.buildCacheKey(key, type)
     const now = Date.now()
     const size = this.calculateSize(data)
-    
+
     const item: CacheItem = {
       key: cacheKey,
       type,
@@ -207,7 +175,7 @@ export class CacheManager {
     await this.enforceSize(size)
 
     this.cache.set(cacheKey, item)
-    
+
     // 保存到磁盘
     await this.saveToDisk(item)
 
@@ -215,14 +183,70 @@ export class CacheManager {
   }
 
   /**
+   * 获取缓存
+   * 支持自动解压缩
+   */
+  async get<T = any>(key: string, type: CacheType): Promise<T | null> {
+    if (!this.config.enabled || !this.config.types.includes(type)) {
+      this.missCount++
+      return null
+    }
+
+    const cacheKey = this.buildCacheKey(key, type)
+
+    // 先从内存缓存读取
+    if (this.cache.has(cacheKey)) {
+      const item = this.cache.get(cacheKey)!
+
+      // 检查是否过期
+      if (this.isExpired(item)) {
+        this.cache.delete(cacheKey)
+        await this.deleteFromDisk(cacheKey)
+        this.missCount++
+        return null
+      }
+
+      // 更新访问信息
+      item.lastAccessed = Date.now()
+      item.accessCount++
+      this.hitCount++
+
+      // 解压缩数据
+      const data = await this.decompressData(item.data)
+
+      this.logger.debug(`缓存命中: ${cacheKey}`)
+      return data as T
+    }
+
+    // 尝试从磁盘读取
+    try {
+      const diskData = await this.loadFromDisk(cacheKey)
+      if (diskData) {
+        // 加载到内存缓存
+        this.cache.set(cacheKey, diskData)
+        this.hitCount++
+
+        // 解压缩数据
+        const data = await this.decompressData(diskData.data)
+        return data as T
+      }
+    } catch (error) {
+      this.logger.debug(`从磁盘加载缓存失败: ${cacheKey}`, error)
+    }
+
+    this.missCount++
+    return null
+  }
+
+  /**
    * 删除缓存
    */
   async delete(key: string, type: CacheType): Promise<void> {
     const cacheKey = this.buildCacheKey(key, type)
-    
+
     this.cache.delete(cacheKey)
     await this.deleteFromDisk(cacheKey)
-    
+
     this.logger.debug(`缓存已删除: ${cacheKey}`)
   }
 
@@ -235,7 +259,7 @@ export class CacheManager {
     }
 
     const cacheKey = this.buildCacheKey(key, type)
-    
+
     if (this.cache.has(cacheKey)) {
       const item = this.cache.get(cacheKey)!
       return !this.isExpired(item)
@@ -252,7 +276,7 @@ export class CacheManager {
   async clear(type?: CacheType): Promise<void> {
     if (type) {
       // 清理指定类型
-      const keysToDelete = Array.from(this.cache.keys()).filter(key => 
+      const keysToDelete = Array.from(this.cache.keys()).filter(key =>
         key.startsWith(`${type}:`)
       )
 
@@ -266,7 +290,7 @@ export class CacheManager {
       // 清理所有缓存
       this.cache.clear()
       await FileSystem.emptyDir(this.config.cacheDir)
-      
+
       this.logger.info('已清理所有缓存')
     }
   }
@@ -279,8 +303,8 @@ export class CacheManager {
       totalItems: this.cache.size,
       totalSize: 0,
       byType: {} as any,
-      hitRate: this.hitCount + this.missCount > 0 
-        ? this.hitCount / (this.hitCount + this.missCount) 
+      hitRate: this.hitCount + this.missCount > 0
+        ? this.hitCount / (this.hitCount + this.missCount)
         : 0,
       lastCleanup: this.lastCleanup
     }
@@ -293,7 +317,7 @@ export class CacheManager {
     // 计算统计数据
     for (const item of this.cache.values()) {
       stats.totalSize += item.size
-      
+
       if (stats.byType[item.type]) {
         stats.byType[item.type].count++
         stats.byType[item.type].size += item.size
@@ -312,7 +336,7 @@ export class CacheManager {
     }
 
     this.logger.info('开始压缩缓存...')
-    
+
     const startTime = Date.now()
     let compressed = 0
 
@@ -332,7 +356,7 @@ export class CacheManager {
   async cleanup(): Promise<void> {
     const now = Date.now()
     const stats = this.getStats()
-    
+
     this.logger.info('开始清理过期缓存...')
 
     let cleaned = 0
@@ -363,11 +387,11 @@ export class CacheManager {
     const sizeThreshold = this.config.maxSize * 1024 * 1024 * this.config.autoClean.threshold
     if (stats.totalSize > sizeThreshold && lru.length > 0) {
       lru.sort((a, b) => a.score - b.score)
-      
+
       let currentSize = stats.totalSize
       for (const { key } of lru) {
         if (currentSize <= sizeThreshold) break
-        
+
         const item = this.cache.get(key)
         if (item) {
           currentSize -= item.size
@@ -426,7 +450,7 @@ export class CacheManager {
   private async loadFromDisk(key: string): Promise<CacheItem | null> {
     try {
       const filePath = path.join(this.config.cacheDir, `${key}.json`)
-      
+
       if (!(await FileSystem.exists(filePath))) {
         return null
       }
@@ -594,6 +618,242 @@ export class CacheManager {
     this.stopAutoCleanup()
     this.cache.clear()
     this.logger.info('缓存管理器已销毁')
+  }
+
+  /**
+   * 缓存预热
+   * 提前加载常用数据到缓存中，提升首次访问性能
+   */
+  async warmup(keys: Array<{ key: string; type: CacheType; loader: () => Promise<any> }>): Promise<void> {
+    if (!this.config.enabled) {
+      return
+    }
+
+    this.logger.info(`开始缓存预热，共 ${keys.length} 项`)
+
+    const startTime = Date.now()
+    let successCount = 0
+    let failCount = 0
+
+    // 并发预热，提升速度（限制并发数为 5）
+    const maxConcurrent = 5
+    for (let i = 0; i < keys.length; i += maxConcurrent) {
+      const batch = keys.slice(i, i + maxConcurrent)
+
+      await Promise.all(
+        batch.map(async item => {
+          try {
+            const data = await item.loader()
+            await this.set(item.key, data, item.type)
+            successCount++
+            this.logger.debug(`预热成功: ${item.key}`)
+          } catch (error) {
+            failCount++
+            this.logger.debug(`预热失败: ${item.key}`, error)
+          }
+        })
+      )
+    }
+
+    const duration = Date.now() - startTime
+    this.logger.success(
+      `缓存预热完成: 成功 ${successCount}/${keys.length}，失败 ${failCount}，耗时 ${duration}ms`
+    )
+  }
+
+  /**
+   * 智能缓存压缩
+   * 自动识别可压缩的缓存数据并进行压缩
+   */
+  async smartCompress(): Promise<{ compressed: number; savedBytes: number }> {
+    if (!this.config.enabled || !this.config.compression) {
+      return { compressed: 0, savedBytes: 0 }
+    }
+
+    this.logger.info('开始智能缓存压缩')
+
+    let compressed = 0
+    let savedBytes = 0
+
+    for (const [key, item] of this.cache) {
+      // 只压缩大于 10KB 的数据
+      if (item.size > 10 * 1024) {
+        try {
+          const originalSize = item.size
+          const compressedData = await this.compressData(item.data)
+          const compressedSize = JSON.stringify(compressedData).length
+
+          if (compressedSize < originalSize * 0.8) { // 压缩率 > 20%
+            item.data = compressedData
+            item.size = compressedSize
+            compressed++
+            savedBytes += originalSize - compressedSize
+
+            this.logger.debug(
+              `压缩缓存 ${key}: ${(originalSize / 1024).toFixed(2)}KB -> ${(compressedSize / 1024).toFixed(2)}KB`
+            )
+          }
+        } catch (error) {
+          this.logger.debug(`压缩失败: ${key}`, error)
+        }
+      }
+    }
+
+    if (compressed > 0) {
+      this.logger.success(
+        `智能压缩完成: 压缩了 ${compressed} 项，节省 ${(savedBytes / 1024).toFixed(2)}KB`
+      )
+    }
+
+    return { compressed, savedBytes }
+  }
+
+  /**
+   * 压缩数据
+   */
+  private async compressData(data: any): Promise<any> {
+    // 简化的压缩实现：对JSON数据进行字符串压缩
+    const jsonStr = JSON.stringify(data)
+
+    try {
+      const { gzipSync } = await import('zlib')
+      const compressed = gzipSync(Buffer.from(jsonStr))
+      return {
+        __compressed: true,
+        __originalSize: jsonStr.length,
+        data: compressed.toString('base64')
+      }
+    } catch {
+      // 如果压缩失败，返回原数据
+      return data
+    }
+  }
+
+  /**
+   * 解压缩数据
+   */
+  private async decompressData(data: any): Promise<any> {
+    if (data && data.__compressed) {
+      try {
+        const { gunzipSync } = await import('zlib')
+        const decompressed = gunzipSync(Buffer.from(data.data, 'base64'))
+        return JSON.parse(decompressed.toString())
+      } catch {
+        return data
+      }
+    }
+    return data
+  }
+
+  /**
+   * 缓存健康检查
+   * 检查缓存状态并返回健康报告
+   */
+  async healthCheck(): Promise<{
+    healthy: boolean
+    issues: string[]
+    stats: CacheStats
+    recommendations: string[]
+  }> {
+    const issues: string[] = []
+    const recommendations: string[] = []
+    const stats = await this.getStats()
+
+    // 检查缓存大小
+    const usagePercent = (stats.totalSize / (this.config.maxSize * 1024 * 1024)) * 100
+    if (usagePercent > 90) {
+      issues.push(`缓存使用率过高: ${usagePercent.toFixed(1)}%`)
+      recommendations.push('建议清理过期缓存或增加缓存上限')
+    }
+
+    // 检查命中率
+    if (stats.hitRate < 0.5) {
+      issues.push(`缓存命中率较低: ${(stats.hitRate * 100).toFixed(1)}%`)
+      recommendations.push('建议调整缓存策略或增加缓存项')
+    }
+
+    // 检查过期项
+    const expiredCount = this.countExpiredItems()
+    if (expiredCount > stats.totalItems * 0.3) {
+      issues.push(`过期缓存项过多: ${expiredCount}/${stats.totalItems}`)
+      recommendations.push('建议执行缓存清理')
+    }
+
+    return {
+      healthy: issues.length === 0,
+      issues,
+      stats,
+      recommendations
+    }
+  }
+
+  /**
+   * 统计过期项数量
+   */
+  private countExpiredItems(): number {
+    const now = Date.now()
+    let count = 0
+
+    for (const item of this.cache.values()) {
+      if (item.expiresAt && item.expiresAt < now) {
+        count++
+      }
+    }
+
+    return count
+  }
+
+  /**
+   * 缓存优化建议
+   * 基于使用情况提供优化建议
+   */
+  async getOptimizationSuggestions(): Promise<Array<{
+    type: string
+    priority: 'high' | 'medium' | 'low'
+    suggestion: string
+    action: string
+  }>> {
+    const suggestions: Array<{
+      type: string
+      priority: 'high' | 'medium' | 'low'
+      suggestion: string
+      action: string
+    }> = []
+
+    const stats = await this.getStats()
+    const usagePercent = (stats.totalSize / (this.config.maxSize * 1024 * 1024)) * 100
+
+    // 高使用率建议
+    if (usagePercent > 80) {
+      suggestions.push({
+        type: 'storage',
+        priority: 'high',
+        suggestion: '缓存使用率过高',
+        action: '执行清理或增加缓存容量'
+      })
+    }
+
+    // 低命中率建议
+    if (stats.hitRate < 0.6) {
+      suggestions.push({
+        type: 'hit-rate',
+        priority: 'medium',
+        suggestion: '缓存命中率较低',
+        action: '调整 TTL 或缓存策略'
+      })
+    }
+
+    // 压缩建议
+    if (this.config.compression && stats.totalSize > 50 * 1024 * 1024) {
+      suggestions.push({
+        type: 'compression',
+        priority: 'medium',
+        suggestion: '缓存体积较大',
+        action: '执行智能压缩以节省空间'
+      })
+    }
+
+    return suggestions
   }
 }
 

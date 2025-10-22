@@ -11,11 +11,11 @@ import { Logger } from '../../utils/logger'
 import { FileSystem } from '../../utils/file-system'
 import { PathUtils } from '../../utils/path-utils'
 import { ViteLauncher } from '../../core/ViteLauncher'
-import { networkInterfaces } from 'node:os'
 import { getPreferredLocalIP } from '../../utils/network.js'
 import type { CliCommandDefinition, CliContext } from '../../types'
 import { DEFAULT_HOST, DEFAULT_OUT_DIR } from '../../constants'
 import pc from 'picocolors'
+import { renderServerBanner, renderQRCode, type ServerInfoItem, formatFileSize } from '../../utils/ui-components'
 
 /**
  * Preview 命令类
@@ -251,44 +251,6 @@ export class PreviewCommand implements CliCommandDefinition {
       // 更新launcher的配置
       launcher['config'] = mergedConfig
 
-      // 渲染服务器横幅的辅助函数
-      function renderServerBanner(
-        title: string,
-        items: Array<{ label: string; value: string }>
-      ): string[] {
-        const leftPad = '  '
-        const labelPad = 4
-        const rows = [
-          `${pc.green('✔')} ${pc.bold(title)}`,
-          ...items.map(({ label, value }) => {
-            const l = (label + ':').padEnd(labelPad, ' ')
-            return `${pc.dim('•')} ${pc.bold(l)} ${pc.cyan(value)}`
-          }),
-          `${pc.dim('•')} 提示: 按 ${pc.yellow('Ctrl+C')} 停止服务器`
-        ]
-
-        // 根据内容计算盒宽度
-        const contentWidth = rows.reduce((m, s) => Math.max(m, stripAnsi(s).length), 0)
-        const width = Math.min(Math.max(contentWidth + 4, 38), 80)
-        const top = pc.dim('┌' + '─'.repeat(width - 2) + '┐')
-        const bottom = pc.dim('└' + '─'.repeat(width - 2) + '┘')
-
-        const padded = rows.map(r => {
-          const visible = stripAnsi(r)
-          const space = width - 2 - visible.length
-          return pc.dim('│') + leftPad + r + ' '.repeat(Math.max(0, space - leftPad.length)) + pc.dim('│')
-        })
-
-        return [top, ...padded, bottom]
-      }
-
-      // 去除 ANSI 颜色后的长度计算辅助
-      function stripAnsi(str: string) {
-        // eslint-disable-next-line no-control-regex
-        const ansiRegex = /[\u001B\u009B][[\]()#;?]*(?:((?:[a-zA-Z\d]*(?:;[a-zA-Z\d]*)*)?\u0007)|(?:(?:\d{1,4}(?:;\d{0,4})*)?[\dA-PR-TZcf-nq-uy=><~]))/g
-        return str.replace(ansiRegex, '')
-      }
-
       // 设置事件监听器
       launcher.onReady(async () => {
         logger.success('预览服务器启动成功!')
@@ -314,7 +276,7 @@ export class PreviewCommand implements CliCommandDefinition {
         }
 
         const title = '预览服务器已启动'
-        const entries: Array<{ label: string; value: string }> = [
+        const entries: ServerInfoItem[] = [
           { label: '本地', value: localUrl }
         ]
         if (networkUrl) entries.push({ label: '网络', value: networkUrl })
@@ -323,82 +285,16 @@ export class PreviewCommand implements CliCommandDefinition {
         const boxLines = renderServerBanner(title, entries)
         for (const line of boxLines) logger.info(line)
 
-        // 生成二维码
+        // 生成并显示二维码
         const qrTarget = (networkUrl || localUrl)
-        try {
-          if (!qrTarget) throw new Error('empty-url')
-
-          // 优先尝试使用 'qrcode' 的终端输出
-          let printed = false
-          try {
-            const qrlib: any = await import('qrcode')
-            const qrcode = qrlib?.default || qrlib
-
-            // 使用toString方法生成终端二维码
-            const terminalQR = await qrcode.toString(qrTarget, {
-              type: 'terminal',
-              small: true
-            })
-
-            if (terminalQR && typeof terminalQR === 'string') {
-              logger.info(pc.dim('二维码（扫码在手机上打开）：'))
-              console.log()
-              console.log(terminalQR)
-              console.log()
-              printed = true
-            }
-          } catch (e1) {
-            logger.debug('尝试使用 qrcode 生成终端二维码失败: ' + (e1 as Error).message)
+        if (qrTarget) {
+          const qrCode = await renderQRCode(qrTarget, { small: true, border: true })
+          if (qrCode) {
+            logger.info(pc.dim('二维码（扫码在手机上打开）：'))
+            console.log(qrCode)
+          } else if (context.options.debug) {
+            logger.debug('二维码生成失败')
           }
-
-          // 回退到 qrcode-terminal（如已安装）
-          if (!printed) {
-            try {
-              const mod: any = await import('qrcode-terminal')
-              const qrt = mod?.default || mod
-              let qrOutput = ''
-              qrt.generate(qrTarget, { small: true }, (q: string) => {
-                qrOutput = q
-              })
-              if (qrOutput) {
-                logger.info(pc.dim('二维码（扫码在手机上打开）：'))
-
-                // 简化处理qrcode-terminal的输出
-                const lines = qrOutput.split('\n').filter(line => line.trim())
-                if (lines.length > 0) {
-                  // 确保所有行长度一致
-                  const maxWidth = Math.max(...lines.map(line => line.length))
-                  const normalizedLines = lines.map(line => {
-                    const padding = ' '.repeat(Math.max(0, maxWidth - line.length))
-                    return line + padding
-                  })
-
-                  // 创建简洁的边框效果
-                  const borderWidth = maxWidth + 4
-                  const topBorder = '┌' + '─'.repeat(borderWidth - 2) + '┐'
-                  const bottomBorder = '└' + '─'.repeat(borderWidth - 2) + '┘'
-                  const emptyLine = '│' + ' '.repeat(borderWidth - 2) + '│'
-
-                  const borderedQR = [
-                    '',
-                    topBorder,
-                    emptyLine,
-                    ...normalizedLines.map(line => '│ ' + line + ' │'),
-                    emptyLine,
-                    bottomBorder,
-                    ''
-                  ].join('\n')
-
-                  console.log(borderedQR)
-                  printed = true
-                }
-              }
-            } catch (e2) {
-              logger.debug('尝试使用 qrcode-terminal 生成终端二维码失败: ' + (e2 as Error).message)
-            }
-          }
-        } catch (e) {
-          logger.debug('二维码生成失败: ' + (e as Error).message)
         }
       })
 
@@ -542,21 +438,3 @@ async function collectFileStats(dir: string, stats: any): Promise<void> {
   }
 }
 
-/**
- * 格式化文件大小
- * 
- * @param bytes - 字节数
- * @returns 格式化后的大小
- */
-function formatFileSize(bytes: number): string {
-  const units = ['B', 'KB', 'MB', 'GB']
-  let size = bytes
-  let unitIndex = 0
-
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024
-    unitIndex++
-  }
-
-  return `${size.toFixed(2)} ${units[unitIndex]}`
-}

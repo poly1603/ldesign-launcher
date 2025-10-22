@@ -71,9 +71,9 @@ export class PerformanceOptimizer extends EventEmitter {
 
   constructor(options: OptimizationOptions = {}) {
     super()
-    
+
     this.logger = new Logger('PerformanceOptimizer')
-    
+
     // 设置默认选项
     this.options = {
       enableAutoSplitting: true,
@@ -97,23 +97,23 @@ export class PerformanceOptimizer extends EventEmitter {
   createVitePlugin(): Plugin {
     return {
       name: 'launcher:performance-optimizer',
-      
+
       configResolved: (config: ResolvedConfig) => {
         this.startTime = Date.now()
         this.applyOptimizations(config)
       },
-      
+
       buildStart: () => {
         this.logger.info('开始性能优化构建')
         this.collectInitialMetrics()
       },
-      
+
       buildEnd: () => {
         const buildTime = Date.now() - this.startTime
         this.metrics.buildTime = buildTime
         this.logger.info(`构建完成，耗时: ${buildTime}ms`)
       },
-      
+
       closeBundle: async () => {
         await this.analyzeBundle()
         this.generateOptimizationReport()
@@ -131,12 +131,12 @@ export class PerformanceOptimizer extends EventEmitter {
       if (this.options.enableAutoSplitting) {
         this.applyCodeSplitting(config)
       }
-      
+
       // 压缩优化
       if (this.options.enableCompression) {
         this.applyCompressionOptimization(config)
       }
-      
+
       // 树摇优化
       if (this.options.enableTreeShaking) {
         config.build.rollupOptions = {
@@ -148,27 +148,27 @@ export class PerformanceOptimizer extends EventEmitter {
           }
         }
       }
-      
+
       // 内联优化
       if (this.options.enableInlining) {
         config.build.assetsInlineLimit = this.options.inlineLimit
       }
     }
-    
+
     // 应用服务器优化
     if (config.server) {
       // 预加载优化
       if (this.options.enablePreloading) {
         config.server.preTransformRequests = true
       }
-      
+
       // HMR 优化
       config.server.hmr = {
         ...(typeof config.server.hmr === 'object' ? config.server.hmr : {}),
         overlay: true
       }
     }
-    
+
     // 应用缓存优化
     if (this.options.enableCaching) {
       this.applyCachingStrategy(config)
@@ -186,7 +186,7 @@ export class PerformanceOptimizer extends EventEmitter {
           return chunkName
         }
       }
-      
+
       // 应用预设策略
       if (this.options.splitStrategy === 'vendor') {
         if (id.includes('node_modules')) {
@@ -197,7 +197,7 @@ export class PerformanceOptimizer extends EventEmitter {
           if (id.includes('element-plus')) return 'element-plus'
           if (id.includes('@vue') || id.includes('/vue/')) return 'vue-vendor'
           if (id.includes('react')) return 'react-vendor'
-          
+
           return 'vendor'
         }
       } else if (this.options.splitStrategy === 'modules') {
@@ -207,10 +207,10 @@ export class PerformanceOptimizer extends EventEmitter {
         if (id.includes('/src/stores/')) return 'stores'
         if (id.includes('/src/services/')) return 'services'
       }
-      
+
       return undefined
     }
-    
+
     config.build.rollupOptions = {
       ...config.build.rollupOptions,
       output: {
@@ -227,10 +227,10 @@ export class PerformanceOptimizer extends EventEmitter {
     // 使用 esbuild 进行压缩
     config.build.minify = 'esbuild'
     config.build.target = 'es2020'
-    
+
     // CSS 压缩
     config.build.cssMinify = true
-    
+
     // 启用 gzip 压缩报告
     config.build.reportCompressedSize = true
   }
@@ -241,7 +241,7 @@ export class PerformanceOptimizer extends EventEmitter {
   private applyCachingStrategy(config: ResolvedConfig): void {
     // 文件系统缓存 - 只在配置阶段设置
     // config.cacheDir 在 ResolvedConfig 中是只读的，需要在 configResolved 之前设置
-    
+
     // 依赖优化缓存 - 同样需要在配置阶段设置
     // 此处只能记录配置，不能直接修改 ResolvedConfig
     this.logger.debug('缓存策略已应用')
@@ -263,16 +263,119 @@ export class PerformanceOptimizer extends EventEmitter {
    * 分析构建产物
    */
   private async analyzeBundle(): Promise<void> {
-    // TODO: 实现构建产物分析
-    this.metrics.suggestions = []
-    
-    // 生成优化建议
-    if (this.metrics.buildTime && this.metrics.buildTime > 30000) {
-      this.metrics.suggestions.push('构建时间较长，建议启用并行构建')
-    }
-    
-    if (this.metrics.memoryUsage && this.metrics.memoryUsage.heapUsed > 500 * 1024 * 1024) {
-      this.metrics.suggestions.push('内存使用较高，建议优化依赖导入')
+    try {
+      const FileSystem = (await import('../utils/file-system')).FileSystem
+      const PathUtils = (await import('../utils/path-utils')).PathUtils
+      const { default: fg } = await import('fast-glob')
+
+      this.metrics.suggestions = []
+
+      // 查找构建输出目录
+      const buildDirs = ['dist', 'build', 'out', '.next', '.nuxt']
+      let bundleDir: string | null = null
+
+      for (const dir of buildDirs) {
+        const dirPath = PathUtils.resolve(dir)
+        if (await FileSystem.exists(dirPath)) {
+          bundleDir = dirPath
+          break
+        }
+      }
+
+      if (!bundleDir) {
+        this.logger.debug('未找到构建产物目录')
+        return
+      }
+
+      // 分析 bundle 文件
+      const bundleFiles = await fg(['**/*.{js,css,wasm,json}'], {
+        cwd: bundleDir,
+        absolute: true,
+        stats: true
+      })
+
+      // 统计总大小和各类型文件大小
+      let totalSize = 0
+      const sizeByType: Record<string, number> = {}
+      const largeFiles: Array<{ name: string; size: number }> = []
+
+      for (const file of bundleFiles) {
+        if (!file.stats) continue
+
+        const size = file.stats.size
+        totalSize += size
+
+        const ext = PathUtils.extname(file.path).substring(1)
+        sizeByType[ext] = (sizeByType[ext] || 0) + size
+
+        // 标记大文件 (> 500KB)
+        if (size > 500 * 1024) {
+          largeFiles.push({
+            name: PathUtils.relative(bundleDir, file.path),
+            size
+          })
+        }
+      }
+
+      // 生成优化建议
+      const totalSizeMB = totalSize / (1024 * 1024)
+      this.logger.debug(`构建产物总大小: ${totalSizeMB.toFixed(2)}MB`)
+
+      // 检查构建时间
+      if (this.metrics.buildTime && this.metrics.buildTime > 30000) {
+        this.metrics.suggestions.push(
+          '构建时间较长，建议启用并行构建和增量构建'
+        )
+      }
+
+      // 检查内存使用
+      if (this.metrics.memoryUsage && this.metrics.memoryUsage.heapUsed > 500 * 1024 * 1024) {
+        this.metrics.suggestions.push(
+          '内存使用较高，建议优化依赖导入和减少同时处理的文件数'
+        )
+      }
+
+      // 检查 bundle 大小
+      if (totalSizeMB > 5) {
+        this.metrics.suggestions.push(
+          `Bundle 体积过大 (${totalSizeMB.toFixed(2)}MB)，建议启用代码分割和 Tree Shaking`
+        )
+      }
+
+      // 检查单个大文件
+      if (largeFiles.length > 0) {
+        this.metrics.suggestions.push(
+          `发现 ${largeFiles.length} 个大文件 (>500KB)，建议进行代码分割:\n` +
+          largeFiles.map(f => `  - ${f.name}: ${(f.size / 1024).toFixed(2)}KB`).join('\n')
+        )
+      }
+
+      // 检查 JavaScript 文件大小
+      if (sizeByType.js && sizeByType.js > 2 * 1024 * 1024) {
+        this.metrics.suggestions.push(
+          `JavaScript 文件总大小为 ${(sizeByType.js / 1024 / 1024).toFixed(2)}MB，` +
+          '建议使用动态导入和按需加载'
+        )
+      }
+
+      // 检查 CSS 文件大小
+      if (sizeByType.css && sizeByType.css > 500 * 1024) {
+        this.metrics.suggestions.push(
+          `CSS 文件总大小为 ${(sizeByType.css / 1024).toFixed(2)}KB，` +
+          '建议使用 PurgeCSS 移除未使用的样式'
+        )
+      }
+
+      // 检查是否有 sourcemap
+      const hasSourcMap = bundleFiles.some(f => f.path.endsWith('.map'))
+      if (hasSourcMap) {
+        this.metrics.suggestions.push(
+          '生产环境包含 sourcemap，建议在生产环境禁用以减少体积'
+        )
+      }
+
+    } catch (error) {
+      this.logger.error('分析构建产物失败', error)
     }
   }
 
@@ -281,23 +384,23 @@ export class PerformanceOptimizer extends EventEmitter {
    */
   private generateOptimizationReport(): void {
     this.logger.info('=== 性能优化报告 ===')
-    
+
     if (this.metrics.buildTime) {
       this.logger.info(`构建时间: ${this.metrics.buildTime}ms`)
     }
-    
+
     if (this.metrics.memoryUsage) {
       const heapUsedMB = (this.metrics.memoryUsage.heapUsed / 1024 / 1024).toFixed(2)
       this.logger.info(`内存使用: ${heapUsedMB}MB`)
     }
-    
+
     if (this.metrics.suggestions && this.metrics.suggestions.length > 0) {
       this.logger.info('优化建议:')
       this.metrics.suggestions.forEach(suggestion => {
         this.logger.info(`  - ${suggestion}`)
       })
     }
-    
+
     this.emit('report', this.metrics)
   }
 

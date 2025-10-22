@@ -155,11 +155,17 @@ export class SmartPluginManager {
           const vueVersion = dependencies.vue
           if (vueVersion.includes('^3') || vueVersion.includes('~3') || vueVersion.startsWith('3')) {
             this.detectedType = ProjectType.VUE3
-            this.logger.info('检测到 Vue 3 项目')
+            // 只在 debug 模式显示
+            if (this.logger.getLevel() === 'debug') {
+              this.logger.debug('检测到 Vue 3 项目')
+            }
             return this.detectedType
           } else if (vueVersion.includes('^2') || vueVersion.includes('~2') || vueVersion.startsWith('2')) {
             this.detectedType = ProjectType.VUE2
-            this.logger.info('检测到 Vue 2 项目')
+            // 只在 debug 模式显示
+            if (this.logger.getLevel() === 'debug') {
+              this.logger.debug('检测到 Vue 2 项目')
+            }
             return this.detectedType
           }
         }
@@ -167,14 +173,20 @@ export class SmartPluginManager {
         // 检测 React
         if (dependencies.react && dependencies['react-dom']) {
           this.detectedType = ProjectType.REACT
-          this.logger.info('检测到 React 项目')
+          // 只在 debug 模式显示
+          if (this.logger.getLevel() === 'debug') {
+            this.logger.debug('检测到 React 项目')
+          }
           return this.detectedType
         }
 
         // 检测 Svelte
         if (dependencies.svelte) {
           this.detectedType = ProjectType.SVELTE
-          this.logger.info('检测到 Svelte 项目')
+          // 只在 debug 模式显示
+          if (this.logger.getLevel() === 'debug') {
+            this.logger.debug('检测到 Svelte 项目')
+          }
           return this.detectedType
         }
       }
@@ -184,7 +196,10 @@ export class SmartPluginManager {
       if (hasVueFiles) {
         // 默认假设是 Vue 3
         this.detectedType = ProjectType.VUE3
-        this.logger.info('检测到 Vue 文件，假设为 Vue 3 项目')
+        // 只在 debug 模式显示
+        if (this.logger.getLevel() === 'debug') {
+          this.logger.debug('检测到 Vue 文件，假设为 Vue 3 项目')
+        }
         return this.detectedType
       }
 
@@ -323,7 +338,10 @@ export class SmartPluginManager {
     const projectType = await this.detectProjectType()
     const plugins: Plugin[] = []
 
-    this.logger.info('SmartPluginManager: 开始加载推荐插件...', { projectType })
+    // 只在 debug 模式显示
+    if (this.logger.getLevel() === 'debug') {
+      this.logger.debug('SmartPluginManager: 开始加载推荐插件...', { projectType })
+    }
 
     try {
       // 根据项目类型加载对应插件
@@ -362,9 +380,10 @@ export class SmartPluginManager {
           break
       }
 
-      if (plugins.length > 0) {
+      // 只在 debug 模式显示
+      if (plugins.length > 0 && this.logger.getLevel() === 'debug') {
         const pluginNames = plugins.map(p => p.name || 'unknown').join(', ')
-        this.logger.success(`智能插件加载完成: ${pluginNames}`)
+        this.logger.debug(`智能插件加载完成: ${pluginNames}`)
       }
       return plugins
 

@@ -56,8 +56,8 @@ export class Logger {
   private formatMessage(level: LogLevel, message: string, data?: any): string {
     let formatted = ''
 
-    // 添加时间戳（总是显示，用于性能分析）
-    if (this.timestamp || true) { // 强制显示时间戳
+    // compact 模式下不显示时间戳（除非是 debug 级别）
+    if (this.timestamp && (!this.compact || level === 'debug')) {
       const now = new Date()
       const timeStr = now.toTimeString().slice(0, 8) // HH:MM:SS
       const msStr = String(now.getMilliseconds()).padStart(3, '0')
@@ -66,14 +66,17 @@ export class Logger {
       formatted += ' '
     }
 
-    // 添加级别对应的emoji（简化输出）
-    if (this.colors && !this.compact) {
+    // compact 模式下不显示 emoji（除了错误）
+    if (this.colors && (!this.compact || level === 'error')) {
       switch (level) {
         case 'debug':
           formatted += '🔧 '
           break
         case 'info':
-          formatted += 'ℹ️  '
+          // compact 模式下 info 不显示 emoji
+          if (!this.compact) {
+            formatted += 'ℹ️  '
+          }
           break
         case 'warn':
           formatted += '⚠️  '
@@ -89,7 +92,9 @@ export class Logger {
           formatted += '[DEBUG] '
           break
         case 'info':
-          formatted += '[INFO] '
+          if (!this.compact) {
+            formatted += '[INFO] '
+          }
           break
         case 'warn':
           formatted += '[WARN] '
@@ -102,7 +107,7 @@ export class Logger {
 
     formatted += message
 
-    // 在compact模式下不显示额外数据，除非是错误
+    // compact 模式下不显示额外数据（除非是错误）
     if (data !== undefined && (!this.compact || level === 'error') && this.shouldShowSimpleData(data)) {
       formatted += ' ' + this.formatSimpleData(data)
     }

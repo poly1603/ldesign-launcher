@@ -15,6 +15,14 @@ export * from './path-utils'
 
 // 导出所有工具函数
 export * from './config'
+export * from './config-cache'
+export * from './config-validator'
+export * from './memory-optimizer'
+export * from './process-executor'
+export * from './bundle-analyzer'
+export * from './security-scanner'
+export * from './usage-analytics'
+export * from './quality-monitor'
 export * from './build'
 export * from './plugin'
 export * from './performance'
@@ -77,3 +85,28 @@ export { formatFileSize as formatFileSizeFromFormat } from './format'
 export { formatFileSize as formatFileSizeFromBuild } from './build'
 export { getNetworkInterfaces as getNetworkInterfacesFromServer } from './server'
 export { getNetworkInterfaces as getNetworkInterfacesFromNetwork } from './network'
+
+// 新增工具函数
+export * from './warning-suppressor'
+export * from './diagnostics'
+
+// UI 组件工具（使用选择性导出避免冲突）
+export {
+  renderServerBanner,
+  renderQRCode,
+  renderProgressBar,
+  renderTable,
+  renderDivider,
+  renderTitle,
+  renderError,
+  renderSuccess,
+  renderWarning,
+  renderInfo,
+  stripAnsi,
+  type ServerInfoItem,
+  type QRCodeOptions,
+  type TableColumn
+} from './ui-components'
+
+// formatFileSize 已在 build 和 format 模块导出，使用别名
+export { formatFileSize as formatFileSizeFromUI } from './ui-components'

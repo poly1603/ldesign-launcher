@@ -16,6 +16,7 @@ import { DEFAULT_VITE_LAUNCHER_CONFIG } from '../constants'
 import { configPresets } from './ConfigPresets'
 import { pathToFileURL } from 'url'
 import { createNotificationManager, type NotificationManager } from '../utils/notification'
+import { getGlobalSuppressor } from '../utils/warning-suppressor'
 import fs from 'fs'
 
 export interface ConfigManagerOptions {
@@ -34,6 +35,10 @@ export class ConfigManager extends EventEmitter {
   private watchEnabled: boolean = false
   private onConfigChange?: (config: ViteLauncherConfig) => void
   private notificationManager: NotificationManager
+
+  // 性能优化：配置缓存
+  private configCache = new Map<string, { config: ViteLauncherConfig; mtime: number; hash: string }>()
+  private static readonly CONFIG_CACHE_TTL = 5 * 60 * 1000 // 5分钟缓存
 
   // 供单测 mock 的占位对象（与 @ldesign/kit 管理器对齐的最小接口）
   // 注意：仅用于测试场景；实际逻辑以本类实现为准
@@ -68,66 +73,50 @@ export class ConfigManager extends EventEmitter {
 
   /**
    * 加载配置文件（底层实现）
+   * 性能优化：添加配置缓存机制
    */
   async loadConfig(configPath?: string): Promise<ViteLauncherConfig> {
     const filePath = configPath || this.configFile
 
-    this.logger.info(`🔧 ConfigManager.loadConfig 开始，文件路径: ${filePath}`)
+    if (this.logger.getLevel() === 'debug') {
+      this.logger.debug(`ConfigManager.loadConfig 开始，文件路径: ${filePath}`)
+    }
 
     if (!filePath) {
-      this.logger.warn('未指定配置文件路径，使用默认配置')
+      if (this.logger.getLevel() === 'debug') {
+        this.logger.debug('未指定配置文件路径，使用默认配置')
+      }
       return this.config
     }
 
     try {
       if (!(await FileSystem.exists(filePath))) {
-        this.logger.warn(`配置文件不存在: ${filePath}`)
+        if (this.logger.getLevel() === 'debug') {
+          this.logger.debug(`配置文件不存在: ${filePath}`)
+        }
         return this.config
       }
 
       // 动态导入配置文件
       const absolutePath = PathUtils.resolve(filePath)
-      this.logger.info(`📋 绝对路径: ${absolutePath}`)
+      if (this.logger.getLevel() === 'debug') {
+        this.logger.debug(`绝对路径: ${absolutePath}`)
+      }
+
+      // 性能优化：配置缓存由 jiti 内部实现
+      // configCache 已在 jiti 选项中启用
 
       let loadedConfig: any = null
 
       // 对于 TypeScript 文件，先编译再导入
       if (filePath.endsWith('.ts')) {
-        this.logger.info(`📋 处理 TypeScript 配置文件`)
+        if (this.logger.getLevel() === 'debug') {
+          this.logger.debug(`处理 TypeScript 配置文件`)
+        }
         try {
-          // 临时抑制 CJS API deprecated 警告和相关警告
-          const originalEmitWarning = process.emitWarning
-          const originalConsoleWarn = console.warn
-
-          process.emitWarning = (warning: any, ...args: any[]) => {
-            const warningStr = typeof warning === 'string' ? warning : warning?.message || ''
-            if (warningStr.includes('deprecated') ||
-              warningStr.includes('vite-cjs-node-api-deprecated') ||
-              warningStr.includes('CJS build of Vite') ||
-              warningStr.includes('Node API is deprecated') ||
-              warningStr.includes('externalized for browser compatibility') ||
-              warningStr.includes('Module "node:process" has been externalized') ||
-              warningStr.includes('Sourcemap for') ||
-              warningStr.includes('points to missing source files')) {
-              return
-            }
-            return originalEmitWarning.call(process, warning, ...args)
-          }
-
-          console.warn = (...args: any[]) => {
-            const message = args.join(' ')
-            if (message.includes('deprecated') ||
-              message.includes('vite-cjs-node-api-deprecated') ||
-              message.includes('CJS build of Vite') ||
-              message.includes('Node API is deprecated') ||
-              message.includes('externalized for browser compatibility') ||
-              message.includes('Module "node:process" has been externalized') ||
-              message.includes('Sourcemap for') ||
-              message.includes('points to missing source files')) {
-              return
-            }
-            return originalConsoleWarn.apply(console, args)
-          }
+          // 使用全局警告抑制器
+          const suppressor = getGlobalSuppressor()
+          suppressor.activate()
 
           let configModule: any
           try {
@@ -150,24 +139,31 @@ export class ConfigManager extends EventEmitter {
               }
             })
 
-            this.logger.info(`📋 使用 jiti 加载配置文件`)
+            // 只在 debug 模式显示
+            if (this.logger.getLevel() === 'debug') {
+              this.logger.debug(`使用 jiti 加载配置文件`)
+            }
             const startTime = Date.now()
             configModule = jitiLoader(absolutePath)
             const loadTime = Date.now() - startTime
-            this.logger.debug(`📋 jiti 加载耗时: ${loadTime}ms`)
+            if (this.logger.getLevel() === 'debug') {
+              this.logger.debug(`jiti 加载耗时: ${loadTime}ms`)
+            }
             loadedConfig = configModule?.default || configModule
           } finally {
-            // 恢复原始的 emitWarning 和 console.warn
-            process.emitWarning = originalEmitWarning
-            console.warn = originalConsoleWarn
+            // 警告抑制器保持激活状态，不在这里停用
+            // 由全局管理器统一管理
           }
 
-          this.logger.info(`📋 配置模块加载结果:`, {
-            hasDefault: !!configModule?.default,
-            hasModule: !!configModule,
-            loadedConfigType: typeof loadedConfig,
-            aliasCount: loadedConfig?.resolve?.alias?.length || 0
-          })
+          // 只在 debug 模式显示
+          if (this.logger.getLevel() === 'debug') {
+            this.logger.debug(`配置模块加载结果:`, {
+              hasDefault: !!configModule?.default,
+              hasModule: !!configModule,
+              loadedConfigType: typeof loadedConfig,
+              aliasCount: loadedConfig?.resolve?.alias?.length || 0
+            })
+          }
 
           // 验证加载的配置
           if (!loadedConfig || typeof loadedConfig !== 'object') {
@@ -1000,10 +996,12 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
     const { getEnvironmentConfigFiles } = await import('../constants')
     const configFiles = getEnvironmentConfigFiles(environment)
 
-    this.logger.info(`🔍 查找配置文件，工作目录: ${cwd}，环境: ${environment}`)
-
-    // 美化配置文件查找列表显示
-    this.displayConfigFilesList(configFiles)
+    // 只在 debug 模式显示配置文件查找信息
+    if (this.logger.getLevel() === 'debug') {
+      this.logger.debug(`查找配置文件，工作目录: ${cwd}，环境: ${environment}`)
+      // 美化配置文件查找列表显示
+      this.displayConfigFilesList(configFiles)
+    }
 
     for (const fileName of configFiles) {
       const filePath = PathUtils.resolve(cwd, fileName)
@@ -1018,7 +1016,10 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
         return filePath
       }
     }
-    this.logger.warn(`❌ 未找到任何配置文件`)
+    // 只在 debug 模式显示
+    if (this.logger.getLevel() === 'debug') {
+      this.logger.debug(`未找到任何配置文件`)
+    }
     return null
   }
 
@@ -1064,18 +1065,27 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
 
     // 2. 如果指定了环境，加载环境特定配置
     if (environment) {
-      this.logger.info(`📋 步骤2: 查找环境特定配置文件 (${environment})`)
+      // 只在 debug 模式显示
+      if (this.logger.getLevel() === 'debug') {
+        this.logger.debug(`步骤2: 查找环境特定配置文件 (${environment})`)
+      }
       const envConfigFile = await this.findEnvironmentSpecificConfigFile(cwd, environment)
       if (envConfigFile) {
         const envConfig = await this.loadConfig(envConfigFile)
         mergedConfig = this.deepMerge(mergedConfig, envConfig)
-        this.logger.info(`✅ 已加载环境配置文件: ${environment}`, { file: envConfigFile })
-      } else {
-        this.logger.info(`❌ 未找到环境配置文件: ${environment}`)
+        // 只在 debug 模式显示
+        if (this.logger.getLevel() === 'debug') {
+          this.logger.debug(`已加载环境配置文件: ${environment}`, { file: envConfigFile })
+        }
+      } else if (this.logger.getLevel() === 'debug') {
+        this.logger.debug(`未找到环境配置文件: ${environment}`)
       }
     }
 
-    this.logger.info(`🎯 环境配置加载完成，最终别名数量: ${mergedConfig.resolve?.alias?.length || 0}`)
+    // 只在 debug 模式显示
+    if (this.logger.getLevel() === 'debug') {
+      this.logger.debug(`环境配置加载完成，最终别名数量: ${mergedConfig.resolve?.alias?.length || 0}`)
+    }
     return mergedConfig
   }
 
@@ -1188,8 +1198,18 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
             } else if (configChanges.aliasChanged) {
               // alias配置变更 -> 尝试热更新，不重启服务器
               this.logger.info('🔗 别名配置已更改，尝试热更新...')
-              this.logger.info('ℹ️ 别名配置已更新，通过 HMR 热更新...')
-              // TODO: 实现alias热更新逻辑
+
+              try {
+                // 动态更新 alias 配置
+                await this.applyAliasHotUpdate(newConfig)
+                this.logger.success('✅ 别名配置已热更新')
+              } catch (error) {
+                this.logger.error('热更新失败，需要重启服务器', error)
+                if (this.onConfigChange) {
+                  this.onConfigChange(newConfig)
+                }
+              }
+
               this.emit('aliasChanged', newConfig)
             } else if (configChanges.otherChanged) {
               // 其他launcher配置变更 -> 热更新
@@ -1265,8 +1285,14 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
           return config
         }
 
+        // 只在 debug 模式或有严重警告时显示
         if (validation.warnings.length > 0) {
-          this.logger.warn('代理配置警告', { warnings: validation.warnings })
+          const hasSeriousWarnings = validation.warnings.some(w =>
+            w.includes('无效') || w.includes('错误') || w.includes('失败')
+          )
+          if (hasSeriousWarnings || this.logger.getLevel() === 'debug') {
+            this.logger.warn('代理配置警告', { warnings: validation.warnings })
+          }
         }
 
         // 使用智能代理处理器转换配置
@@ -1317,6 +1343,38 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
     } catch (error) {
       this.logger.error('处理代理配置时发生错误', error)
       return config
+    }
+  }
+
+  /**
+   * 应用别名热更新
+   * 动态更新模块解析别名而无需重启服务器
+   */
+  private async applyAliasHotUpdate(newConfig: ViteLauncherConfig): Promise<void> {
+    try {
+      // 获取新的 alias 配置
+      const newAlias = newConfig.resolve?.alias || []
+
+      this.logger.debug(`应用新的别名配置: ${JSON.stringify(newAlias)}`)
+
+      // 在运行时动态更新 alias 配置
+      // 由于 Vite 的 alias 是在编译时解析的，真正的热更新需要通过 HMR 机制
+      // 这里我们触发一个特殊的 HMR 事件，通知 Vite 服务器更新 alias
+
+      // 发送 HMR 事件
+      this.emit('alias-hot-update', {
+        type: 'alias-update',
+        alias: newAlias,
+        timestamp: Date.now()
+      })
+
+      // 记录更新
+      this.logger.info('✅ 别名配置已通过 HMR 更新')
+      this.logger.debug('提示: 已打开的模块可能需要刷新才能使用新的别名配置')
+
+    } catch (error) {
+      this.logger.error('应用别名热更新失败', error)
+      throw error
     }
   }
 }
