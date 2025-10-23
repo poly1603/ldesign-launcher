@@ -14,6 +14,7 @@ export class LauncherError extends Error {
   public readonly code: string
   public readonly context?: Record<string, unknown>
   public readonly suggestion?: string
+  public readonly errorCause?: Error
 
   constructor(
     message: string,
@@ -32,7 +33,7 @@ export class LauncherError extends Error {
 
     // 保持原始错误链
     if (options?.cause) {
-      this.cause = options.cause
+      this.errorCause = options.cause
     }
 
     // 确保正确的堆栈跟踪
@@ -55,8 +56,8 @@ export class LauncherError extends Error {
       formatted += `\n建议: ${this.suggestion}`
     }
 
-    if (this.cause) {
-      formatted += `\n原因: ${(this.cause as Error).message}`
+    if (this.errorCause) {
+      formatted += `\n原因: ${this.errorCause.message}`
     }
 
     return formatted
@@ -195,22 +196,22 @@ export function isLauncherError(error: unknown): error is LauncherError {
 export const createError = {
   config: (message: string, options?: Omit<ConstructorParameters<typeof ConfigError>[1], 'code'>) =>
     new ConfigError(message, options),
-  
+
   plugin: (message: string, options?: Omit<ConstructorParameters<typeof PluginError>[1], 'code'>) =>
     new PluginError(message, options),
-  
+
   server: (message: string, options?: Omit<ConstructorParameters<typeof ServerError>[1], 'code'>) =>
     new ServerError(message, options),
-  
+
   build: (message: string, options?: Omit<ConstructorParameters<typeof BuildError>[1], 'code'>) =>
     new BuildError(message, options),
-  
+
   validation: (message: string, options?: Omit<ConstructorParameters<typeof ValidationError>[1], 'code'>) =>
     new ValidationError(message, options),
-  
+
   network: (message: string, options?: Omit<ConstructorParameters<typeof NetworkError>[1], 'code'>) =>
     new NetworkError(message, options),
-  
+
   filesystem: (message: string, options?: Omit<ConstructorParameters<typeof FileSystemError>[1], 'code'>) =>
     new FileSystemError(message, options),
 }

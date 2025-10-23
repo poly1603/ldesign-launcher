@@ -65,6 +65,96 @@ export async function findAvailablePort(
 }
 
 /**
+ * 在端口范围内查找可用端口
+ * 
+ * @param portRange - 端口范围 [start, end]
+ * @param host - 主机地址
+ * @returns 可用端口
+ */
+export async function findPortInRange(
+  portRange: [number, number],
+  host: Host = 'localhost'
+): Promise<Port> {
+  const [start, end] = portRange
+
+  if (start < 1 || end > 65535 || start > end) {
+    throw new Error('无效的端口范围')
+  }
+
+  const maxAttempts = end - start + 1
+  return findAvailablePort(start, host, maxAttempts)
+}
+
+/**
+ * 检查服务器健康状态
+ * 
+ * @param url - 服务器 URL
+ * @param timeout - 超时时间（毫秒）
+ * @returns 是否健康
+ */
+export async function checkServerHealth(url: string, timeout: number = 5000): Promise<boolean> {
+  try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), timeout)
+
+    const response = await fetch(url, {
+      signal: controller.signal,
+      method: 'HEAD'
+    })
+
+    clearTimeout(timeoutId)
+    return response.ok
+  } catch (error) {
+    return false
+  }
+}
+
+/**
+ * 在指定浏览器中打开 URL
+ * 
+ * @param url - 要打开的 URL
+ * @param browser - 浏览器名称
+ * @param options - 打开选项
+ */
+export async function openInBrowser(
+  url: string,
+  browser?: 'chrome' | 'edge' | 'firefox' | 'safari',
+  options?: { incognito?: boolean }
+): Promise<void> {
+  try {
+    const open = await import('open')
+    const openFn = 'default' in open ? open.default : open
+
+    const openOptions: { app?: { name: string; arguments?: string[] } } = {}
+
+    if (browser) {
+      openOptions.app = { name: browser }
+
+      // 添加隐身模式参数
+      if (options?.incognito) {
+        const incognitoArgs: Record<string, string[]> = {
+          chrome: ['--incognito'],
+          edge: ['-inprivate'],
+          firefox: ['-private-window']
+        }
+
+        if (incognitoArgs[browser]) {
+          openOptions.app.arguments = incognitoArgs[browser]
+        }
+      }
+    }
+
+    if (typeof openFn === 'function') {
+      await openFn(url, openOptions)
+    } else {
+      throw new Error('open 函数未找到')
+    }
+  } catch (error) {
+    throw new Error(`打开浏览器失败: ${(error as Error).message}`)
+  }
+}
+
+/**
  * 获取服务器 URL
  * 
  * @param server - 服务器实例
