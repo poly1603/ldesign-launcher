@@ -178,16 +178,16 @@ export interface ServerOptions {
   open?: boolean | string
 
   /** 是否启用 HTTPS */
-  https?: boolean | Record<string, any>
+  https?: boolean | { key?: string | Buffer; cert?: string | Buffer;[key: string]: unknown }
 
   /** 代理配置 */
-  proxy?: Record<string, any>
+  proxy?: Record<string, string | { target: string;[key: string]: unknown }>
 
   /** CORS 配置 */
-  cors?: boolean | Record<string, any>
+  cors?: boolean | { origin?: string | string[] | boolean; credentials?: boolean;[key: string]: unknown }
 
   /** 中间件配置 */
-  middlewares?: any[]
+  middlewares?: Array<(req: unknown, res: unknown, next: () => void) => void | Promise<void>>
 }
 
 /**
@@ -232,13 +232,13 @@ export interface PreviewOptions {
   open?: boolean | string
 
   /** 是否启用 HTTPS */
-  https?: boolean | Record<string, any>
+  https?: boolean | { key?: string | Buffer; cert?: string | Buffer;[key: string]: unknown }
 
   /** 代理配置 */
-  proxy?: Record<string, any>
+  proxy?: Record<string, string | { target: string;[key: string]: unknown }>
 
   /** CORS 配置 */
-  cors?: boolean | Record<string, any>
+  cors?: boolean | { origin?: string | string[] | boolean; credentials?: boolean;[key: string]: unknown }
 }
 
 /**
@@ -250,7 +250,7 @@ export interface PluginOptions {
   plugins?: (Plugin | string)[]
 
   /** 插件配置 */
-  config?: Record<string, any>
+  config?: Record<string, unknown>
 
   /** 是否启用插件热重载 */
   hotReload?: boolean
@@ -317,7 +317,7 @@ export interface ValidationRule {
   name: string
 
   /** 验证函数 */
-  validate: (value: any, config: ViteLauncherConfig) => ValidationResult
+  validate: (value: unknown, config: ViteLauncherConfig) => ValidationResult
 
   /** 规则描述 */
   description?: string

@@ -212,12 +212,13 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
 
     // 默认监听 error 事件，避免未监听时抛出异常
     // 注意：不要在此处再次调用 handleError，否则会与 handleError 内部的 emit('error') 形成递归
-    this.on('error', (err: any) => {
+    this.on('error', (err: unknown) => {
       try {
         // 如果是内部 emit 传递的事件负载
         if (err && typeof err === 'object' && 'error' in err) {
-          const e = (err as any).error as any
-          const ctx = (err as any).context || '运行时错误'
+          const errorPayload = err as { error: unknown; context?: string }
+          const e = errorPayload.error
+          const ctx = errorPayload.context || '运行时错误'
           const real = e instanceof Error ? e : new Error(String(e))
           this.logger.error(ctx, { error: real.message, stack: real.stack })
           return
@@ -523,7 +524,7 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
       // 调试：输出最终插件列表
       try {
         const names = (mergedConfig.plugins || [])
-          .map((p: any) => (p && typeof p === 'object' && 'name' in p) ? (p as any).name : String(p))
+          .map((p: unknown) => (p && typeof p === 'object' && 'name' in p) ? (p as { name: string }).name : String(p))
         // 只在 debug 模式显示
         if (this.logger.getLevel() === 'debug') {
           this.logger.debug('已加载插件', { count: names.length, plugins: names })
@@ -712,28 +713,34 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
     if (!override) return base
 
     // 简单的深度合并实现
-    const deepMerge = (target: any, source: any): any => {
+    const deepMerge = (target: ViteLauncherConfig, source: Partial<ViteLauncherConfig>): ViteLauncherConfig => {
       if (!target) target = {}
       if (!source) return target
 
       const result = { ...target }
 
       for (const key in source) {
-        if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+        const sourceValue = source[key]
+        const targetValue = target[key]
+
+        if (sourceValue && typeof sourceValue === 'object' && !Array.isArray(sourceValue)) {
           // 对象类型，递归合并
-          result[key] = deepMerge(target[key] || {}, source[key])
-        } else if (Array.isArray(source[key])) {
+          result[key] = deepMerge(
+            (targetValue || {}) as ViteLauncherConfig,
+            sourceValue as Partial<ViteLauncherConfig>
+          ) as ViteLauncherConfig[Extract<keyof ViteLauncherConfig, string>]
+        } else if (Array.isArray(sourceValue)) {
           // 数组类型，特殊处理
-          if (key === 'alias' && Array.isArray(target[key])) {
+          if (key === 'alias' && Array.isArray(targetValue)) {
             // 对于 resolve.alias，合并数组而不是覆盖
-            result[key] = [...(target[key] || []), ...source[key]]
+            result[key] = [...(targetValue || []), ...sourceValue] as ViteLauncherConfig[Extract<keyof ViteLauncherConfig, string>]
           } else {
             // 其他数组直接覆盖
-            result[key] = source[key]
+            result[key] = sourceValue as ViteLauncherConfig[Extract<keyof ViteLauncherConfig, string>]
           }
         } else {
           // 基本类型，直接覆盖
-          result[key] = source[key]
+          result[key] = sourceValue as ViteLauncherConfig[Extract<keyof ViteLauncherConfig, string>]
         }
       }
 
@@ -1002,7 +1009,7 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
     }
 
     // 正确处理 host 配置
-    const getResolvedHost = (hostConfig: any): string => {
+    const getResolvedHost = (hostConfig: string | boolean | undefined): string => {
       if (typeof hostConfig === 'string') {
         return hostConfig
       } else if (hostConfig === true) {
@@ -1016,7 +1023,7 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
 
     return {
       type: ServerType.DEV,
-      status: this.status as any, // 临时类型转换
+      status: this.status as unknown as import('../types').ServerStatus,
       instance: this.devServer,
       config: {
         type: ServerType.DEV,
@@ -1373,19 +1380,16 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
     }
 
     // 处理用户配置的别名
-    let userAliases: any[] = []
+    let userAliases: import('../utils/aliases').AliasEntry[] = []
     if (config.resolve.alias) {
       if (Array.isArray(config.resolve.alias)) {
         userAliases = [...config.resolve.alias]
         if (this.logger.getLevel() === 'debug') {
-          console.log('🔧 用户别名（数组格式）调试:')
-          console.log('  总数:', userAliases.length)
           const ldesignAliases = userAliases.filter(a => a.find && typeof a.find === 'string' && a.find.startsWith('@ldesign'))
-          console.log('  @ldesign别名数量:', ldesignAliases.length)
-          console.log('  当前阶段:', stage)
-          console.log('  @ldesign别名详情:', JSON.stringify(ldesignAliases.slice(0, 5), null, 2))
-
           this.logger.debug('用户别名（数组格式）', {
+            totalCount: userAliases.length,
+            ldesignCount: ldesignAliases.length,
+            currentStage: stage,
             count: userAliases.length,
             first10: userAliases.slice(0, 10).map(a => ({ find: a.find, replacement: a.replacement, stages: a.stages })),
             ldesignAliases: ldesignAliases.map(a => ({ find: a.find, replacement: a.replacement, stages: a.stages }))
@@ -1395,7 +1399,7 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
         // 如果是对象格式，转换为数组格式以便统一处理
         userAliases = Object.entries(config.resolve.alias).map(([find, replacement]) => ({
           find,
-          replacement
+          replacement: String(replacement)
         }))
         if (this.logger.getLevel() === 'debug') {
           this.logger.debug('用户别名（对象格式转换）', {
@@ -1478,19 +1482,24 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
         const userPluginsRaw = config.plugins || []
 
         // 将可能的嵌套数组拍平
-        const flatten = (arr: any[]): any[] => arr.flat ? arr.flat(Infinity) : ([] as any[]).concat(...arr)
+        const flatten = (arr: unknown[]): Plugin[] => {
+          if (arr.flat) {
+            return arr.flat(Infinity) as Plugin[]
+          }
+          return ([] as Plugin[]).concat(...(arr as Plugin[][]))
+        }
         const userPlugins = Array.isArray(userPluginsRaw) ? flatten(userPluginsRaw) : [userPluginsRaw]
         const smartFlat = Array.isArray(smartPlugins) ? flatten(smartPlugins) : [smartPlugins]
 
         const exists = new Set<string>(
           userPlugins
-            .filter((p: any) => p && typeof p === 'object' && 'name' in p)
-            .map((p: any) => p.name as string)
+            .filter((p: unknown): p is Plugin & { name: string } => p !== null && typeof p === 'object' && 'name' in p)
+            .map((p) => p.name)
         )
 
-        const merged: any[] = [...userPlugins]
+        const merged: Plugin[] = [...userPlugins]
         for (const p of smartFlat) {
-          const name = p && typeof p === 'object' && 'name' in p ? (p as any).name as string : undefined
+          const name = p && typeof p === 'object' && 'name' in p ? (p as { name: string }).name : undefined
           if (!name || !exists.has(name)) {
             merged.unshift(p) // 智能插件优先，但不覆盖用户已显式配置的插件
             if (name) exists.add(name)
@@ -1571,6 +1580,7 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
             ...config,
             server: {
               ...config.server,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               https: true as any
             }
           }
@@ -1624,10 +1634,10 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
     }
 
     // 输出简化的服务器信息
-    console.log('\n' + '🚀 服务器已重启')
-    console.log('📍 本地地址: ' + localUrl)
+    this.logger.info('\n🚀 服务器已重启')
+    this.logger.info('📍 本地地址: ' + localUrl)
     if (networkUrl) {
-      console.log('🌐 网络地址: ' + networkUrl)
+      this.logger.info('🌐 网络地址: ' + networkUrl)
     }
 
     // 生成二维码 - 优先使用网络地址
@@ -1644,7 +1654,7 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
     try {
       // 优先使用 qrcode 库
       try {
-        const qrlib: any = await import('qrcode')
+        const qrlib = await import('qrcode') as { default?: typeof import('qrcode') } & typeof import('qrcode')
         const qrcode = qrlib?.default || qrlib
 
         // 使用toString方法生成终端二维码
@@ -1666,10 +1676,13 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
 
       // 回退到 qrcode-terminal
       try {
-        const mod: any = await import('qrcode-terminal')
+        const mod = await import('qrcode-terminal') as {
+          default?: { generate: (text: string, opts: { small: boolean }, callback: (qr: string) => void) => void }
+          generate?: (text: string, opts: { small: boolean }, callback: (qr: string) => void) => void
+        }
         const qrt = mod?.default || mod
         let qrOutput = ''
-        qrt.generate(url, { small: true }, (q: string) => {
+        qrt.generate?.(url, { small: true }, (q: string) => {
           qrOutput = q
         })
         if (qrOutput) {

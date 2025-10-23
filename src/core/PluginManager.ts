@@ -223,7 +223,8 @@ export class PluginManager extends EventEmitter implements IPluginManager {
       if (pluginInfo.plugin.init) {
         // 注意：这里需要传入 launcher 实例，但为了避免循环依赖，暂时传入 null
         // 在实际使用时，应该由 ViteLauncher 类来管理插件
-        await pluginInfo.plugin.init(null as any)
+        // 使用 undefined 替代 any，更符合可选参数的语义
+        await pluginInfo.plugin.init(undefined as unknown as NonNullable<Parameters<NonNullable<typeof pluginInfo.plugin.init>>[0]>)
       }
 
       // 更新状态和统计信息

@@ -1,35 +1,41 @@
 /**
  * @ldesign/launcher 工具函数
  * 
- * 导出所有工具函数
+ * 导出所有工具函数 - 使用明确的具名导出避免命名冲突
  * 
  * @author LDesign Team
  * @since 1.0.0
  */
 
-// 导出核心工具
+// ==================== 核心工具 ====================
 export * from './logger'
 export * from './error-handler'
 export * from './file-system'
 export * from './path-utils'
 
-// 导出所有工具函数
-export * from './config'
+// ==================== 配置相关 ====================
+export {
+  loadConfigFile,
+  validateConfig,
+  mergeConfigs,
+  createPathResolver,
+  defineConfig
+} from './config'
+
 export * from './config-cache'
 export * from './config-validator'
-export * from './memory-optimizer'
-export * from './process-executor'
-export * from './bundle-analyzer'
-export * from './security-scanner'
-export * from './usage-analytics'
-export * from './quality-monitor'
-export * from './build'
-export * from './plugin'
-export * from './performance'
 
-// 选择性导出以避免命名冲突
+// ==================== 构建和分析 ====================
 export {
-  // server utils
+  analyzeBuildResult,
+  generateBuildReport,
+  formatFileSize as formatBuildFileSize  // 重命名避免冲突
+} from './build'
+
+export * from './bundle-analyzer'
+
+// ==================== 服务器相关 ====================
+export {
   isPortAvailable,
   findAvailablePort,
   getServerUrl,
@@ -39,11 +45,13 @@ export {
   openBrowser,
   getServerSummary,
   parseHost,
-  logServerInfo
+  logServerInfo,
+  isValidUrl as isValidServerUrl,  // 重命名避免与 validation 模块冲突
+  getNetworkInterfaces as getServerNetworkInterfaces  // 重命名避免与 network 模块冲突
 } from './server'
 
+// ==================== 验证相关 ====================
 export {
-  // validation utils (避免与server模块中的isValidUrl冲突)
   isValidPort,
   isValidHost,
   isValidFilePath,
@@ -53,44 +61,64 @@ export {
   isValidMode,
   isValidBuildTarget,
   isValidMinifyOption,
-  validateObjectSchema
+  validateObjectSchema,
+  batchValidate,
+  isValidUrl as validateUrl  // 重命名避免冲突
 } from './validation'
 
+// ==================== 网络相关 ====================
 export {
-  // format utils
-  formatDuration,
-  formatRelativeTime,
-  formatPercentage,
-  formatNumber,
-  formatUrl,
-  formatPath,
-  formatJson
-} from './format'
-
-export {
-  // network utils (避免与server模块中的getNetworkInterfaces冲突)
   downloadFile,
   checkUrlAccessibility,
   parseUrl,
   buildUrl,
   isLocalAddress,
   getPreferredLocalIP,
-  getLocalIPs
+  getLocalIPs,
+  getNetworkInterfaces as getNetworkInterfacesList  // 重命名避免冲突
 } from './network'
 
-// 解决冲突的函数导出（使用别名）
-export { isValidUrl as isValidUrlFromValidation } from './validation'
-export { isValidUrl as isValidUrlFromServer } from './server'
-export { formatFileSize as formatFileSizeFromFormat } from './format'
-export { formatFileSize as formatFileSizeFromBuild } from './build'
-export { getNetworkInterfaces as getNetworkInterfacesFromServer } from './server'
-export { getNetworkInterfaces as getNetworkInterfacesFromNetwork } from './network'
+// ==================== 格式化相关 ====================
+export {
+  formatDuration,
+  formatRelativeTime,
+  formatPercentage,
+  formatNumber,
+  formatUrl,
+  formatPath,
+  formatJson,
+  formatFileSize as formatFileSizeUtil  // 重命名避免冲突
+} from './format'
 
-// 新增工具函数
-export * from './warning-suppressor'
-export * from './diagnostics'
+// ==================== 性能和优化 ====================
+export * from './performance'
+export * from './memory-optimizer'
 
-// UI 组件工具（使用选择性导出避免冲突）
+// ==================== 环境和进程 ====================
+export {
+  EnvironmentManager,
+  environmentManager,
+  loadEnv,
+  getClientEnv,
+  generateDefines
+} from './env'
+
+export * from './process-executor'
+
+// ==================== 插件相关 ====================
+export {
+  validatePlugin
+} from './plugin'
+
+export * from './proxy-config'
+export * from './smart-proxy'
+
+// ==================== 安全和质量 ====================
+export * from './security-scanner'
+export * from './quality-monitor'
+export * from './usage-analytics'
+
+// ==================== UI 和交互 ====================
 export {
   renderServerBanner,
   renderQRCode,
@@ -103,10 +131,38 @@ export {
   renderWarning,
   renderInfo,
   stripAnsi,
+  formatFileSize as formatUIFileSize,  // 重命名避免冲突
   type ServerInfoItem,
   type QRCodeOptions,
   type TableColumn
 } from './ui-components'
 
-// formatFileSize 已在 build 和 format 模块导出，使用别名
-export { formatFileSize as formatFileSizeFromUI } from './ui-components'
+// ==================== 其他工具 ====================
+export * from './warning-suppressor'
+export * from './diagnostics'
+export * from './notification'
+export * from './ssl'
+export * from './vite-resolver'
+
+// ==================== 导出说明 ====================
+/**
+ * 命名冲突解决方案:
+ * 
+ * 1. isValidUrl:
+ *    - server.ts:    isValidServerUrl  (服务器URL验证)
+ *    - validation.ts: validateUrl       (通用URL验证)
+ * 
+ * 2. formatFileSize:
+ *    - build.ts:       formatBuildFileSize  (构建文件大小格式化)
+ *    - format.ts:      formatFileSizeUtil   (通用文件大小格式化)
+ *    - ui-components.ts: formatUIFileSize   (UI显示文件大小格式化)
+ * 
+ * 3. getNetworkInterfaces:
+ *    - server.ts:   getServerNetworkInterfaces   (服务器网络接口)
+ *    - network.ts:  getNetworkInterfacesList     (网络接口列表)
+ * 
+ * 使用建议:
+ * - 对于文件大小格式化，推荐使用 formatFileSizeUtil (最通用)
+ * - 对于URL验证，根据场景选择: validateUrl (通用) 或 isValidServerUrl (服务器专用)
+ * - 对于网络接口，推荐使用 getNetworkInterfacesList (更完整)
+ */

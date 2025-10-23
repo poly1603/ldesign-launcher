@@ -31,7 +31,7 @@ export class ConfigManager extends EventEmitter {
   private configFile?: string
   private logger: Logger
   private config: ViteLauncherConfig = {}
-  private watcher?: any
+  private watcher?: import('chokidar').FSWatcher
   private watchEnabled: boolean = false
   private onConfigChange?: (config: ViteLauncherConfig) => void
   private notificationManager: NotificationManager
@@ -51,10 +51,14 @@ export class ConfigManager extends EventEmitter {
     super()
 
     // 使 kitConfigManager 的方法可被 Vitest mock（如果存在 vi）
-    const viRef: any = (globalThis as any).vi
+    const viRef = (globalThis as typeof globalThis & {
+      vi?: {
+        fn: <T extends (...args: never[]) => unknown>(impl: T) => T
+      }
+    }).vi
     this.kitConfigManager = {
       getAll: viRef?.fn ? viRef.fn(() => ({})) : (() => ({})),
-      save: viRef?.fn ? viRef.fn(async () => { }) : (async () => { })
+      save: viRef?.fn ? viRef.fn(async (_path: string, _config: ViteLauncherConfig) => { }) : (async () => { })
     }
 
     this.configFile = options.configFile
@@ -106,7 +110,7 @@ export class ConfigManager extends EventEmitter {
       // 性能优化：配置缓存由 jiti 内部实现
       // configCache 已在 jiti 选项中启用
 
-      let loadedConfig: any = null
+      let loadedConfig: ViteLauncherConfig | null = null
 
       // 对于 TypeScript 文件，先编译再导入
       if (filePath.endsWith('.ts')) {
@@ -118,11 +122,12 @@ export class ConfigManager extends EventEmitter {
           const suppressor = getGlobalSuppressor()
           suppressor.activate()
 
-          let configModule: any
+          let configModule: { default?: ViteLauncherConfig } & Partial<ViteLauncherConfig>
           try {
             // 使用 jiti 处理 TypeScript 文件（兼容 ESM）
-            const jitiMod: any = await import('jiti')
-            const createJiti = (jitiMod && jitiMod.default) ? jitiMod.default : jitiMod
+            const jitiMod = await import('jiti')
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const createJiti: any = (jitiMod as any).default || jitiMod
 
             // 优化jiti配置，启用缓存以提升性能
             const jitiLoader = createJiti(process.cwd(), {
@@ -188,14 +193,13 @@ export class ConfigManager extends EventEmitter {
             if (fs.existsSync(jsConfigPath)) {
               this.logger.info(`📋 找到 JavaScript 配置文件: ${jsConfigPath}`)
               const url = pathToFileURL(jsConfigPath).href
-              const configModule = await import(url)
-              loadedConfig = (configModule && (configModule as any).default) || configModule
+              const configModule = await import(url) as { default?: ViteLauncherConfig } & Partial<ViteLauncherConfig>
+              loadedConfig = (configModule && configModule.default) || configModule
               this.logger.info(`✅ JavaScript 配置文件加载成功`)
             } else {
               throw new Error('JavaScript 配置文件不存在')
             }
           } catch (jsError) {
-            console.log('🔧 JavaScript 配置文件加载失败详细错误:', jsError)
             this.logger.warn('JavaScript 配置文件加载失败，尝试使用 TS 转译后动态导入', {
               error: (jsError as Error).message,
               stack: (jsError as Error).stack
@@ -204,7 +208,7 @@ export class ConfigManager extends EventEmitter {
             // 进一步降级：使用 TypeScript 转译为 ESM 后再导入
             try {
               const configModule = await this.transpileTsAndImport(absolutePath)
-              loadedConfig = (configModule && (configModule as any).default) || configModule
+              loadedConfig = (configModule && configModule.default) || configModule
             } catch (tsFallbackErr) {
               this.logger.warn('TS 转译导入失败，使用默认配置', {
                 error: (tsFallbackErr as Error).message
@@ -218,20 +222,20 @@ export class ConfigManager extends EventEmitter {
         // JS/MJS/CJS：优先使用动态 import，兼容 ESM 与 CJS
         try {
           const url = pathToFileURL(absolutePath).href
-          const configModule = await import(url)
-          loadedConfig = (configModule && (configModule as any).default) || configModule
+          const configModule = await import(url) as { default?: ViteLauncherConfig } & Partial<ViteLauncherConfig>
+          loadedConfig = (configModule && configModule.default) || configModule
 
           this.logger.debug('配置模块加载结果', {
             type: typeof configModule,
-            hasDefault: !!(configModule && (configModule as any).default),
-            keys: configModule ? Object.keys(configModule as any) : []
+            hasDefault: !!(configModule && configModule.default),
+            keys: configModule ? Object.keys(configModule) : []
           })
         } catch (importErr) {
           // 可能是文件编码或 Node 解析问题，尝试以 UTF-8 重编码后再导入
           try {
             const tempUrl = await this.reencodeAndTempImport(absolutePath)
-            const configModule = await import(tempUrl)
-            loadedConfig = (configModule && (configModule as any).default) || configModule
+            const configModule = await import(tempUrl) as { default?: ViteLauncherConfig } & Partial<ViteLauncherConfig>
+            loadedConfig = (configModule && configModule.default) || configModule
 
             this.logger.debug('配置模块经临时重编码后加载成功')
           } catch (fallbackErr) {

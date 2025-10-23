@@ -74,9 +74,12 @@ export class SmartPresetManager {
           }
         },
         resolve: {
-          alias: {
-            '@': './src'
-          }
+          alias: [
+            {
+              find: '@',
+              replacement: './src'
+            }
+          ]
         },
         server: {
           port: 3000,
@@ -110,9 +113,12 @@ export class SmartPresetManager {
           }
         },
         resolve: {
-          alias: {
-            '@': './src'
-          }
+          alias: [
+            {
+              find: '@',
+              replacement: './src'
+            }
+          ]
         },
         server: {
           port: 3000,
@@ -253,8 +259,8 @@ export class SmartPresetManager {
         requiredDependencies: ['@module-federation/vite'],
         detector: async (projectPath) => {
           const packageJson = await this.readPackageJson(projectPath)
-          return !!(packageJson.dependencies?.['@module-federation/vite'] || 
-                   packageJson.devDependencies?.['@module-federation/vite'])
+          return !!(packageJson.dependencies?.['@module-federation/vite'] ||
+            packageJson.devDependencies?.['@module-federation/vite'])
         }
       },
       config: {
@@ -280,9 +286,9 @@ export class SmartPresetManager {
    */
   async detectProjectType(): Promise<ProjectPreset[]> {
     this.logger.info('开始自动检测项目类型...')
-    
+
     const detectedTypes: ProjectPreset[] = []
-    
+
     for (const [type, preset] of this.presets) {
       try {
         const isMatch = await this.checkPresetMatch(preset)
@@ -294,7 +300,7 @@ export class SmartPresetManager {
         this.logger.warn(`检测预设 ${preset.name} 时出错`, { error: (error as Error).message })
       }
     }
-    
+
     this.logger.info(`检测完成，找到 ${detectedTypes.length} 个匹配的预设`)
     return detectedTypes
   }
@@ -326,7 +332,7 @@ export class SmartPresetManager {
    */
   async generateSmartConfig(options: SmartPresetOptions = {}): Promise<Partial<ViteLauncherConfig>> {
     const detectedTypes = await this.detectProjectType()
-    
+
     if (detectedTypes.length === 0) {
       this.logger.warn('未检测到匹配的项目类型，使用默认配置')
       return this.getDefaultConfig()
@@ -335,24 +341,24 @@ export class SmartPresetManager {
     // 选择最佳匹配的预设
     const bestMatch = this.selectBestPreset(detectedTypes, options)
     const preset = this.presets.get(bestMatch)
-    
+
     if (!preset) {
       return this.getDefaultConfig()
     }
 
     this.logger.info(`使用预设: ${preset.name}`)
-    
+
     // 合并配置
     let config = { ...preset.config }
-    
+
     // 应用自定义配置
     if (options.custom) {
       config = this.mergeConfigs(config, options.custom)
     }
-    
+
     // 添加智能优化
     config = await this.applySmartOptimizations(config, preset)
-    
+
     return config
   }
 
@@ -361,7 +367,7 @@ export class SmartPresetManager {
    */
   private async checkPresetMatch(preset: PresetDefinition): Promise<boolean> {
     const { detection } = preset
-    
+
     // 检查必需文件
     if (detection.requiredFiles) {
       for (const file of detection.requiredFiles) {
@@ -372,7 +378,7 @@ export class SmartPresetManager {
         }
       }
     }
-    
+
     // 检查必需依赖
     if (detection.requiredDependencies) {
       try {
@@ -381,7 +387,7 @@ export class SmartPresetManager {
           ...packageJson.dependencies,
           ...packageJson.devDependencies
         }
-        
+
         for (const dep of detection.requiredDependencies) {
           if (!allDeps[dep]) {
             return false
@@ -391,13 +397,13 @@ export class SmartPresetManager {
         return false
       }
     }
-    
+
     // 检查必需脚本
     if (detection.requiredScripts) {
       try {
         const packageJson = await this.readPackageJson(this.projectPath)
         const scripts = packageJson.scripts || {}
-        
+
         for (const script of detection.requiredScripts) {
           if (!scripts[script]) {
             return false
@@ -407,12 +413,12 @@ export class SmartPresetManager {
         return false
       }
     }
-    
+
     // 执行自定义检测函数
     if (detection.detector) {
       return await detection.detector(this.projectPath)
     }
-    
+
     return true
   }
 
@@ -424,20 +430,20 @@ export class SmartPresetManager {
     if (types.length === 1) {
       return types[0]
     }
-    
+
     // 根据优先级排序
     const priorityOrder: ProjectPreset[] = [
       'vue3-ts', 'react-ts', 'vue3', 'react',
       'next', 'nuxt', 'svelte', 'astro',
       'library', 'electron', 'micro-frontend'
     ]
-    
+
     for (const priority of priorityOrder) {
       if (types.includes(priority)) {
         return priority
       }
     }
-    
+
     // 如果没有匹配优先级，返回第一个
     return types[0]
   }
@@ -446,12 +452,12 @@ export class SmartPresetManager {
    * 应用智能优化
    */
   private async applySmartOptimizations(
-    config: Partial<ViteLauncherConfig>, 
+    config: Partial<ViteLauncherConfig>,
     preset: PresetDefinition
   ): Promise<Partial<ViteLauncherConfig>> {
     // 根据项目大小调整配置
     const projectSize = await this.estimateProjectSize()
-    
+
     if (projectSize > 1000) { // 大型项目
       config.build = {
         ...config.build,
@@ -467,17 +473,17 @@ export class SmartPresetManager {
         }
       }
     }
-    
+
     // 根据依赖数量调整优化配置
     const depCount = await this.countDependencies()
-    
+
     if (depCount > 50) {
       config.optimizeDeps = {
         ...config.optimizeDeps,
         include: preset.recommendedDependencies?.slice(0, 10)
       }
     }
-    
+
     return config
   }
 
@@ -514,7 +520,7 @@ export class SmartPresetManager {
     try {
       const entries = await fs.readdir(dir, { withFileTypes: true })
       let count = 0
-      
+
       for (const entry of entries) {
         if (entry.isDirectory()) {
           count += await this.countFiles(path.join(dir, entry.name))
@@ -522,7 +528,7 @@ export class SmartPresetManager {
           count++
         }
       }
-      
+
       return count
     } catch {
       return 0
@@ -548,7 +554,7 @@ export class SmartPresetManager {
    */
   private mergeConfigs(base: any, override: any): any {
     const result = { ...base }
-    
+
     for (const key in override) {
       if (typeof override[key] === 'object' && !Array.isArray(override[key])) {
         result[key] = this.mergeConfigs(result[key] || {}, override[key])
@@ -556,7 +562,7 @@ export class SmartPresetManager {
         result[key] = override[key]
       }
     }
-    
+
     return result
   }
 

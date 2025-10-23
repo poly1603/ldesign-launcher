@@ -53,6 +53,10 @@ export class SmartPluginManager {
   private cwd: string
   private detectedType: ProjectType | null = null
   private availablePlugins: Map<string, PluginConfig> = new Map()
+  
+  // 性能优化：插件检测结果缓存
+  private static pluginCache = new Map<string, { type: ProjectType; timestamp: number; packageJsonHash: string }>()
+  private static readonly PLUGIN_CACHE_TTL = 60 * 1000 // 1分钟缓存
 
   constructor(cwd: string, logger: Logger) {
     this.cwd = cwd
@@ -143,9 +147,23 @@ export class SmartPluginManager {
 
     this.logger.debug('正在检测项目类型...')
 
+    // 性能优化：获取 package.json hash 用于缓存
+    const packageJsonPath = PathUtils.resolve(this.cwd, 'package.json')
+    const packageJsonHash = await this.getPackageJsonHash(packageJsonPath)
+    const cached = SmartPluginManager.pluginCache.get(this.cwd)
+    
+    if (cached && 
+        cached.packageJsonHash === packageJsonHash && 
+        Date.now() - cached.timestamp < SmartPluginManager.PLUGIN_CACHE_TTL) {
+      this.detectedType = cached.type
+      if (this.logger.getLevel() === 'debug') {
+        this.logger.debug('使用缓存的项目类型检测结果', { type: this.detectedType })
+      }
+      return this.detectedType
+    }
+
     try {
       // 读取 package.json
-      const packageJsonPath = PathUtils.resolve(this.cwd, 'package.json')
       if (await FileSystem.exists(packageJsonPath)) {
         const packageJson = JSON.parse(await FileSystem.readFile(packageJsonPath))
         const dependencies = { ...packageJson.dependencies, ...packageJson.devDependencies }
@@ -159,6 +177,13 @@ export class SmartPluginManager {
             if (this.logger.getLevel() === 'debug') {
               this.logger.debug('检测到 Vue 3 项目')
             }
+            
+            // 缓存检测结果
+            SmartPluginManager.pluginCache.set(this.cwd, {
+              type: this.detectedType,
+              timestamp: Date.now(),
+              packageJsonHash
+            })
             return this.detectedType
           } else if (vueVersion.includes('^2') || vueVersion.includes('~2') || vueVersion.startsWith('2')) {
             this.detectedType = ProjectType.VUE2
@@ -166,6 +191,13 @@ export class SmartPluginManager {
             if (this.logger.getLevel() === 'debug') {
               this.logger.debug('检测到 Vue 2 项目')
             }
+            
+            // 缓存检测结果
+            SmartPluginManager.pluginCache.set(this.cwd, {
+              type: this.detectedType,
+              timestamp: Date.now(),
+              packageJsonHash
+            })
             return this.detectedType
           }
         }
@@ -177,6 +209,13 @@ export class SmartPluginManager {
           if (this.logger.getLevel() === 'debug') {
             this.logger.debug('检测到 React 项目')
           }
+          
+          // 缓存检测结果
+          SmartPluginManager.pluginCache.set(this.cwd, {
+            type: this.detectedType,
+            timestamp: Date.now(),
+            packageJsonHash
+          })
           return this.detectedType
         }
 
@@ -187,6 +226,13 @@ export class SmartPluginManager {
           if (this.logger.getLevel() === 'debug') {
             this.logger.debug('检测到 Svelte 项目')
           }
+          
+          // 缓存检测结果
+          SmartPluginManager.pluginCache.set(this.cwd, {
+            type: this.detectedType,
+            timestamp: Date.now(),
+            packageJsonHash
+          })
           return this.detectedType
         }
       }
@@ -200,6 +246,12 @@ export class SmartPluginManager {
         if (this.logger.getLevel() === 'debug') {
           this.logger.debug('检测到 Vue 文件，假设为 Vue 3 项目')
         }
+        
+        SmartPluginManager.pluginCache.set(this.cwd, {
+          type: this.detectedType,
+          timestamp: Date.now(),
+          packageJsonHash
+        })
         return this.detectedType
       }
 
@@ -207,6 +259,12 @@ export class SmartPluginManager {
       if (hasReactFiles) {
         this.detectedType = ProjectType.REACT
         this.logger.info('检测到 React 文件')
+        
+        SmartPluginManager.pluginCache.set(this.cwd, {
+          type: this.detectedType,
+          timestamp: Date.now(),
+          packageJsonHash
+        })
         return this.detectedType
       }
 
@@ -214,18 +272,51 @@ export class SmartPluginManager {
       if (hasSvelteFiles) {
         this.detectedType = ProjectType.SVELTE
         this.logger.info('检测到 Svelte 文件')
+        
+        SmartPluginManager.pluginCache.set(this.cwd, {
+          type: this.detectedType,
+          timestamp: Date.now(),
+          packageJsonHash
+        })
         return this.detectedType
       }
 
       // 默认为 vanilla 项目
       this.detectedType = ProjectType.VANILLA
       this.logger.info('未检测到特定框架，使用 Vanilla 配置')
+      
+      // 缓存检测结果
+      SmartPluginManager.pluginCache.set(this.cwd, {
+        type: this.detectedType,
+        timestamp: Date.now(),
+        packageJsonHash
+      })
+      
       return this.detectedType
 
     } catch (error) {
       this.logger.warn('项目类型检测失败', { error: (error as Error).message })
       this.detectedType = ProjectType.VANILLA
       return this.detectedType
+    }
+  }
+
+  /**
+   * 获取 package.json 的 hash 值用于缓存
+   */
+  private async getPackageJsonHash(packageJsonPath: string): Promise<string> {
+    try {
+      const content = await FileSystem.readFile(packageJsonPath)
+      // 简单的 hash 算法
+      let hash = 0
+      for (let i = 0; i < content.length; i++) {
+        const char = content.charCodeAt(i)
+        hash = ((hash << 5) - hash) + char
+        hash = hash & hash // Convert to 32bit integer
+      }
+      return hash.toString(36)
+    } catch {
+      return Date.now().toString()
     }
   }
 

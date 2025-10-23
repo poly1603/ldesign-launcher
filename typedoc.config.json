@@ -1,0 +1,60 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["./src/index.ts"],
+  "out": "./docs/api",
+  "plugin": [],
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeInternal": false,
+  "readme": "./README.md",
+  "name": "@ldesign/launcher API Documentation",
+  "includeVersion": true,
+  "disableSources": false,
+  "sourceLinkTemplate": "https://github.com/ldesign/launcher/blob/{gitRevision}/{path}#L{line}",
+  "navigationLinks": {
+    "GitHub": "https://github.com/ldesign/launcher",
+    "NPM": "https://www.npmjs.com/package/@ldesign/launcher"
+  },
+  "categorizeByGroup": true,
+  "categoryOrder": [
+    "Core",
+    "CLI",
+    "Plugins",
+    "Utils",
+    "Types",
+    "*"
+  ],
+  "sort": ["source-order", "required-first", "kind"],
+  "kindSortOrder": [
+    "Class",
+    "Interface",
+    "Enum",
+    "Function",
+    "TypeAlias",
+    "Variable"
+  ],
+  "visibilityFilters": {
+    "protected": true,
+    "private": false,
+    "inherited": true,
+    "external": false
+  },
+  "searchInComments": true,
+  "exclude": [
+    "**/node_modules/**",
+    "**/__tests__/**",
+    "**/tests/**",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ],
+  "validation": {
+    "notExported": true,
+    "invalidLink": true,
+    "notDocumented": false
+  },
+  "githubPages": true,
+  "hideGenerator": false,
+  "customCss": "./docs/custom.css"
+}
+
+
