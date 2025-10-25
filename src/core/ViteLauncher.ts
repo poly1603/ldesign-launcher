@@ -285,7 +285,21 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
         this.logger.debug('ViteLauncher 初始化完成')
       }
     } catch (error) {
-      this.logger.error('配置文件加载失败，使用默认配置', { error: (error as Error).message })
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      this.logger.error('配置文件加载失败，使用默认配置', { error: errorMessage })
+
+      // 记录错误但不中断初始化流程，使用默认配置继续
+      this.stats.errorCount++
+
+      // 触发错误事件，以便外部监听
+      this.emit(LauncherEvent.ERROR, {
+        error: error instanceof Error ? error : new Error(errorMessage),
+        context: '配置文件加载',
+        timestamp: Date.now()
+      } as LauncherEventData[LauncherEvent.ERROR])
+
+      // 确保使用默认配置初始化成功
+      this.initialized = true
     }
   }
 
@@ -1580,8 +1594,7 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
             ...config,
             server: {
               ...config.server,
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              https: true as any
+              https: true as any  // HTTPS 配置
             }
           }
         }

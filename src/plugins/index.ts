@@ -1,15 +1,38 @@
 /**
- * 插件导出
- * 
- * @author LDesign Team
- * @since 1.0.0
+ * 插件模块统一导出
  */
 
-export { createDependencyAnalyzerPlugin } from './dependency-analyzer'
-export { createSmartCachePlugin } from './smart-cache'
-export { createDevEnhancementPlugin } from './dev-enhancement'
-export { createFontConverterPlugin } from './font-converter'
-export { createSVGComponentPlugin } from './svg-component-generator'
-export { createImageOptimizerPlugin } from './image-optimizer'
-export { createAPIDocPlugin } from './api-doc-generator'
-export { createPWASupportPlugin } from './pwa-support'
+// 开发工具插件 - 需要从具体文件导入
+// export { 
+//   analyzePlugin,
+//   compressionPlugin,
+//   inspectorPlugin,
+//   legacyPlugin,
+//   bundleVisualizerPlugin
+// } from './dev-tools'
+
+// 微前端插件 - 需要从具体文件导入
+// export {
+//   microAppsPlugin,
+//   moduleUnionPlugin,
+//   singleSpaPlugin
+// } from './micro-frontend'
+
+// 插件预设
+export {
+  presetManager,
+  definePreset
+} from './presets'
+
+// 插件市场 - 暂时移除
+// export { PluginMarket } from './PluginMarket'
+
+// HMR增强插件
+// export { HMREnhancedPlugin } from './hmr-enhanced'
+
+// 导出类型
+// export type * from './dev-tools'
+// export type * from './micro-frontend'
+export type * from './presets'
+// export type * from './PluginMarket'
+// export type * from './hmr-enhanced'

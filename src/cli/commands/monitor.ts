@@ -46,6 +46,61 @@ export interface PerformanceMetrics {
   }
 }
 
+// 定义命令选项类型
+export interface MonitorOptions {
+  realtime?: boolean
+  report?: boolean
+  analyze?: boolean
+  vitals?: boolean
+  build?: boolean
+  config?: boolean
+  output?: string
+  format?: string
+  interval?: number
+  duration?: number
+  threshold?: Record<string, number>
+  url?: string
+  get?: string
+  set?: string
+  list?: boolean
+  reset?: boolean
+}
+
+// 定义分析结果类型
+export interface AnalysisResult {
+  metrics: PerformanceMetrics
+  bottlenecks: Array<{
+    type: string
+    severity: 'low' | 'medium' | 'high'
+    description: string
+    value: number
+    threshold: number
+  }>
+  suggestions: Array<{
+    title: string
+    priority: 'low' | 'medium' | 'high'
+    category: string
+    impact: string
+    description: string
+    implementation?: string
+  }>
+  score: number
+  timestamp: number
+  error?: string
+}
+
+// 定义 Web Vitals 结果类型
+export interface WebVitalsResult {
+  LCP: { value: number; rating: string }
+  FID: { value: number; rating: string }
+  CLS: { value: number; rating: string }
+  FCP: { value: number; rating: string }
+  TTFB: { value: number; rating: string }
+  timestamp: number
+  url: string
+  error?: string
+}
+
 export interface MonitorConfig {
   /** 监控目标 */
   targets: string[]
@@ -157,7 +212,7 @@ export class MonitorCommand {
   /**
    * 启动性能监控
    */
-  private async startMonitoring(options: any): Promise<void> {
+  private async startMonitoring(options: MonitorOptions): Promise<void> {
     try {
       this.logger.info('启动性能监控...')
 
@@ -228,7 +283,7 @@ export class MonitorCommand {
   /**
    * 生成性能报告
    */
-  private async generateReport(options: any): Promise<void> {
+  private async generateReport(options: MonitorOptions): Promise<void> {
     try {
       this.logger.info('生成性能报告...')
 
@@ -352,12 +407,12 @@ export class MonitorCommand {
         this.logger.success(`✅ 配置已更新: ${key} = ${value}`)
       } else if (options.get) {
         const value = await this.getConfig(options.get)
-        console.log(`${options.get}: ${value}`)
+        this.logger.info(`${options.get}: ${value}`)
       } else if (options.list) {
         const config = await this.getAllConfig()
-        console.log(chalk.cyan('\n📋 监控配置:\n'))
+        this.logger.info(chalk.cyan('\n📋 监控配置:\n'))
         Object.entries(config).forEach(([key, value]) => {
-          console.log(`${chalk.yellow(key)}: ${value}`)
+          this.logger.info(`${chalk.yellow(key)}: ${value}`)
         })
       }
     } catch (error) {
@@ -486,21 +541,25 @@ export class MonitorCommand {
   }
 
   private displayRealTimeMetrics(metrics: PerformanceMetrics, target: string): void {
-    console.clear()
-    console.log(chalk.cyan(`\n📊 实时性能监控 - ${target}\n`))
+    // 使用 Logger 输出而不是 console
+    this.logger.info('')  // 空行
+    this.logger.info(chalk.cyan(`📊 实时性能监控 - ${target}`))
+    this.logger.info('')
 
     // 显示 Web Vitals
-    console.log(chalk.yellow('Core Web Vitals:'))
-    console.log(`  LCP: ${this.formatMetric(metrics.webVitals.LCP, 'ms')}`)
-    console.log(`  FID: ${this.formatMetric(metrics.webVitals.FID, 'ms')}`)
-    console.log(`  CLS: ${this.formatMetric(metrics.webVitals.CLS, '')}`)
+    this.logger.info(chalk.yellow('Core Web Vitals:'))
+    this.logger.info(`  LCP: ${this.formatMetric(metrics.webVitals.LCP, 'ms')}`)
+    this.logger.info(`  FID: ${this.formatMetric(metrics.webVitals.FID, 'ms')}`)
+    this.logger.info(`  CLS: ${this.formatMetric(metrics.webVitals.CLS, '')}`)
 
     // 显示运行时指标
-    console.log(chalk.yellow('\n运行时指标:'))
-    console.log(`  内存使用: ${this.formatMetric(metrics.runtimeMetrics.memoryUsage, 'MB')}`)
-    console.log(`  CPU 使用: ${this.formatMetric(metrics.runtimeMetrics.cpuUsage, '%')}`)
+    this.logger.info('')
+    this.logger.info(chalk.yellow('运行时指标:'))
+    this.logger.info(`  内存使用: ${this.formatMetric(metrics.runtimeMetrics.memoryUsage, 'MB')}`)
+    this.logger.info(`  CPU 使用: ${this.formatMetric(metrics.runtimeMetrics.cpuUsage, '%')}`)
 
-    console.log(chalk.gray(`\n最后更新: ${new Date().toLocaleTimeString()}`))
+    this.logger.info('')
+    this.logger.info(chalk.gray(`最后更新: ${new Date().toLocaleTimeString()}`))
   }
 
   private formatMetric(value: number, unit: string): string {
@@ -692,16 +751,16 @@ export class MonitorCommand {
   private displayReportSummary(data: any): void {
     const { metrics, period, count } = data
 
-    console.log(chalk.cyan('\n📊 报告摘要\n'))
-    console.log(`周期: ${period}`)
-    console.log(`数据点数: ${count}`)
+    this.logger.info(chalk.cyan('\n📊 报告摘要\n'))
+    this.logger.info(`周期: ${period}`)
+    this.logger.info(`数据点数: ${count}`)
 
     if (metrics.length > 0) {
       const avgWebVitals = this.calculateAverageWebVitals(metrics)
-      console.log(chalk.yellow('\n平均 Web Vitals:'))
-      console.log(`  LCP: ${avgWebVitals.LCP.toFixed(2)}ms`)
-      console.log(`  FID: ${avgWebVitals.FID.toFixed(2)}ms`)
-      console.log(`  CLS: ${avgWebVitals.CLS.toFixed(4)}`)
+      this.logger.info(chalk.yellow('\n平均 Web Vitals:'))
+      this.logger.info(`  LCP: ${avgWebVitals.LCP.toFixed(2)}ms`)
+      this.logger.info(`  FID: ${avgWebVitals.FID.toFixed(2)}ms`)
+      this.logger.info(`  CLS: ${avgWebVitals.CLS.toFixed(4)}`)
     }
   }
 
@@ -828,24 +887,24 @@ export class MonitorCommand {
 
   private displayAnalysisResults(analysis: any): void {
     if (analysis.error) {
-      console.log(chalk.red(`\n分析失败: ${analysis.error}\n`))
+      this.logger.error(`\n分析失败: ${analysis.error}\n`)
       return
     }
 
-    console.log(chalk.cyan('\n📊 性能分析结果\n'))
-    console.log(`URL: ${analysis.url}`)
-    console.log(`性能评分: ${this.getScoreColor(analysis.score)}`)
-    console.log(`分析时间: ${new Date(analysis.timestamp).toLocaleString()}`)
+    this.logger.info(chalk.cyan('\n📊 性能分析结果\n'))
+    this.logger.info(`URL: ${analysis.url}`)
+    this.logger.info(`性能评分: ${this.getScoreColor(analysis.score)}`)
+    this.logger.info(`分析时间: ${new Date(analysis.timestamp).toLocaleString()}`)
 
-    console.log(chalk.yellow('\nCore Web Vitals:'))
-    console.log(`  LCP: ${analysis.metrics.webVitals.LCP.toFixed(2)}ms ${this.getVitalStatus(analysis.metrics.webVitals.LCP, 'LCP')}`)
-    console.log(`  FID: ${analysis.metrics.webVitals.FID.toFixed(2)}ms ${this.getVitalStatus(analysis.metrics.webVitals.FID, 'FID')}`)
-    console.log(`  CLS: ${analysis.metrics.webVitals.CLS.toFixed(4)} ${this.getVitalStatus(analysis.metrics.webVitals.CLS, 'CLS')}`)
+    this.logger.info(chalk.yellow('\nCore Web Vitals:'))
+    this.logger.info(`  LCP: ${analysis.metrics.webVitals.LCP.toFixed(2)}ms ${this.getVitalStatus(analysis.metrics.webVitals.LCP, 'LCP')}`)
+    this.logger.info(`  FID: ${analysis.metrics.webVitals.FID.toFixed(2)}ms ${this.getVitalStatus(analysis.metrics.webVitals.FID, 'FID')}`)
+    this.logger.info(`  CLS: ${analysis.metrics.webVitals.CLS.toFixed(4)} ${this.getVitalStatus(analysis.metrics.webVitals.CLS, 'CLS')}`)
 
     if (analysis.bottlenecks.length > 0) {
-      console.log(chalk.red('\n⚠️  性能瓶颈:'))
+      this.logger.warn(chalk.red('\n⚠️  性能瓶颈:'))
       analysis.bottlenecks.forEach((b: any, i: number) => {
-        console.log(`  ${i + 1}. [${b.severity}] ${b.description}`)
+        this.logger.warn(`  ${i + 1}. [${b.severity}] ${b.description}`)
       })
     }
   }
@@ -873,18 +932,18 @@ export class MonitorCommand {
 
   private displayOptimizationSuggestions(analysis: any): void {
     if (!analysis.suggestions || analysis.suggestions.length === 0) {
-      console.log(chalk.green('\n✨ 没有优化建议，性能表现良好！\n'))
+      this.logger.success(chalk.green('\n✨ 没有优化建议，性能表现良好！\n'))
       return
     }
 
-    console.log(chalk.cyan('\n💡 优化建议\n'))
+    this.logger.info(chalk.cyan('\n💡 优化建议\n'))
 
     analysis.suggestions.forEach((suggestion: any, i: number) => {
-      console.log(chalk.yellow(`${i + 1}. ${suggestion.title} [${suggestion.priority}]`))
+      this.logger.info(chalk.yellow(`${i + 1}. ${suggestion.title} [${suggestion.priority}]`))
       suggestion.actions.forEach((action: string) => {
-        console.log(`   - ${action}`)
+        this.logger.info(`   - ${action}`)
       })
-      console.log('')
+      this.logger.info('')
     })
   }
 
@@ -909,26 +968,26 @@ export class MonitorCommand {
 
   private displayWebVitals(vitals: any, showThreshold: boolean): void {
     if (vitals.error) {
-      console.log(chalk.red(`\n检查失败: ${vitals.error}\n`))
+      this.logger.error(`\n检查失败: ${vitals.error}\n`)
       return
     }
 
-    console.log(chalk.cyan('\n📊 Core Web Vitals\n'))
-    console.log(`URL: ${vitals.url}`)
-    console.log(`状态: ${vitals.passed ? chalk.green('✓ 通过') : chalk.red('✗ 未通过')}`)
+    this.logger.info(chalk.cyan('\n📊 Core Web Vitals\n'))
+    this.logger.info(`URL: ${vitals.url}`)
+    this.logger.info(`状态: ${vitals.passed ? chalk.green('✓ 通过') : chalk.red('✗ 未通过')}`)
 
-    console.log(chalk.yellow('\n指标:'))
-    console.log(`  LCP: ${vitals.vitals.LCP.toFixed(2)}ms ${this.getVitalStatus(vitals.vitals.LCP, 'LCP')}`)
-    console.log(`  FID: ${vitals.vitals.FID.toFixed(2)}ms ${this.getVitalStatus(vitals.vitals.FID, 'FID')}`)
-    console.log(`  CLS: ${vitals.vitals.CLS.toFixed(4)} ${this.getVitalStatus(vitals.vitals.CLS, 'CLS')}`)
-    console.log(`  FCP: ${vitals.vitals.FCP.toFixed(2)}ms`)
-    console.log(`  TTFB: ${vitals.vitals.TTFB.toFixed(2)}ms`)
+    this.logger.info(chalk.yellow('\n指标:'))
+    this.logger.info(`  LCP: ${vitals.vitals.LCP.toFixed(2)}ms ${this.getVitalStatus(vitals.vitals.LCP, 'LCP')}`)
+    this.logger.info(`  FID: ${vitals.vitals.FID.toFixed(2)}ms ${this.getVitalStatus(vitals.vitals.FID, 'FID')}`)
+    this.logger.info(`  CLS: ${vitals.vitals.CLS.toFixed(4)} ${this.getVitalStatus(vitals.vitals.CLS, 'CLS')}`)
+    this.logger.info(`  FCP: ${vitals.vitals.FCP.toFixed(2)}ms`)
+    this.logger.info(`  TTFB: ${vitals.vitals.TTFB.toFixed(2)}ms`)
 
     if (showThreshold) {
-      console.log(chalk.gray('\n阈值参考:'))
-      console.log('  LCP: ≤2.5s (好) | ≤4.0s (需改进) | >4.0s (差)')
-      console.log('  FID: ≤100ms (好) | ≤300ms (需改进) | >300ms (差)')
-      console.log('  CLS: ≤0.1 (好) | ≤0.25 (需改进) | >0.25 (差)')
+      this.logger.info(chalk.gray('\n阈值参考:'))
+      this.logger.info('  LCP: ≤2.5s (好) | ≤4.0s (需改进) | >4.0s (差)')
+      this.logger.info('  FID: ≤100ms (好) | ≤300ms (需改进) | >300ms (差)')
+      this.logger.info('  CLS: ≤0.1 (好) | ≤0.25 (需改进) | >0.25 (差)')
     }
   }
 
@@ -983,25 +1042,25 @@ export class MonitorCommand {
   }
 
   private displayBuildAnalysis(current: any, comparison: any): void {
-    console.log(chalk.cyan('\n📦 构建分析\n'))
-    console.log(`Bundle 大小: ${(current.metrics.bundleSize / 1024 / 1024).toFixed(2)}MB`)
-    console.log(`Chunk 数量: ${current.metrics.chunkCount}`)
-    console.log(`依赖数量: ${current.metrics.dependencies}`)
+    this.logger.info(chalk.cyan('\n📦 构建分析\n'))
+    this.logger.info(`Bundle 大小: ${(current.metrics.bundleSize / 1024 / 1024).toFixed(2)}MB`)
+    this.logger.info(`Chunk 数量: ${current.metrics.chunkCount}`)
+    this.logger.info(`依赖数量: ${current.metrics.dependencies}`)
 
     if (comparison) {
-      console.log(chalk.yellow('\n对比上次构建:'))
+      this.logger.info(chalk.yellow('\n对比上次构建:'))
       const sizeChange = comparison.bundleSize.change
       const sizeChangeStr = sizeChange > 0 ? chalk.red(`+${(sizeChange / 1024).toFixed(2)}KB`) : chalk.green(`${(sizeChange / 1024).toFixed(2)}KB`)
-      console.log(`  Bundle 大小: ${sizeChangeStr} (${comparison.bundleSize.changePercent}%)`)
-      console.log(`  Chunk 数量: ${comparison.chunkCount.change > 0 ? '+' : ''}${comparison.chunkCount.change}`)
-      console.log(`  依赖数量: ${comparison.dependencies.change > 0 ? '+' : ''}${comparison.dependencies.change}`)
+      this.logger.info(`  Bundle 大小: ${sizeChangeStr} (${comparison.bundleSize.changePercent}%)`)
+      this.logger.info(`  Chunk 数量: ${comparison.chunkCount.change > 0 ? '+' : ''}${comparison.chunkCount.change}`)
+      this.logger.info(`  依赖数量: ${comparison.dependencies.change > 0 ? '+' : ''}${comparison.dependencies.change}`)
     }
 
     if (current.analysis.bundleSizeIssue) {
-      console.log(chalk.red('\n⚠️  Bundle 体积过大，建议优化'))
+      this.logger.warn(chalk.red('\n⚠️  Bundle 体积过大，建议优化'))
     }
     if (current.analysis.tooManyChunks) {
-      console.log(chalk.yellow('\n⚠️  Chunk 数量较多，考虑合并'))
+      this.logger.warn(chalk.yellow('\n⚠️  Chunk 数量较多，考虑合并'))
     }
   }
 

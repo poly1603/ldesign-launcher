@@ -22,6 +22,9 @@ interface CacheEntry {
   size: number
   hits: number
   lastAccess: number
+  mtime?: number      // 修改时间
+  created?: number    // 创建时间
+  accessed?: number   // 访问时间
 }
 
 /**
@@ -75,7 +78,14 @@ export class BuildCache extends EventEmitter {
       await this.pruneExpired()
 
     } catch (error) {
-      this.logger.error('缓存初始化失败', { error: (error as Error).message })
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      this.logger.error('缓存初始化失败', { error: errorMessage })
+
+      // 创建临时缓存目录作为降级方案
+      this.cacheDir = PathUtils.resolve(process.cwd(), '.temp-build-cache')
+      // this.enabled = false // 标记缓存系统不可用 - enabled 是私有属性
+
+      this.logger.warn('构建缓存系统降级运行', { tempDir: this.cacheDir })
     }
   }
 
@@ -351,6 +361,126 @@ export class BuildCache extends EventEmitter {
 
     this.logger.success(`缓存预热完成，成功: ${warmed}/${files.length}`)
     this.emit('warmup', { total: files.length, warmed })
+  }
+
+  /**
+   * 验证缓存条目完整性
+   */
+  private validateEntry(entry: CacheEntry): boolean {
+    try {
+      // 检查必要字段
+      if (!entry.hash || !entry.size || !entry.mtime || !entry.created) {
+        return false
+      }
+
+      // 检查时间戳合理性
+      const now = Date.now()
+      if (entry.created > now || entry.mtime > now || entry.accessed > now) {
+        return false
+      }
+
+      // 检查大小合理性
+      if (entry.size < 0 || entry.size > 1024 * 1024 * 1024) { // 最大1GB
+        return false
+      }
+
+      // 检查访问计数
+      if (entry.hits < 0) {
+        return false
+      }
+
+      return true
+    } catch (error) {
+      return false
+    }
+  }
+
+  /**
+   * 修复损坏的缓存条目
+   */
+  private repairEntry(entry: Partial<CacheEntry>): CacheEntry | null {
+    try {
+      const now = Date.now()
+
+      const repaired: CacheEntry = {
+        hash: entry.hash || '',
+        size: Math.max(0, entry.size || 0),
+        mtime: entry.mtime && entry.mtime <= now ? entry.mtime : now,
+        created: entry.created && entry.created <= now ? entry.created : now,
+        accessed: entry.accessed && entry.accessed <= now ? entry.accessed : now,
+        hits: Math.max(0, entry.hits || 0)
+      }
+
+      if (this.validateEntry(repaired) && repaired.hash) {
+        return repaired
+      }
+
+      return null
+    } catch (error) {
+      return null
+    }
+  }
+
+  /**
+   * 执行完整性检查
+   */
+  async performIntegrityCheck(): Promise<{
+    total: number
+    valid: number
+    repaired: number
+    removed: number
+  }> {
+    const result = {
+      total: 0,
+      valid: 0,
+      repaired: 0,
+      removed: 0
+    }
+
+    try {
+      // 检查所有缓存条目
+      for (const [key, entry] of this.entries.entries()) {
+        result.total++
+
+        if (this.validateEntry(entry)) {
+          result.valid++
+        } else {
+          // 尝试修复
+          const repaired = this.repairEntry(entry)
+          if (repaired) {
+            this.entries.set(key, repaired)
+            result.repaired++
+          } else {
+            // 无法修复，删除
+            this.entries.delete(key)
+            result.removed++
+          }
+        }
+      }
+
+      // 检查孤立的缓存文件
+      const files = await FileSystem.readDir(this.cacheDir)
+      for (const file of files) {
+        if (file.endsWith('.cache') && !file.includes('index')) {
+          const key = file.replace('.cache', '')
+
+          if (!this.entries.has(key)) {
+            // 孤立文件，删除
+            await FileSystem.remove(PathUtils.resolve(this.cacheDir, file))
+            result.removed++
+          }
+        }
+      }
+
+      // 保存更新后的索引
+      await this.saveIndex()
+
+      this.logger.info('构建缓存完整性检查完成', result)
+      return result
+    } catch (error) {
+      this.logger.error('构建缓存完整性检查失败', { error: (error as Error).message })
+      return result
+    }
   }
 }
 

@@ -1,321 +1,299 @@
 /**
- * ConfigManager 配置管理器测试
- * 
- * @author LDesign Team
- * @since 1.0.0
+ * ConfigManager 单元测试
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ConfigManager } from '../../src/core/ConfigManager'
-import type { ViteLauncherConfig } from '../../src/types'
+import { ViteLauncherConfig } from '../../src/types'
+import * as fs from 'fs-extra'
+import path from 'path'
 
-// Mock @ldesign/kit 模块
-vi.mock('@ldesign/kit', () => ({
-  ConfigManager: vi.fn().mockImplementation(() => ({
-    load: vi.fn(),
-    save: vi.fn(),
-    getAll: vi.fn().mockReturnValue({}),
-    removeAllListeners: vi.fn(),
-    on: vi.fn(),
-    emit: vi.fn()
-  })),
-  Logger: vi.fn().mockImplementation(() => ({
-    info: vi.fn(),
-    success: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn()
-  })),
-  FileSystem: {
-    exists: vi.fn(),
-    readFile: vi.fn(),
-    writeFile: vi.fn(),
-    stat: vi.fn()
-  },
-  PathUtils: {
-    resolve: vi.fn((path) => path),
-    join: vi.fn((...paths) => paths.join('/')),
-    extname: vi.fn((path) => path.split('.').pop() || '')
-  },
-  FileWatcher: vi.fn().mockImplementation(() => ({
-    watch: vi.fn(),
-    close: vi.fn()
-  }))
-}))
+// Mock fs-extra
+vi.mock('fs-extra')
 
 describe('ConfigManager', () => {
   let configManager: ConfigManager
-  
-  beforeEach(() => {
-    vi.clearAllMocks()
-    configManager = new ConfigManager({
-      cwd: '/test/project'
-    })
-  })
-  
-  afterEach(async () => {
-    if (configManager) {
-      await configManager.destroy()
+  const testConfigPath = path.join(process.cwd(), 'test-config.ts')
+
+  const mockConfig: ViteLauncherConfig = {
+    root: './src',
+    build: {
+      outDir: 'dist',
+      target: 'es2020'
+    },
+    server: {
+      port: 3000,
+      host: 'localhost'
+    },
+    launcher: {
+      logLevel: 'info',
+      cache: {
+        enabled: true,
+        dir: '.cache'
+      }
     }
+  }
+
+  beforeEach(() => {
+    configManager = new ConfigManager()
+    vi.clearAllMocks()
   })
-  
-  describe('构造函数', () => {
-    it('应该正确初始化 ConfigManager 实例', () => {
-      expect(configManager).toBeInstanceOf(ConfigManager)
-    })
-    
-    it('应该接受配置选项', () => {
-      const manager = new ConfigManager({
-        cwd: '/custom/path',
-        watch: true
-      })
-      
-      expect(manager).toBeInstanceOf(ConfigManager)
-    })
+
+  afterEach(() => {
+    configManager.destroy()
   })
-  
-  describe('配置加载', () => {
-    it('应该正确加载配置文件', async () => {
-      const mockConfig: ViteLauncherConfig = {
-        server: {
-          port: 3000,
-          host: 'localhost'
-        }
-      }
-      
-      // Mock 文件存在
-      const { FileSystem } = await import('@ldesign/kit')
-      vi.mocked(FileSystem.exists).mockResolvedValue(true)
-      
-      // Mock 配置管理器返回配置
-      const kitConfigManager = configManager['kitConfigManager']
-      vi.mocked(kitConfigManager.getAll).mockReturnValue(mockConfig)
-      
-      const result = await configManager.load({
-        configFile: '/test/config.js'
-      })
-      
-      expect(result).toEqual(expect.objectContaining(mockConfig))
+
+  describe('loadConfig', () => {
+    it('应该成功加载配置文件', async () => {
+      vi.mocked(fs.pathExists).mockResolvedValue(true)
+      vi.mocked(fs.readFile).mockResolvedValue(`export default ${JSON.stringify(mockConfig)}`)
+
+      const config = await configManager.loadConfig(testConfigPath)
+
+      expect(config).toBeDefined()
+      expect(config.root).toBe(mockConfig.root)
+      expect(config.server?.port).toBe(3000)
     })
-    
-    it('应该处理配置文件不存在的情况', async () => {
-      const { FileSystem } = await import('@ldesign/kit')
-      vi.mocked(FileSystem.exists).mockResolvedValue(false)
-      
-      await expect(configManager.load({
-        configFile: '/nonexistent/config.js'
-      })).rejects.toThrow('配置文件不存在')
+
+    it('配置文件不存在时应该返回默认配置', async () => {
+      vi.mocked(fs.pathExists).mockResolvedValue(false)
+
+      const config = await configManager.loadConfig('non-existent.ts')
+
+      expect(config).toBeDefined()
+      expect(config.root).toBe(process.cwd())
     })
-    
-    it('应该在没有配置文件时使用默认配置', async () => {
-      // Mock 找不到配置文件
-      vi.spyOn(configManager as any, 'findConfigFile').mockResolvedValue(null)
-      
-      const result = await configManager.load()
-      
-      expect(result).toBeDefined()
-      expect(typeof result).toBe('object')
+
+    it('应该正确处理配置文件加载错误', async () => {
+      vi.mocked(fs.pathExists).mockResolvedValue(true)
+      vi.mocked(fs.readFile).mockRejectedValue(new Error('读取失败'))
+
+      const config = await configManager.loadConfig(testConfigPath)
+
+      expect(config).toBeDefined()
+      // 应该返回默认配置
+      expect(config.root).toBe(process.cwd())
     })
   })
-  
-  describe('配置保存', () => {
-    it('应该正确保存配置文件', async () => {
-      const mockConfig: ViteLauncherConfig = {
-        server: {
-          port: 8080,
-          host: '0.0.0.0'
-        }
-      }
-      
-      const kitConfigManager = configManager['kitConfigManager']
-      vi.mocked(kitConfigManager.save).mockResolvedValue(undefined)
-      
-      await configManager.save('/test/config.js', mockConfig)
-      
-      expect(kitConfigManager.save).toHaveBeenCalledWith('/test/config.js', mockConfig)
-    })
-    
-    it('应该在没有指定文件路径时抛出错误', async () => {
-      const mockConfig: ViteLauncherConfig = {}
-      
-      await expect(configManager.save(undefined, mockConfig)).rejects.toThrow('未指定配置文件路径')
-    })
-  })
-  
-  describe('配置验证', () => {
-    it('应该验证有效配置', async () => {
-      const validConfig: ViteLauncherConfig = {
-        server: {
-          port: 3000,
-          host: 'localhost'
-        },
-        build: {
-          outDir: 'dist',
-          minify: true
-        }
-      }
-      
-      const result = await configManager.validate(validConfig)
-      
+
+  describe('validateConfig', () => {
+    it('应该验证有效的配置', async () => {
+      const result = await configManager.validateConfig(mockConfig)
+
       expect(result.valid).toBe(true)
       expect(result.errors).toHaveLength(0)
     })
-    
-    it('应该检测无效配置', async () => {
-      const invalidConfig: ViteLauncherConfig = {
+
+    it('应该检测无效的端口号', async () => {
+      const invalidConfig = {
+        ...mockConfig,
         server: {
-          port: 99999, // 无效端口
-          host: 123 as any // 无效主机类型
+          port: 99999
         }
       }
-      
-      const result = await configManager.validate(invalidConfig)
-      
+
+      const result = await configManager.validateConfig(invalidConfig)
+
       expect(result.valid).toBe(false)
-      expect(result.errors.length).toBeGreaterThan(0)
+      expect(result.errors).toContain('服务器端口必须是 1-65535 之间的数字')
     })
-    
-    it('应该生成警告信息', async () => {
-      const configWithWarnings: ViteLauncherConfig = {
-        build: {
-          outDir: 'relative/path' // 相对路径会产生警告
+
+    it('应该检测无效的日志级别', async () => {
+      const invalidConfig = {
+        ...mockConfig,
+        launcher: {
+          logLevel: 'invalid' as any
         }
       }
-      
-      const result = await configManager.validate(configWithWarnings)
-      
-      expect(result.warnings.length).toBeGreaterThan(0)
+
+      const result = await configManager.validateConfig(invalidConfig)
+
+      expect(result.valid).toBe(false)
+      expect(result.errors).toContain('日志级别必须是 silent、error、warn、info 或 debug 之一')
     })
   })
-  
-  describe('配置合并', () => {
-    it('应该正确合并配置对象', () => {
-      const baseConfig: ViteLauncherConfig = {
-        server: {
-          port: 3000,
-          host: 'localhost'
-        }
-      }
-      
-      const overrideConfig: ViteLauncherConfig = {
-        server: {
-          port: 8080
-        },
+
+  describe('validateConfigWithCache', () => {
+    it('应该缓存验证结果', async () => {
+      const validateSpy = vi.spyOn(configManager, 'validateConfig')
+
+      // 第一次调用
+      const result1 = await configManager.validateConfigWithCache(mockConfig)
+      expect(result1.valid).toBe(true)
+      expect(validateSpy).toHaveBeenCalledTimes(1)
+
+      // 第二次调用应该使用缓存
+      const result2 = await configManager.validateConfigWithCache(mockConfig)
+      expect(result2.valid).toBe(true)
+      expect(validateSpy).toHaveBeenCalledTimes(1) // 仍然是1次，因为使用了缓存
+    })
+
+    it('配置改变时应该重新验证', async () => {
+      const validateSpy = vi.spyOn(configManager, 'validateConfig')
+
+      await configManager.validateConfigWithCache(mockConfig)
+      expect(validateSpy).toHaveBeenCalledTimes(1)
+
+      const modifiedConfig = { ...mockConfig, root: './different' }
+      await configManager.validateConfigWithCache(modifiedConfig)
+      expect(validateSpy).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  describe('mergeConfigs', () => {
+    it('应该正确合并配置', () => {
+      const base: ViteLauncherConfig = {
+        root: './src',
         build: {
           outDir: 'dist'
         }
       }
-      
-      const result = configManager.mergeConfigs(baseConfig, overrideConfig)
-      
-      expect(result.server?.port).toBe(8080)
-      expect(result.server?.host).toBe('localhost')
-      expect(result.build?.outDir).toBe('dist')
-    })
-    
-    it('应该支持自定义合并策略', () => {
-      const baseConfig: ViteLauncherConfig = { server: { port: 3000 } }
-      const overrideConfig: ViteLauncherConfig = { server: { host: 'localhost' } }
-      
-      const result = configManager.mergeConfigs(baseConfig, overrideConfig, {
-        strategy: 'override'
-      })
-      
-      expect(result).toEqual(expect.objectContaining(overrideConfig))
-    })
-  })
-  
-  describe('配置更新', () => {
-    it('应该正确更新配置', () => {
-      const updates = {
+
+      const override: ViteLauncherConfig = {
+        build: {
+          target: 'es2020'
+        },
         server: {
-          port: 8080
+          port: 4000
         }
       }
-      
-      const oldConfig = configManager.getConfig()
-      configManager.updateConfig(updates)
-      const newConfig = configManager.getConfig()
-      
-      expect(newConfig.server?.port).toBe(8080)
-      expect(newConfig).not.toEqual(oldConfig)
+
+      const merged = configManager.mergeConfigs(base, override)
+
+      expect(merged.root).toBe('./src')
+      expect(merged.build?.outDir).toBe('dist')
+      expect(merged.build?.target).toBe('es2020')
+      expect(merged.server?.port).toBe(4000)
     })
-    
-    it('应该触发配置变更事件', () => {
-      const changeListener = vi.fn()
-      configManager.on('changed', changeListener)
-      
-      const updates = { server: { port: 9000 } }
-      configManager.updateConfig(updates)
-      
-      expect(changeListener).toHaveBeenCalledWith(
-        expect.objectContaining({
-          updates
-        })
-      )
-    })
-  })
-  
-  describe('配置重置', () => {
-    it('应该正确重置配置为默认值', () => {
-      // 先更新配置
-      configManager.updateConfig({ server: { port: 8080 } })
-      
-      // 然后重置
-      configManager.reset()
-      
-      const config = configManager.getConfig()
-      expect(config.server?.port).not.toBe(8080)
-    })
-    
-    it('应该触发重置事件', () => {
-      const resetListener = vi.fn()
-      configManager.on('reset', resetListener)
-      
-      configManager.reset()
-      
-      expect(resetListener).toHaveBeenCalled()
+
+    it('应该支持覆盖策略', () => {
+      const base: ViteLauncherConfig = {
+        root: './src',
+        build: {
+          outDir: 'dist',
+          target: 'es2015'
+        }
+      }
+
+      const override: ViteLauncherConfig = {
+        build: {
+          target: 'es2020'
+        }
+      }
+
+      const merged = configManager.mergeConfigs(base, override, { strategy: 'override' })
+
+      expect(merged.build?.target).toBe('es2020')
+      expect(merged.build?.outDir).toBeUndefined() // 覆盖策略会完全替换
     })
   })
-  
-  describe('验证规则', () => {
-    it('应该正确添加验证规则', () => {
+
+  describe('backupConfig 和 rollbackConfig', () => {
+    it('应该能够备份和回滚配置', async () => {
+      // 设置初始配置
+      configManager['currentConfig'] = mockConfig
+
+      // 备份配置
+      configManager.backupConfig()
+
+      // 修改配置
+      const newConfig = { ...mockConfig, root: './new-root' }
+      configManager['currentConfig'] = newConfig
+
+      // 回滚配置
+      await configManager.rollbackConfig()
+
+      expect(configManager.getConfig().root).toBe(mockConfig.root)
+    })
+
+    it('没有备份时回滚应该抛出错误', async () => {
+      await expect(configManager.rollbackConfig()).rejects.toThrow('没有可用的配置备份')
+    })
+  })
+
+  describe('safeUpdateConfig', () => {
+    it('应该安全更新有效配置', async () => {
+      const newConfig = { ...mockConfig, root: './new-root' }
+
+      await configManager.safeUpdateConfig(newConfig)
+
+      expect(configManager.getConfig().root).toBe('./new-root')
+    })
+
+    it('无效配置应该回滚到备份', async () => {
+      configManager['currentConfig'] = mockConfig
+
+      const invalidConfig = {
+        ...mockConfig,
+        server: {
+          port: 99999 // 无效端口
+        }
+      }
+
+      await expect(configManager.safeUpdateConfig(invalidConfig)).rejects.toThrow()
+      expect(configManager.getConfig().server?.port).toBe(3000) // 应该回滚到原配置
+    })
+  })
+
+  describe('resolveEnvironmentVariables', () => {
+    it('应该解析环境变量引用', () => {
+      process.env.TEST_PORT = '8080'
+      process.env.TEST_HOST = 'example.com'
+
+      const config: ViteLauncherConfig = {
+        server: {
+          port: 3000,
+          host: '${TEST_HOST}'
+        },
+        build: {
+          outDir: '$TEST_PORT/dist'
+        }
+      }
+
+      const resolved = configManager['resolveEnvironmentVariables'](config)
+
+      expect(resolved.server?.host).toBe('example.com')
+      expect(resolved.build?.outDir).toBe('8080/dist')
+
+      delete process.env.TEST_PORT
+      delete process.env.TEST_HOST
+    })
+  })
+
+  describe('自定义验证规则', () => {
+    it('应该添加和执行自定义验证规则', async () => {
       const customRule = {
         name: 'custom-rule',
-        validate: vi.fn().mockReturnValue({ valid: true, errors: [], warnings: [] })
+        validate: (config: ViteLauncherConfig) => {
+          const errors: string[] = []
+          if (config.root === 'forbidden') {
+            errors.push('Root cannot be "forbidden"')
+          }
+          return { errors }
+        }
       }
-      
+
       configManager.addValidationRule(customRule)
-      
-      // 验证时应该调用自定义规则
-      configManager.validate({})
-      
-      expect(customRule.validate).toHaveBeenCalled()
+
+      const invalidConfig = { ...mockConfig, root: 'forbidden' }
+      const result = await configManager.validateConfig(invalidConfig)
+
+      expect(result.valid).toBe(false)
+      expect(result.errors).toContain('Root cannot be "forbidden"')
     })
-    
-    it('应该正确移除验证规则', () => {
+
+    it('应该能够移除验证规则', async () => {
       const customRule = {
-        name: 'custom-rule',
-        validate: vi.fn().mockReturnValue({ valid: true, errors: [], warnings: [] })
+        name: 'removable-rule',
+        validate: () => ({ errors: ['Always fail'] })
       }
-      
+
       configManager.addValidationRule(customRule)
-      configManager.removeValidationRule('custom-rule')
-      
-      // 移除后验证时不应该调用该规则
-      configManager.validate({})
-      
-      expect(customRule.validate).not.toHaveBeenCalled()
-    })
-  })
-  
-  describe('销毁', () => {
-    it('应该正确清理资源', async () => {
-      await configManager.destroy()
-      
-      // 检查是否清理了文件监听器和事件监听器
-      expect(configManager.listenerCount('loaded')).toBe(0)
-      expect(configManager.listenerCount('changed')).toBe(0)
+      configManager.removeValidationRule('removable-rule')
+
+      const result = await configManager.validateConfig(mockConfig)
+
+      expect(result.errors).not.toContain('Always fail')
     })
   })
 })

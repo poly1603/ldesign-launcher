@@ -42,7 +42,7 @@ class EnvironmentManager {
   async saveHistory(environment: string): Promise<void> {
     try {
       const history: EnvironmentHistory = await this.loadHistory()
-      
+
       history.lastEnvironment = environment
       history.history.unshift({
         environment,
@@ -185,10 +185,10 @@ export class EnvCommand {
    */
   private async showCurrent(): Promise<void> {
     const current = await this.envManager.getLastEnvironment()
-    
-    console.log(pc.cyan('\n📍 当前环境:\n'))
-    console.log(`  ${pc.green('●')} ${pc.bold(current)}`)
-    console.log()
+
+    this.logger.info(pc.cyan('\n📍 当前环境:\n'))
+    this.logger.info(`  ${pc.green('●')} ${pc.bold(current)}`)
+    this.logger.info('')
   }
 
   /**
@@ -196,12 +196,12 @@ export class EnvCommand {
    */
   private async listEnvironments(cwd: string): Promise<void> {
     const { getEnvironmentConfigFiles } = await import('../../constants')
-    
+
     // 标准环境
     const standardEnvs = ['development', 'production', 'test', 'staging']
-    
-    console.log(pc.cyan('\n🌍 可用环境:\n'))
-    
+
+    this.logger.info(pc.cyan('\n🌍 可用环境:\n'))
+
     for (const env of standardEnvs) {
       const configFiles = getEnvironmentConfigFiles(env)
       let hasConfig = false
@@ -210,22 +210,22 @@ export class EnvCommand {
         const filePath = PathUtils.resolve(cwd, file)
         if (await FileSystem.exists(filePath)) {
           hasConfig = true
-          console.log(`  ${pc.green('●')} ${pc.bold(env)} ${pc.dim(`(${file})`)}`)
+          this.logger.info(`  ${pc.green('●')} ${pc.bold(env)} ${pc.dim(`(${file})`)}`)
           break
         }
       }
 
       if (!hasConfig) {
-        console.log(`  ${pc.gray('○')} ${pc.dim(env)} ${pc.gray('(无配置文件)')}`)
+        this.logger.info(`  ${pc.gray('○')} ${pc.dim(env)} ${pc.gray('(无配置文件)')}`)
       }
     }
-    
-    console.log()
+
+    this.logger.info('')
 
     // 显示上次使用的环境
     const last = await this.envManager.getLastEnvironment()
-    console.log(pc.dim(`💡 上次使用: ${last}`))
-    console.log()
+    this.logger.info(pc.dim(`💡 上次使用: ${last}`))
+    this.logger.info('')
   }
 
   /**
@@ -234,7 +234,7 @@ export class EnvCommand {
   private async compareEnvironments(cwd: string, env1: string, env2: string): Promise<void> {
     const configManager = new ConfigManager({ logger: this.logger })
 
-    console.log(pc.cyan(`\n📊 对比环境配置: ${env1} vs ${env2}\n`))
+    this.logger.info(pc.cyan(`\n📊 对比环境配置: ${env1} vs ${env2}\n`))
 
     try {
       const config1 = await configManager.load({ cwd, environment: env1 })
@@ -266,7 +266,7 @@ export class EnvCommand {
       return null
     }
 
-    const diffs: Array<{ path: string; [key: string]: unknown }> = []
+    const diffs: Array<{ path: string;[key: string]: unknown }> = []
 
     // 对比 server 配置
     if (config1.server?.port !== config2.server?.port) {
@@ -290,15 +290,15 @@ export class EnvCommand {
     }
 
     if (diffs.length === 0) {
-      console.log(pc.green('  ✓ 配置完全相同'))
+      this.logger.info(pc.green('  ✓ 配置完全相同'))
     } else {
-      console.log(pc.yellow(`  发现 ${diffs.length} 处差异:\n`))
-      
+      this.logger.info(pc.yellow(`  发现 ${diffs.length} 处差异:\n`))
+
       diffs.forEach(diff => {
-        console.log(pc.dim(`  ${diff.path}:`))
-        console.log(`    ${pc.cyan(env1)}: ${JSON.stringify(diff[env1])}`)
-        console.log(`    ${pc.magenta(env2)}: ${JSON.stringify(diff[env2])}`)
-        console.log()
+        this.logger.info(pc.dim(`  ${diff.path}:`))
+        this.logger.info(`    ${pc.cyan(env1)}: ${JSON.stringify(diff[env1])}`)
+        this.logger.info(`    ${pc.magenta(env2)}: ${JSON.stringify(diff[env2])}`)
+        this.logger.info('')
       })
     }
   }
@@ -311,10 +311,10 @@ export class EnvCommand {
     const { getEnvironmentConfigFiles } = await import('../../constants')
     const configManager = new ConfigManager({ logger: this.logger })
 
-    console.log(pc.cyan('\n✅ 验证环境配置\n'))
+    this.logger.info(pc.cyan('\n✅ 验证环境配置\n'))
 
     const envs = ['development', 'production', 'test', 'staging']
-    
+
     for (const env of envs) {
       const configFiles = getEnvironmentConfigFiles(env)
       let found = false
@@ -329,16 +329,16 @@ export class EnvCommand {
             const result = validateLauncherConfig(config)
 
             if (result.success) {
-              console.log(`  ${pc.green('✓')} ${pc.bold(env)} ${pc.dim(`(${file})`)} - 有效`)
+              this.logger.info(`  ${pc.green('✓')} ${pc.bold(env)} ${pc.dim(`(${file})`)} - 有效`)
             } else {
-              console.log(`  ${pc.red('✗')} ${pc.bold(env)} ${pc.dim(`(${file})`)} - 无效`)
+              this.logger.error(`  ${pc.red('✗')} ${pc.bold(env)} ${pc.dim(`(${file})`)} - 无效`)
               result.error.errors.forEach(err => {
-                console.log(`    ${pc.red('→')} ${err.path.join('.')}: ${err.message}`)
+                this.logger.error(`    ${pc.red('→')} ${err.path.join('.')}: ${err.message}`)
               })
             }
           } catch (error) {
-            console.log(`  ${pc.red('✗')} ${pc.bold(env)} - 加载失败`)
-            console.log(`    ${pc.red('→')} ${(error as Error).message}`)
+            this.logger.error(`  ${pc.red('✗')} ${pc.bold(env)} - 加载失败`)
+            this.logger.error(`    ${pc.red('→')} ${(error as Error).message}`)
           }
 
           break
@@ -346,11 +346,11 @@ export class EnvCommand {
       }
 
       if (!found) {
-        console.log(`  ${pc.gray('○')} ${pc.dim(env)} - 无配置文件`)
+        this.logger.info(`  ${pc.gray('○')} ${pc.dim(env)} - 无配置文件`)
       }
     }
 
-    console.log()
+    this.logger.info('')
   }
 
   /**
@@ -359,40 +359,40 @@ export class EnvCommand {
   private async showHistory(): Promise<void> {
     const history = await this.envManager.getHistory()
 
-    console.log(pc.cyan('\n📜 环境切换历史:\n'))
+    this.logger.info(pc.cyan('\n📜 环境切换历史:\n'))
 
     if (history.length === 0) {
-      console.log(pc.dim('  暂无历史记录'))
+      this.logger.info(pc.dim('  暂无历史记录'))
     } else {
       history.forEach((record, index) => {
         const date = new Date(record.timestamp).toLocaleString('zh-CN')
-        console.log(`  ${pc.dim(`${index + 1}.`)} ${pc.bold(record.environment)} ${pc.gray(`- ${date}`)}`)
+        this.logger.info(`  ${pc.dim(`${index + 1}.`)} ${pc.bold(record.environment)} ${pc.gray(`- ${date}`)}`)
       })
     }
 
-    console.log()
+    this.logger.info('')
   }
 
   /**
    * 显示帮助信息
    */
   private showHelp(): void {
-    console.log(pc.cyan('\n🌍 环境管理命令\n'))
-    console.log('用法:')
-    console.log('  launcher env [选项]\n')
-    console.log('选项:')
-    console.log('  --current            查看当前环境')
-    console.log('  --list               列出所有可用环境')
-    console.log('  --diff <env1> <env2> 对比两个环境的配置')
-    console.log('  --validate           验证所有环境配置')
-    console.log('  --history            查看环境切换历史')
-    console.log('  --set <env>          设置当前环境')
-    console.log('\n示例:')
-    console.log('  launcher env --current')
-    console.log('  launcher env --list')
-    console.log('  launcher env --diff development production')
-    console.log('  launcher env --validate')
-    console.log()
+    this.logger.info(pc.cyan('\n🌍 环境管理命令\n'))
+    this.logger.info('用法:')
+    this.logger.info('  launcher env [选项]\n')
+    this.logger.info('选项:')
+    this.logger.info('  --current            查看当前环境')
+    this.logger.info('  --list               列出所有可用环境')
+    this.logger.info('  --diff <env1> <env2> 对比两个环境的配置')
+    this.logger.info('  --validate           验证所有环境配置')
+    this.logger.info('  --history            查看环境切换历史')
+    this.logger.info('  --set <env>          设置当前环境')
+    this.logger.info('\n示例:')
+    this.logger.info('  launcher env --current')
+    this.logger.info('  launcher env --list')
+    this.logger.info('  launcher env --diff development production')
+    this.logger.info('  launcher env --validate')
+    this.logger.info('')
   }
 }
 

@@ -394,7 +394,7 @@ export class VisualCommand {
       })
 
       const url = `http://localhost:${options.port}`
-      
+
       this.logger.success(`🚀 可视化服务器已启动: ${url}`)
 
       if (options.open) {
@@ -433,7 +433,7 @@ export class VisualCommand {
   }
 
   private displayDependencyStats(tree: DependencyNode): void {
-    console.log(chalk.cyan('\n📊 依赖统计:\n'))
+    this.logger.info(chalk.cyan('\n📊 依赖统计:\n'))
     // 显示依赖统计信息
   }
 
@@ -453,7 +453,7 @@ export class VisualCommand {
   }
 
   private displayStructureStats(structure: ProjectStructure): void {
-    console.log(chalk.cyan('\n📊 项目统计:\n'))
+    this.logger.info(chalk.cyan('\n📊 项目统计:\n'))
     // 显示项目统计信息
   }
 
@@ -505,7 +505,7 @@ export class VisualCommand {
   private async createVisualizationServer(options: any): Promise<any> {
     // 实现可视化服务器
     return {
-      close: () => {}
+      close: () => { }
     }
   }
 }

@@ -59,7 +59,7 @@ export interface CacheItem {
   /** 缓存类型 */
   type: CacheType
   /** 数据 */
-  data: any
+  data: unknown
   /** 创建时间 */
   createdAt: number
   /** 最后访问时间 */
@@ -144,49 +144,70 @@ export class CacheManager {
         this.logger.debug(`缓存系统初始化完成，缓存目录: ${this.config.cacheDir}`)
       }
     } catch (error) {
-      this.logger.error('缓存系统初始化失败', error)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      this.logger.error('缓存系统初始化失败', { error: errorMessage })
+
+      // 尝试恢复：创建一个临时内存缓存目录
+      this.config.cacheDir = path.join(process.cwd(), '.temp-cache')
+      this.config.enabled = false // 禁用磁盘缓存，仅使用内存缓存
+
+      this.logger.warn('缓存系统降级为仅内存模式', { tempDir: this.config.cacheDir })
     }
   }
 
   /**
    * 设置缓存
    */
-  async set(key: string, type: CacheType, data: any, ttl?: number): Promise<void> {
+  async set(key: string, type: CacheType, data: unknown, ttl?: number): Promise<void> {
     if (!this.config.enabled || !this.config.types.includes(type)) {
       return
     }
 
-    const cacheKey = this.buildCacheKey(key, type)
-    const now = Date.now()
-    const size = this.calculateSize(data)
+    try {
+      const cacheKey = this.buildCacheKey(key, type)
+      const now = Date.now()
+      const size = this.calculateSize(data)
 
-    const item: CacheItem = {
-      key: cacheKey,
-      type,
-      data,
-      createdAt: now,
-      lastAccessed: now,
-      accessCount: 1,
-      size,
-      expiresAt: ttl ? now + ttl : now + this.config.ttl
+      const item: CacheItem = {
+        key: cacheKey,
+        type,
+        data,
+        createdAt: now,
+        lastAccessed: now,
+        accessCount: 1,
+        size,
+        expiresAt: ttl ? now + ttl : now + this.config.ttl
+      }
+
+      // 检查缓存大小限制
+      await this.enforceSize(size)
+
+      this.cache.set(cacheKey, item)
+
+      // 保存到磁盘（带错误处理）
+      try {
+        await this.saveToDisk(item)
+      } catch (diskError) {
+        // 磁盘保存失败不应该影响内存缓存
+        this.logger.warn('缓存保存到磁盘失败，但已保存到内存', {
+          key: cacheKey,
+          error: diskError instanceof Error ? diskError.message : String(diskError)
+        })
+      }
+
+      this.logger.debug(`缓存已设置: ${cacheKey} (${this.formatSize(size)})`)
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      this.logger.error('设置缓存失败', { key, type, error: errorMessage })
+      throw error
     }
-
-    // 检查缓存大小限制
-    await this.enforceSize(size)
-
-    this.cache.set(cacheKey, item)
-
-    // 保存到磁盘
-    await this.saveToDisk(item)
-
-    this.logger.debug(`缓存已设置: ${cacheKey} (${this.formatSize(size)})`)
   }
 
   /**
    * 获取缓存
    * 支持自动解压缩
    */
-  async get<T = any>(key: string, type: CacheType): Promise<T | null> {
+  async get<T = unknown>(key: string, type: CacheType): Promise<T | null> {
     if (!this.config.enabled || !this.config.types.includes(type)) {
       this.missCount++
       return null
@@ -231,7 +252,9 @@ export class CacheManager {
         return data as T
       }
     } catch (error) {
-      this.logger.debug(`从磁盘加载缓存失败: ${cacheKey}`, error)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      this.logger.debug(`从磁盘加载缓存失败: ${cacheKey}`, { error: errorMessage })
+      // 不抛出错误，降级到缓存未命中
     }
 
     this.missCount++
@@ -302,7 +325,7 @@ export class CacheManager {
     const stats: CacheStats = {
       totalItems: this.cache.size,
       totalSize: 0,
-      byType: {} as any,
+      byType: {} as Record<CacheType, { count: number; size: number }>,
       hitRate: this.hitCount + this.missCount > 0
         ? this.hitCount / (this.hitCount + this.missCount)
         : 0,
@@ -424,7 +447,7 @@ export class CacheManager {
   /**
    * 计算数据大小
    */
-  private calculateSize(data: any): number {
+  private calculateSize(data: unknown): number {
     return Buffer.byteLength(JSON.stringify(data), 'utf8')
   }
 
@@ -593,8 +616,8 @@ export class CacheManager {
     }, interval)
 
     // 允许进程在仅有该定时器时正常退出
-    if (typeof (this.cleanupTimer as any).unref === 'function') {
-      (this.cleanupTimer as any).unref()
+    if (typeof (this.cleanupTimer as NodeJS.Timeout).unref === 'function') {
+      (this.cleanupTimer as NodeJS.Timeout).unref()
     }
 
     this.logger.debug(`启动自动清理，间隔: ${this.config.autoClean.interval} 小时`)
@@ -624,7 +647,7 @@ export class CacheManager {
    * 缓存预热
    * 提前加载常用数据到缓存中，提升首次访问性能
    */
-  async warmup(keys: Array<{ key: string; type: CacheType; loader: () => Promise<any> }>): Promise<void> {
+  async warmup(keys: Array<{ key: string; type: CacheType; loader: () => Promise<unknown> }>): Promise<void> {
     if (!this.config.enabled) {
       return
     }
@@ -644,7 +667,7 @@ export class CacheManager {
         batch.map(async item => {
           try {
             const data = await item.loader()
-            await this.set(item.key, data, item.type)
+            await this.set(item.key, item.type, data)
             successCount++
             this.logger.debug(`预热成功: ${item.key}`)
           } catch (error) {
@@ -711,7 +734,7 @@ export class CacheManager {
   /**
    * 压缩数据
    */
-  private async compressData(data: any): Promise<any> {
+  private async compressData(data: unknown): Promise<unknown> {
     // 简化的压缩实现：对JSON数据进行字符串压缩
     const jsonStr = JSON.stringify(data)
 
@@ -732,11 +755,12 @@ export class CacheManager {
   /**
    * 解压缩数据
    */
-  private async decompressData(data: any): Promise<any> {
-    if (data && data.__compressed) {
+  private async decompressData(data: unknown): Promise<unknown> {
+    if (data && typeof data === 'object' && '__compressed' in data) {
       try {
         const { gunzipSync } = await import('zlib')
-        const decompressed = gunzipSync(Buffer.from(data.data, 'base64'))
+        const compressedData = data as { __compressed: boolean; data: string }
+        const decompressed = gunzipSync(Buffer.from(compressedData.data, 'base64'))
         return JSON.parse(decompressed.toString())
       } catch {
         return data
@@ -855,6 +879,188 @@ export class CacheManager {
 
     return suggestions
   }
+
+  /**
+   * 验证缓存项的完整性
+   * @param item - 缓存项
+   * @returns 是否完整
+   */
+  private validateCacheIntegrity(item: CacheItem): boolean {
+    try {
+      // 检查必要字段
+      if (!item.key || !item.type || !item.data || !item.createdAt) {
+        return false
+      }
+
+      // 检查时间戳合理性
+      const now = Date.now()
+      if (item.createdAt > now || item.lastAccessed > now) {
+        return false
+      }
+
+      // 检查过期时间
+      if (item.expiresAt && item.expiresAt < item.createdAt) {
+        return false
+      }
+
+      // 检查大小合理性
+      if (item.size < 0 || item.size > this.config.maxSize) {
+        return false
+      }
+
+      // 检查访问计数
+      if (item.accessCount < 0) {
+        return false
+      }
+
+      return true
+    } catch (error) {
+      this.logger.debug('缓存项完整性验证失败', { key: item.key, error })
+      return false
+    }
+  }
+
+  /**
+   * 修复损坏的缓存项
+   * @param item - 损坏的缓存项
+   * @returns 修复后的缓存项或null
+   */
+  private repairCacheItem(item: Partial<CacheItem>): CacheItem | null {
+    try {
+      const now = Date.now()
+
+      // 尝试修复缺失或无效的字段
+      const repaired: CacheItem = {
+        key: item.key || `unknown_${now}`,
+        type: item.type || 'unknown' as CacheType,
+        data: item.data || null,
+        createdAt: item.createdAt && item.createdAt <= now ? item.createdAt : now,
+        lastAccessed: item.lastAccessed && item.lastAccessed <= now ? item.lastAccessed : now,
+        accessCount: Math.max(0, item.accessCount || 0),
+        size: Math.max(0, item.size || this.calculateSize(item.data)),
+        expiresAt: item.expiresAt || now + this.config.ttl
+      }
+
+      // 再次验证修复后的项
+      if (this.validateCacheIntegrity(repaired)) {
+        this.logger.info('缓存项已修复', { key: repaired.key })
+        return repaired
+      }
+
+      return null
+    } catch (error) {
+      this.logger.error('缓存项修复失败', { error })
+      return null
+    }
+  }
+
+  /**
+   * 执行完整性检查和修复
+   * @returns 检查和修复结果
+   */
+  async performIntegrityCheck(): Promise<{
+    total: number
+    valid: number
+    repaired: number
+    removed: number
+  }> {
+    const result = {
+      total: 0,
+      valid: 0,
+      repaired: 0,
+      removed: 0
+    }
+
+    try {
+      // 检查内存缓存
+      for (const [key, item] of this.cache.entries()) {
+        result.total++
+
+        if (this.validateCacheIntegrity(item)) {
+          result.valid++
+        } else {
+          // 尝试修复
+          const repaired = this.repairCacheItem(item)
+          if (repaired) {
+            this.cache.set(key, repaired)
+            result.repaired++
+          } else {
+            // 无法修复，删除
+            this.cache.delete(key)
+            result.removed++
+          }
+        }
+      }
+
+      // 检查磁盘缓存
+      const cacheDir = this.config.cacheDir
+      if (await FileSystem.exists(cacheDir)) {
+        const files = await FileSystem.readDir(cacheDir)
+
+        for (const file of files) {
+          if (file.endsWith('.cache')) {
+            const filePath = path.join(cacheDir, file)
+
+            try {
+              const content = await FileSystem.readFile(filePath, { encoding: 'utf8' })
+              const item = JSON.parse(content) as CacheItem
+
+              result.total++
+
+              if (this.validateCacheIntegrity(item)) {
+                result.valid++
+              } else {
+                // 尝试修复
+                const repaired = this.repairCacheItem(item)
+                if (repaired) {
+                  await FileSystem.writeFile(filePath, JSON.stringify(repaired))
+                  result.repaired++
+                } else {
+                  // 无法修复，删除
+                  await FileSystem.remove(filePath)
+                  result.removed++
+                }
+              }
+            } catch (error) {
+              // 文件损坏，删除
+              await FileSystem.remove(filePath)
+              result.removed++
+            }
+          }
+        }
+      }
+
+      this.logger.info('缓存完整性检查完成', result)
+      return result
+    } catch (error) {
+      this.logger.error('缓存完整性检查失败', { error })
+      return result
+    }
+  }
+
+  /**
+   * 定期执行完整性检查
+   * @param intervalHours - 检查间隔（小时）
+   */
+  startIntegrityCheckSchedule(intervalHours: number = 24): void {
+    // 停止现有的定时器
+    if (this.integrityCheckTimer) {
+      clearInterval(this.integrityCheckTimer)
+    }
+
+    // 启动新的定时器
+    this.integrityCheckTimer = setInterval(async () => {
+      this.logger.info('开始定期缓存完整性检查')
+      await this.performIntegrityCheck()
+    }, intervalHours * 60 * 60 * 1000)
+
+    // 立即执行一次
+    this.performIntegrityCheck().catch(error => {
+      this.logger.error('初始完整性检查失败', { error })
+    })
+  }
+
+  private integrityCheckTimer?: NodeJS.Timeout
 }
 
 // 全局缓存管理器实例

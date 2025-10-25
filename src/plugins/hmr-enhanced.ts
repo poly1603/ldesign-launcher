@@ -43,7 +43,7 @@ interface HMRStats {
  */
 export function createHMREnhancedPlugin(options: HMREnhancedOptions = {}): Plugin {
   const logger = new Logger('HMR-Enhanced')
-  
+
   const config: Required<HMREnhancedOptions> = {
     fallbackToFullReload: options.fallbackToFullReload !== false,
     retries: options.retries || 3,
@@ -65,7 +65,7 @@ export function createHMREnhancedPlugin(options: HMREnhancedOptions = {}): Plugi
 
   return {
     name: 'launcher:hmr-enhanced',
-    
+
     configureServer(viteServer) {
       server = viteServer
 
@@ -94,7 +94,7 @@ export function createHMREnhancedPlugin(options: HMREnhancedOptions = {}): Plugi
 
           if (data.type === 'custom' && data.event === 'hmr-error') {
             stats.failedUpdates++
-            
+
             if (config.debug) {
               logger.error('HMR 更新失败', { error: data.data.error })
             }
@@ -106,7 +106,7 @@ export function createHMREnhancedPlugin(options: HMREnhancedOptions = {}): Plugi
                 path: '*'
               })
               stats.fullReloads++
-              
+
               if (config.debug) {
                 logger.info('已触发全量刷新')
               }
@@ -115,16 +115,16 @@ export function createHMREnhancedPlugin(options: HMREnhancedOptions = {}): Plugi
 
           if (data.type === 'custom' && data.event === 'hmr-success') {
             stats.successfulUpdates++
-            
+
             if (data.data.updateTime) {
               stats.updateTimes.push(data.data.updateTime)
-              
+
               // 计算平均更新时间
               if (stats.updateTimes.length > 100) {
                 stats.updateTimes = stats.updateTimes.slice(-100) // 只保留最近 100 次
               }
-              
-              stats.averageUpdateTime = 
+
+              stats.averageUpdateTime =
                 stats.updateTimes.reduce((a, b) => a + b, 0) / stats.updateTimes.length
             }
           }
@@ -176,7 +176,7 @@ export function createHMREnhancedPlugin(options: HMREnhancedOptions = {}): Plugi
         }
 
         if (hmrConfig.debug) {
-          console.log('[HMR] 更新成功，耗时:', updateTime + 'ms');
+          logger.debug('[HMR] 更新成功，耗时:', updateTime + 'ms');
         }
       }
     });
@@ -184,7 +184,7 @@ export function createHMREnhancedPlugin(options: HMREnhancedOptions = {}): Plugi
     // 监听 HMR 错误
     import.meta.hot.on('vite:error', (error) => {
       if (hmrConfig.debug) {
-        console.error('[HMR] 更新失败:', error);
+        logger.error('[HMR] 更新失败:', error);
       }
 
       // 发送错误到服务器
@@ -197,7 +197,7 @@ export function createHMREnhancedPlugin(options: HMREnhancedOptions = {}): Plugi
 
       // 如果启用回退，等待服务器触发全量刷新
       if (hmrConfig.fallbackToFullReload) {
-        console.log('[HMR] 即将触发全量刷新...');
+        logger.info('[HMR] 即将触发全量刷新...');
       }
     });
   }

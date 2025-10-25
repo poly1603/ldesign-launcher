@@ -14,6 +14,8 @@ export { ConfigManager } from './core/ConfigManager'
 export { PluginMarketManager, pluginMarket } from './core/PluginMarket'
 export { CacheManager, cacheManager } from './core/CacheManager'
 export { ToolsManager, createToolsManager, createToolsPlugins } from './core/ToolsManager'
+export { SmartPluginManager } from './core/SmartPluginManager'
+export { BuildCache } from './core/BuildCache'
 
 // 导出新增的优化和增强模块
 export { PerformanceOptimizer, createPerformanceOptimizer } from './core/PerformanceOptimizer'
@@ -24,6 +26,9 @@ export type { DevExperienceOptions, DevMetrics } from './core/DevExperience'
 
 export { TestIntegration, createTestIntegration } from './core/TestIntegration'
 export type { TestConfig, TestResult, TestFramework } from './core/TestIntegration'
+
+// 导出新增功能模块
+// 新功能模块暂时移除，待核心功能稳定后再添加
 
 export { DashboardServer, createDashboardServer } from './dashboard/server'
 export type { DashboardConfig, DashboardMetrics, BuildRecord } from './dashboard/server'

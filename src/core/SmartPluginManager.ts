@@ -42,7 +42,9 @@ export interface PluginConfig {
     configFiles?: string[]
   }
   /** 插件选项 */
-  options?: Record<string, any>
+  options?: Record<string, unknown>
+  /** 插件的依赖项 */
+  dependencies?: string[]
 }
 
 /**
@@ -53,7 +55,7 @@ export class SmartPluginManager {
   private cwd: string
   private detectedType: ProjectType | null = null
   private availablePlugins: Map<string, PluginConfig> = new Map()
-  
+
   // 性能优化：插件检测结果缓存
   private static pluginCache = new Map<string, { type: ProjectType; timestamp: number; packageJsonHash: string }>()
   private static readonly PLUGIN_CACHE_TTL = 60 * 1000 // 1分钟缓存
@@ -151,10 +153,10 @@ export class SmartPluginManager {
     const packageJsonPath = PathUtils.resolve(this.cwd, 'package.json')
     const packageJsonHash = await this.getPackageJsonHash(packageJsonPath)
     const cached = SmartPluginManager.pluginCache.get(this.cwd)
-    
-    if (cached && 
-        cached.packageJsonHash === packageJsonHash && 
-        Date.now() - cached.timestamp < SmartPluginManager.PLUGIN_CACHE_TTL) {
+
+    if (cached &&
+      cached.packageJsonHash === packageJsonHash &&
+      Date.now() - cached.timestamp < SmartPluginManager.PLUGIN_CACHE_TTL) {
       this.detectedType = cached.type
       if (this.logger.getLevel() === 'debug') {
         this.logger.debug('使用缓存的项目类型检测结果', { type: this.detectedType })
@@ -177,7 +179,7 @@ export class SmartPluginManager {
             if (this.logger.getLevel() === 'debug') {
               this.logger.debug('检测到 Vue 3 项目')
             }
-            
+
             // 缓存检测结果
             SmartPluginManager.pluginCache.set(this.cwd, {
               type: this.detectedType,
@@ -191,7 +193,7 @@ export class SmartPluginManager {
             if (this.logger.getLevel() === 'debug') {
               this.logger.debug('检测到 Vue 2 项目')
             }
-            
+
             // 缓存检测结果
             SmartPluginManager.pluginCache.set(this.cwd, {
               type: this.detectedType,
@@ -209,7 +211,7 @@ export class SmartPluginManager {
           if (this.logger.getLevel() === 'debug') {
             this.logger.debug('检测到 React 项目')
           }
-          
+
           // 缓存检测结果
           SmartPluginManager.pluginCache.set(this.cwd, {
             type: this.detectedType,
@@ -226,7 +228,7 @@ export class SmartPluginManager {
           if (this.logger.getLevel() === 'debug') {
             this.logger.debug('检测到 Svelte 项目')
           }
-          
+
           // 缓存检测结果
           SmartPluginManager.pluginCache.set(this.cwd, {
             type: this.detectedType,
@@ -246,7 +248,7 @@ export class SmartPluginManager {
         if (this.logger.getLevel() === 'debug') {
           this.logger.debug('检测到 Vue 文件，假设为 Vue 3 项目')
         }
-        
+
         SmartPluginManager.pluginCache.set(this.cwd, {
           type: this.detectedType,
           timestamp: Date.now(),
@@ -259,7 +261,7 @@ export class SmartPluginManager {
       if (hasReactFiles) {
         this.detectedType = ProjectType.REACT
         this.logger.info('检测到 React 文件')
-        
+
         SmartPluginManager.pluginCache.set(this.cwd, {
           type: this.detectedType,
           timestamp: Date.now(),
@@ -272,7 +274,7 @@ export class SmartPluginManager {
       if (hasSvelteFiles) {
         this.detectedType = ProjectType.SVELTE
         this.logger.info('检测到 Svelte 文件')
-        
+
         SmartPluginManager.pluginCache.set(this.cwd, {
           type: this.detectedType,
           timestamp: Date.now(),
@@ -284,14 +286,14 @@ export class SmartPluginManager {
       // 默认为 vanilla 项目
       this.detectedType = ProjectType.VANILLA
       this.logger.info('未检测到特定框架，使用 Vanilla 配置')
-      
+
       // 缓存检测结果
       SmartPluginManager.pluginCache.set(this.cwd, {
         type: this.detectedType,
         timestamp: Date.now(),
         packageJsonHash
       })
-      
+
       return this.detectedType
 
     } catch (error) {
@@ -499,37 +501,59 @@ export class SmartPluginManager {
       package: config.packageName
     })
 
-    try {
-      // 动态导入插件 - 使用正确的模块解析上下文
-      // 从项目根目录解析模块，而不是从 launcher 包解析
-      const { createRequire } = await import('module')
-      const require = createRequire(PathUtils.resolve(this.cwd, 'package.json'))
+    // 重试配置
+    const maxRetries = 3
+    const retryDelay = 1000 // 1秒
 
-      // 先尝试 require 解析路径
-      const modulePath = require.resolve(config.packageName)
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // 动态导入插件 - 使用正确的模块解析上下文
+        // 从项目根目录解析模块，而不是从 launcher 包解析
+        const { createRequire } = await import('module')
+        const require = createRequire(PathUtils.resolve(this.cwd, 'package.json'))
 
-      // 将 Windows 路径转换为 file:// URL
-      const { pathToFileURL } = await import('url')
-      const moduleUrl = pathToFileURL(modulePath).href
+        // 先尝试 require 解析路径
+        const modulePath = require.resolve(config.packageName)
 
-      // 然后使用动态导入
-      const pluginModule = await import(moduleUrl)
-      const pluginFactory = pluginModule.default || pluginModule
-      const plugin = pluginFactory(config.options)
+        // 将 Windows 路径转换为 file:// URL
+        const { pathToFileURL } = await import('url')
+        const moduleUrl = pathToFileURL(modulePath).href
 
-      this.logger.debug(`插件加载成功: ${config.name}`)
-      return plugin
-    } catch (error) {
-      // 只在调试模式下显示插件加载失败的详细信息
-      if (process.env.NODE_ENV === 'development' || process.env.DEBUG) {
-        this.logger.debug('插件加载失败，可能未安装', {
-          name: config.name,
-          package: config.packageName,
-          error: (error as Error).message
-        })
+        // 然后使用动态导入
+        const pluginModule = await import(moduleUrl)
+        const pluginFactory = pluginModule.default || pluginModule
+        const plugin = pluginFactory(config.options)
+
+        this.logger.debug(`插件加载成功: ${config.name}`)
+        return plugin
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error)
+
+        if (attempt < maxRetries) {
+          this.logger.warn(`插件加载失败，尝试重试 (${attempt}/${maxRetries})`, {
+            name: config.name,
+            package: config.packageName,
+            error: errorMessage
+          })
+
+          // 等待后重试
+          await new Promise(resolve => setTimeout(resolve, retryDelay * attempt))
+        } else {
+          // 最后一次尝试失败，只在调试模式下显示详细信息
+          if (process.env.NODE_ENV === 'development' || process.env.DEBUG) {
+            this.logger.debug('插件加载失败，可能未安装', {
+              name: config.name,
+              package: config.packageName,
+              error: errorMessage,
+              attempts: maxRetries
+            })
+          }
+          return null
+        }
       }
-      return null
     }
+
+    return null
   }
 
   /**
@@ -537,5 +561,230 @@ export class SmartPluginManager {
    */
   getDetectedType(): ProjectType | null {
     return this.detectedType
+  }
+
+  /**
+   * 检查插件依赖
+   * @param pluginKey - 插件键名
+   * @returns 依赖检查结果
+   */
+  async checkPluginDependencies(pluginKey: string): Promise<{
+    satisfied: boolean
+    missing: string[]
+    conflicts: string[]
+  }> {
+    const result = {
+      satisfied: true,
+      missing: [] as string[],
+      conflicts: [] as string[]
+    }
+
+    const config = this.availablePlugins.get(pluginKey)
+    if (!config) {
+      result.satisfied = false
+      result.missing.push(config?.packageName || pluginKey)
+      return result
+    }
+
+    try {
+      // 读取项目的 package.json
+      const packageJsonPath = PathUtils.resolve(this.cwd, 'package.json')
+      const packageJson = JSON.parse(await FileSystem.readFile(packageJsonPath, 'utf-8'))
+      const allDeps = {
+        ...packageJson.dependencies,
+        ...packageJson.devDependencies,
+        ...packageJson.peerDependencies
+      }
+
+      // 检查插件本身是否已安装
+      if (!allDeps[config.packageName]) {
+        result.satisfied = false
+        result.missing.push(config.packageName)
+      }
+
+      // 检查插件的依赖
+      if (config.dependencies) {
+        for (const dep of config.dependencies) {
+          if (!allDeps[dep]) {
+            result.satisfied = false
+            result.missing.push(dep)
+          }
+        }
+      }
+
+      // 检查是否有冲突的插件
+      const conflictingPlugins: Record<string, string[]> = {
+        'vue3': ['vue2', '@vitejs/plugin-vue2'],
+        'vue2': ['vue3', '@vitejs/plugin-vue'],
+        'react': ['preact', '@preact/preset-vite']
+      }
+
+      const conflicts = conflictingPlugins[pluginKey] || []
+      for (const conflict of conflicts) {
+        if (allDeps[conflict]) {
+          result.satisfied = false
+          result.conflicts.push(conflict)
+        }
+      }
+
+      return result
+    } catch (error) {
+      this.logger.debug('依赖检查失败', {
+        plugin: pluginKey,
+        error: error instanceof Error ? error.message : String(error)
+      })
+
+      result.satisfied = false
+      return result
+    }
+  }
+
+  /**
+   * 验证所有插件依赖
+   * @returns 所有插件的依赖验证结果
+   */
+  async validateAllPluginDependencies(): Promise<Map<string, {
+    satisfied: boolean
+    missing: string[]
+    conflicts: string[]
+  }>> {
+    const results = new Map()
+
+    for (const [pluginKey] of this.availablePlugins) {
+      const result = await this.checkPluginDependencies(pluginKey)
+      results.set(pluginKey, result)
+    }
+
+    return results
+  }
+
+  /**
+   * 获取插件的依赖树
+   * @param pluginKey - 插件键名
+   * @returns 依赖树
+   */
+  async getPluginDependencyTree(pluginKey: string): Promise<{
+    name: string
+    version: string
+    dependencies: Array<{ name: string; version: string }>
+  } | null> {
+    const config = this.availablePlugins.get(pluginKey)
+    if (!config) {
+      return null
+    }
+
+    try {
+      // 获取插件的 package.json
+      const { createRequire } = await import('module')
+      const require = createRequire(PathUtils.resolve(this.cwd, 'package.json'))
+
+      const pluginPackageJsonPath = require.resolve(`${config.packageName}/package.json`)
+      const pluginPackageJson = JSON.parse(await FileSystem.readFile(pluginPackageJsonPath, 'utf-8'))
+
+      const tree = {
+        name: pluginPackageJson.name,
+        version: pluginPackageJson.version,
+        dependencies: [] as Array<{ name: string; version: string }>
+      }
+
+      // 收集依赖
+      const deps = {
+        ...pluginPackageJson.dependencies,
+        ...pluginPackageJson.peerDependencies
+      }
+
+      for (const [name, version] of Object.entries(deps)) {
+        tree.dependencies.push({
+          name,
+          version: version as string
+        })
+      }
+
+      return tree
+    } catch (error) {
+      this.logger.debug('获取插件依赖树失败', {
+        plugin: pluginKey,
+        error: error instanceof Error ? error.message : String(error)
+      })
+      return null
+    }
+  }
+
+  /**
+   * 自动安装缺失的插件依赖
+   * @param pluginKey - 插件键名
+   * @returns 是否成功
+   */
+  async autoInstallDependencies(pluginKey: string): Promise<boolean> {
+    const check = await this.checkPluginDependencies(pluginKey)
+
+    if (check.satisfied) {
+      this.logger.info('插件依赖已满足，无需安装')
+      return true
+    }
+
+    if (check.missing.length > 0) {
+      this.logger.info(`检测到缺失的依赖: ${check.missing.join(', ')}`)
+
+      try {
+        // 确定包管理器
+        const packageManager = await this.detectPackageManager()
+
+        // 构建安装命令
+        const packages = check.missing.join(' ')
+        const command = this.getInstallCommand(packageManager, packages)
+
+        this.logger.info(`执行安装命令: ${command}`)
+
+        // 执行安装
+        const { execSync } = await import('child_process')
+        execSync(command, {
+          cwd: this.cwd,
+          stdio: 'inherit'
+        })
+
+        this.logger.success('依赖安装成功')
+        return true
+      } catch (error) {
+        this.logger.error('依赖安装失败', {
+          error: error instanceof Error ? error.message : String(error)
+        })
+        return false
+      }
+    }
+
+    if (check.conflicts.length > 0) {
+      this.logger.warn(`检测到冲突的依赖: ${check.conflicts.join(', ')}`)
+      this.logger.warn('请手动解决依赖冲突')
+    }
+
+    return false
+  }
+
+  /**
+   * 检测包管理器
+   */
+  private async detectPackageManager(): Promise<'npm' | 'yarn' | 'pnpm'> {
+    if (await FileSystem.exists(PathUtils.resolve(this.cwd, 'pnpm-lock.yaml'))) {
+      return 'pnpm'
+    }
+    if (await FileSystem.exists(PathUtils.resolve(this.cwd, 'yarn.lock'))) {
+      return 'yarn'
+    }
+    return 'npm'
+  }
+
+  /**
+   * 获取安装命令
+   */
+  private getInstallCommand(packageManager: 'npm' | 'yarn' | 'pnpm', packages: string): string {
+    switch (packageManager) {
+      case 'pnpm':
+        return `pnpm add -D ${packages}`
+      case 'yarn':
+        return `yarn add -D ${packages}`
+      case 'npm':
+        return `npm install -D ${packages}`
+    }
   }
 }

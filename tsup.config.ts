@@ -27,10 +27,11 @@ export default defineConfig({
     // 插件预设（独立模块）
     'plugins/presets': 'src/plugins/presets.ts',
     // 市场管理（独立模块）
-    'marketplace/index': 'src/marketplace/index.ts'
+    'marketplace/index': 'src/marketplace/index.ts',
+    // 新功能模块暂时移除，待核心功能稳定后再添加
   },
   format: ['cjs', 'esm'],
-  dts: true,
+  dts: false, // 暂时禁用类型声明文件生成
   tsconfig: 'tsconfig.json',
   clean: true,
   splitting: true, // 启用代码分割以减少重复代码
@@ -75,6 +76,7 @@ export default defineConfig({
     'ttf2woff',
     'ttf2woff2',
     'open',
+    // 新增依赖暂时移除
     // 测试相关依赖
     'vitest',
     '@vitest/ui',

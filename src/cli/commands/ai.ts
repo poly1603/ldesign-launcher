@@ -29,7 +29,7 @@ export class AICommand {
   name = 'ai'
   description = '智能优化分析和建议'
   alias = 'optimize'
-  
+
   options = [
     {
       name: 'path',
@@ -91,56 +91,56 @@ export class AICommand {
   async execute(options: AICommandOptions): Promise<void> {
     try {
       const projectPath = options.path || process.cwd()
-      
-      console.log()
-      console.log(chalk.cyan('🤖 AI 优化分析启动'))
-      console.log(chalk.gray('─'.repeat(50)))
-      
+
+      this.logger.info('')
+      this.logger.info(chalk.cyan('🤖 AI 优化分析启动'))
+      this.logger.info(chalk.gray('─'.repeat(50)))
+
       // 分析项目
-      console.log(chalk.yellow('\n📊 分析项目中...'))
+      this.logger.info(chalk.yellow('\n📊 分析项目中...'))
       const analysis = await this.aiOptimizer.analyzeProject(projectPath)
-      
+
       // 显示分析结果
       this.displayAnalysis(analysis)
-      
+
       if (options.analyzeOnly) {
         return
       }
-      
+
       // 收集性能数据
       const performanceOptimizer = createPerformanceOptimizer()
       const devExperience = createDevExperience()
       const performanceMetrics = performanceOptimizer.getMetrics()
       const devMetrics = devExperience.getMetrics()
-      
+
       // 生成建议
-      console.log(chalk.yellow('\n💡 生成优化建议...'))
+      this.logger.info(chalk.yellow('\n💡 生成优化建议...'))
       const suggestions = await this.aiOptimizer.generateSuggestions(
         analysis,
         performanceMetrics,
         devMetrics
       )
-      
+
       if (suggestions.length === 0) {
-        console.log(chalk.green('✨ 项目已经优化得很好了！'))
+        this.logger.success(chalk.green('✨ 项目已经优化得很好了！'))
         return
       }
-      
+
       // 显示建议
       this.displaySuggestions(suggestions)
-      
+
       // 处理建议
       if (options.auto) {
         await this.autoApplySuggestions(suggestions)
       } else {
         await this.interactiveMode(suggestions)
       }
-      
+
       // 导出报告
       if (options.export) {
         await this.exportReport(options.export)
       }
-      
+
     } catch (error) {
       this.logger.error('AI 分析失败:', error)
       process.exit(1)
@@ -150,11 +150,11 @@ export class AICommand {
   /**
    * 显示分析结果
    */
-  private displayAnalysis(analysis: any): void {
-    console.log()
-    console.log(chalk.bold('📋 项目分析结果'))
-    console.log(chalk.gray('─'.repeat(50)))
-    
+  private displayAnalysis(analysis: Record<string, any>): void {
+    this.logger.info('')
+    this.logger.info(chalk.bold('📋 项目分析结果'))
+    this.logger.info(chalk.gray('─'.repeat(50)))
+
     const info = [
       ['项目类型', analysis.projectType],
       ['框架', analysis.framework],
@@ -163,12 +163,12 @@ export class AICommand {
       ['TypeScript', `${analysis.fileStats.ts} 个`],
       ['CSS', `${analysis.fileStats.css} 个`],
       ['依赖数量', analysis.dependencies.total],
-      ['大型依赖', analysis.dependencies.large.length > 0 ? 
+      ['大型依赖', analysis.dependencies.large.length > 0 ?
         analysis.dependencies.large.join(', ') : '无']
     ]
-    
+
     info.forEach(([label, value]) => {
-      console.log(`  ${chalk.gray(label + ':')} ${chalk.white(value)}`)
+      this.logger.info(`  ${chalk.gray(label + ':')} ${chalk.white(value)}`)
     })
   }
 
@@ -176,37 +176,37 @@ export class AICommand {
    * 显示优化建议
    */
   private displaySuggestions(suggestions: any[]): void {
-    console.log()
-    console.log(chalk.bold(`🎯 发现 ${suggestions.length} 个优化建议`))
-    console.log(chalk.gray('─'.repeat(50)))
-    
+    this.logger.info('')
+    this.logger.info(chalk.bold(`🎯 发现 ${suggestions.length} 个优化建议`))
+    this.logger.info(chalk.gray('─'.repeat(50)))
+
     // 按优先级分组
     const high = suggestions.filter(s => s.priority === 'high')
     const medium = suggestions.filter(s => s.priority === 'medium')
     const low = suggestions.filter(s => s.priority === 'low')
-    
+
     if (high.length > 0) {
-      console.log(chalk.red('\n⚠️  高优先级'))
+      this.logger.warn(chalk.red('\n⚠️  高优先级'))
       high.forEach((s, i) => {
-        console.log(`  ${i + 1}. ${s.title}`)
-        console.log(chalk.gray(`     ${s.description}`))
-        console.log(chalk.green(`     预期收益: ${s.expectedBenefit.improvement}`))
+        this.logger.info(`  ${i + 1}. ${s.title}`)
+        this.logger.info(chalk.gray(`     ${s.description}`))
+        this.logger.info(chalk.green(`     预期收益: ${s.expectedBenefit.improvement}`))
       })
     }
-    
+
     if (medium.length > 0) {
-      console.log(chalk.yellow('\n⚡ 中优先级'))
+      this.logger.info(chalk.yellow('\n⚡ 中优先级'))
       medium.forEach((s, i) => {
-        console.log(`  ${i + 1}. ${s.title}`)
-        console.log(chalk.gray(`     ${s.description}`))
+        this.logger.info(`  ${i + 1}. ${s.title}`)
+        this.logger.info(chalk.gray(`     ${s.description}`))
       })
     }
-    
+
     if (low.length > 0) {
-      console.log(chalk.blue('\n💡 低优先级'))
+      this.logger.info(chalk.blue('\n💡 低优先级'))
       low.forEach((s, i) => {
-        console.log(`  ${i + 1}. ${s.title}`)
-        console.log(chalk.gray(`     ${s.description}`))
+        this.logger.info(`  ${i + 1}. ${s.title}`)
+        this.logger.info(chalk.gray(`     ${s.description}`))
       })
     }
   }
@@ -215,8 +215,8 @@ export class AICommand {
    * 交互模式
    */
   private async interactiveMode(suggestions: any[]): Promise<void> {
-    console.log()
-    
+    this.logger.info('')
+
     const { action } = await inquirer.prompt([
       {
         type: 'list',
@@ -231,21 +231,21 @@ export class AICommand {
         ]
       }
     ])
-    
+
     switch (action) {
       case 'view':
         await this.viewDetailedSuggestions(suggestions)
         break
-      
+
       case 'select':
         await this.selectSuggestions(suggestions)
         break
-      
+
       case 'high':
         const highPriority = suggestions.filter(s => s.priority === 'high')
         await this.applySuggestions(highPriority)
         break
-      
+
       case 'export':
         const { filename } = await inquirer.prompt([
           {
@@ -257,9 +257,9 @@ export class AICommand {
         ])
         await this.exportReport(filename)
         break
-      
+
       case 'exit':
-        console.log(chalk.gray('退出 AI 优化'))
+        this.logger.info(chalk.gray('退出 AI 优化'))
         break
     }
   }
@@ -267,27 +267,31 @@ export class AICommand {
   /**
    * 查看详细建议
    */
-  private async viewDetailedSuggestions(suggestions: any[]): Promise<void> {
+  private async viewDetailedSuggestions(suggestions: Array<{ title: string; priority: string; category: string; impact: string; description: string; implementation?: string }>): Promise<void> {
     for (const suggestion of suggestions) {
-      console.log()
-      console.log(chalk.bold(`📌 ${suggestion.title}`))
-      console.log(chalk.gray('─'.repeat(50)))
-      console.log(`${chalk.gray('优先级:')} ${this.getPriorityColor(suggestion.priority)(suggestion.priority.toUpperCase())}`)
-      console.log(`${chalk.gray('描述:')} ${suggestion.description}`)
-      console.log(`${chalk.gray('影响:')} ${suggestion.impact}`)
-      console.log(`${chalk.gray('预期收益:')} ${suggestion.expectedBenefit.metric} ${suggestion.expectedBenefit.improvement}`)
-      console.log(chalk.gray('\n实施步骤:'))
-      suggestion.implementation.forEach((step: string, i: number) => {
-        console.log(`  ${i + 1}. ${step}`)
-      })
-      
+      this.logger.info('')
+      this.logger.info(chalk.bold(`📌 ${suggestion.title}`))
+      this.logger.info(chalk.gray('─'.repeat(50)))
+      this.logger.info(`${chalk.gray('优先级:')} ${this.getPriorityColor(suggestion.priority)(suggestion.priority.toUpperCase())}`)
+      this.logger.info(`${chalk.gray('描述:')} ${suggestion.description}`)
+      this.logger.info(`${chalk.gray('影响:')} ${suggestion.impact}`)
+      this.logger.info(`${chalk.gray('预期收益:')} ${suggestion.expectedBenefit.metric} ${suggestion.expectedBenefit.improvement}`)
+      this.logger.info(chalk.gray('\n实施步骤:'))
+      if (Array.isArray(suggestion.implementation)) {
+        suggestion.implementation.forEach((step: string, i: number) => {
+          this.logger.info(`  ${i + 1}. ${step}`)
+        })
+      } else if (suggestion.implementation) {
+        this.logger.info(`  ${suggestion.implementation}`)
+      }
+
       if (suggestion.references && suggestion.references.length > 0) {
-        console.log(chalk.gray('\n参考链接:'))
+        this.logger.info(chalk.gray('\n参考链接:'))
         suggestion.references.forEach((ref: string) => {
-          console.log(`  • ${chalk.cyan(ref)}`)
+          this.logger.info(`  • ${chalk.cyan(ref)}`)
         })
       }
-      
+
       const { next } = await inquirer.prompt([
         {
           type: 'list',
@@ -300,7 +304,7 @@ export class AICommand {
           ]
         }
       ])
-      
+
       if (next === 'apply') {
         await this.applySuggestions([suggestion])
       } else if (next === 'back') {
@@ -312,7 +316,7 @@ export class AICommand {
   /**
    * 选择建议
    */
-  private async selectSuggestions(suggestions: any[]): Promise<void> {
+  private async selectSuggestions(suggestions: Array<{ title: string; priority: string; category: string; impact: string; description: string; implementation?: string }>): Promise<void> {
     const { selected } = await inquirer.prompt([
       {
         type: 'checkbox',
@@ -325,9 +329,9 @@ export class AICommand {
         }))
       }
     ])
-    
+
     const selectedSuggestions = suggestions.filter(s => selected.includes(s.id))
-    
+
     if (selectedSuggestions.length > 0) {
       await this.applySuggestions(selectedSuggestions)
     }
@@ -336,40 +340,40 @@ export class AICommand {
   /**
    * 应用建议
    */
-  private async applySuggestions(suggestions: any[]): Promise<void> {
-    console.log()
-    console.log(chalk.cyan(`🔧 应用 ${suggestions.length} 个优化建议...`))
-    
+  private async applySuggestions(suggestions: Array<{ title: string; priority: string; category: string; impact: string; description: string; implementation?: string }>): Promise<void> {
+    this.logger.info('')
+    this.logger.info(chalk.cyan(`🔧 应用 ${suggestions.length} 个优化建议...`))
+
     for (const suggestion of suggestions) {
-      console.log(`  • 应用: ${suggestion.title}`)
-      
+      this.logger.info(`  • 应用: ${suggestion.title}`)
+
       try {
         await this.aiOptimizer.applySuggestion(suggestion.id)
-        console.log(chalk.green(`    ✓ 成功`))
+        this.logger.success(chalk.green(`    ✓ 成功`))
       } catch (error) {
-        console.log(chalk.red(`    ✗ 失败: ${(error as Error).message}`))
+        this.logger.error(chalk.red(`    ✗ 失败: ${(error as Error).message}`))
       }
     }
-    
-    console.log()
-    console.log(chalk.green('✨ 优化应用完成！'))
-    console.log(chalk.gray('请重新构建项目以查看效果'))
+
+    this.logger.info('')
+    this.logger.success(chalk.green('✨ 优化应用完成！'))
+    this.logger.info(chalk.gray('请重新构建项目以查看效果'))
   }
 
   /**
    * 自动应用建议
    */
-  private async autoApplySuggestions(suggestions: any[]): Promise<void> {
+  private async autoApplySuggestions(suggestions: Array<{ title: string; priority: string; category: string; impact: string; description: string; implementation?: string }>): Promise<void> {
     const highPriority = suggestions.filter(s => s.priority === 'high')
-    
+
     if (highPriority.length === 0) {
-      console.log(chalk.yellow('没有高优先级建议需要自动应用'))
+      this.logger.info(chalk.yellow('没有高优先级建议需要自动应用'))
       return
     }
-    
-    console.log()
-    console.log(chalk.cyan(`🤖 自动应用 ${highPriority.length} 个高优先级建议`))
-    
+
+    this.logger.info('')
+    this.logger.info(chalk.cyan(`🤖 自动应用 ${highPriority.length} 个高优先级建议`))
+
     await this.applySuggestions(highPriority)
   }
 
@@ -379,14 +383,14 @@ export class AICommand {
   private async exportReport(filename: string): Promise<void> {
     const fs = await import('fs-extra')
     const path = await import('path')
-    
+
     const report = this.aiOptimizer.exportReport()
     const filepath = path.resolve(process.cwd(), filename)
-    
+
     await fs.writeFile(filepath, report, 'utf-8')
-    
-    console.log()
-    console.log(chalk.green(`✅ 报告已导出到: ${filepath}`))
+
+    this.logger.info('')
+    this.logger.success(chalk.green(`✅ 报告已导出到: ${filepath}`))
   }
 
   /**
