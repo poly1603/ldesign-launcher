@@ -31,7 +31,9 @@ export default defineConfig({
     // 新功能模块暂时移除，待核心功能稳定后再添加
   },
   format: ['cjs', 'esm'],
-  dts: false, // 暂时禁用类型声明文件生成
+  dts: {
+    resolve: true,
+  },
   tsconfig: 'tsconfig.json',
   clean: true,
   splitting: true, // 启用代码分割以减少重复代码

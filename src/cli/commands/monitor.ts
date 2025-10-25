@@ -63,6 +63,8 @@ export interface MonitorOptions {
   get?: string
   set?: string
   list?: boolean
+  targets?: string
+  period?: string
   reset?: boolean
 }
 
@@ -216,9 +218,9 @@ export class MonitorCommand {
     try {
       this.logger.info('启动性能监控...')
 
-      const targets = options.targets.split(',')
-      const interval = parseInt(options.interval) * 1000
-      const duration = parseInt(options.duration) * 60 * 1000
+      const targets = (options.targets || '').split(',').filter(Boolean)
+      const interval = (options.interval || 5) * 1000
+      const duration = (options.duration || 60) * 60 * 1000
 
       // 创建输出目录
       await fs.mkdir(options.output, { recursive: true })

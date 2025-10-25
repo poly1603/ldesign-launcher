@@ -589,7 +589,7 @@ export class SmartPluginManager {
     try {
       // 读取项目的 package.json
       const packageJsonPath = PathUtils.resolve(this.cwd, 'package.json')
-      const packageJson = JSON.parse(await FileSystem.readFile(packageJsonPath, 'utf-8'))
+      const packageJson = JSON.parse(await FileSystem.readFile(packageJsonPath, { encoding: 'utf-8' }))
       const allDeps = {
         ...packageJson.dependencies,
         ...packageJson.devDependencies,
@@ -679,7 +679,7 @@ export class SmartPluginManager {
       const require = createRequire(PathUtils.resolve(this.cwd, 'package.json'))
 
       const pluginPackageJsonPath = require.resolve(`${config.packageName}/package.json`)
-      const pluginPackageJson = JSON.parse(await FileSystem.readFile(pluginPackageJsonPath, 'utf-8'))
+      const pluginPackageJson = JSON.parse(await FileSystem.readFile(pluginPackageJsonPath, { encoding: 'utf-8' }))
 
       const tree = {
         name: pluginPackageJson.name,

@@ -403,12 +403,15 @@ export class BuildCache extends EventEmitter {
       const now = Date.now()
 
       const repaired: CacheEntry = {
+        key: entry.key || '',
         hash: entry.hash || '',
+        timestamp: entry.timestamp || now,
         size: Math.max(0, entry.size || 0),
+        hits: Math.max(0, entry.hits || 0),
+        lastAccess: entry.lastAccess || now,
         mtime: entry.mtime && entry.mtime <= now ? entry.mtime : now,
         created: entry.created && entry.created <= now ? entry.created : now,
-        accessed: entry.accessed && entry.accessed <= now ? entry.accessed : now,
-        hits: Math.max(0, entry.hits || 0)
+        accessed: entry.accessed && entry.accessed <= now ? entry.accessed : now
       }
 
       if (this.validateEntry(repaired) && repaired.hash) {

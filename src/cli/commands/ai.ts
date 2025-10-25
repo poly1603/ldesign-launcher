@@ -5,7 +5,7 @@
  */
 
 import { Logger } from '../../utils/logger'
-import { createAIOptimizer } from '../../ai/optimizer'
+import { createAIOptimizer, type OptimizationSuggestion } from '../../ai/optimizer'
 import { createPerformanceOptimizer } from '../../core/PerformanceOptimizer'
 import { createDevExperience } from '../../core/DevExperience'
 import chalk from 'chalk'
@@ -175,7 +175,7 @@ export class AICommand {
   /**
    * 显示优化建议
    */
-  private displaySuggestions(suggestions: any[]): void {
+  private displaySuggestions(suggestions: OptimizationSuggestion[]): void {
     this.logger.info('')
     this.logger.info(chalk.bold(`🎯 发现 ${suggestions.length} 个优化建议`))
     this.logger.info(chalk.gray('─'.repeat(50)))
@@ -214,7 +214,7 @@ export class AICommand {
   /**
    * 交互模式
    */
-  private async interactiveMode(suggestions: any[]): Promise<void> {
+  private async interactiveMode(suggestions: OptimizationSuggestion[]): Promise<void> {
     this.logger.info('')
 
     const { action } = await inquirer.prompt([
@@ -267,7 +267,7 @@ export class AICommand {
   /**
    * 查看详细建议
    */
-  private async viewDetailedSuggestions(suggestions: Array<{ title: string; priority: string; category: string; impact: string; description: string; implementation?: string }>): Promise<void> {
+  private async viewDetailedSuggestions(suggestions: OptimizationSuggestion[]): Promise<void> {
     for (const suggestion of suggestions) {
       this.logger.info('')
       this.logger.info(chalk.bold(`📌 ${suggestion.title}`))
@@ -316,7 +316,7 @@ export class AICommand {
   /**
    * 选择建议
    */
-  private async selectSuggestions(suggestions: Array<{ title: string; priority: string; category: string; impact: string; description: string; implementation?: string }>): Promise<void> {
+  private async selectSuggestions(suggestions: OptimizationSuggestion[]): Promise<void> {
     const { selected } = await inquirer.prompt([
       {
         type: 'checkbox',
@@ -340,7 +340,7 @@ export class AICommand {
   /**
    * 应用建议
    */
-  private async applySuggestions(suggestions: Array<{ title: string; priority: string; category: string; impact: string; description: string; implementation?: string }>): Promise<void> {
+  private async applySuggestions(suggestions: OptimizationSuggestion[]): Promise<void> {
     this.logger.info('')
     this.logger.info(chalk.cyan(`🔧 应用 ${suggestions.length} 个优化建议...`))
 
@@ -363,7 +363,7 @@ export class AICommand {
   /**
    * 自动应用建议
    */
-  private async autoApplySuggestions(suggestions: Array<{ title: string; priority: string; category: string; impact: string; description: string; implementation?: string }>): Promise<void> {
+  private async autoApplySuggestions(suggestions: OptimizationSuggestion[]): Promise<void> {
     const highPriority = suggestions.filter(s => s.priority === 'high')
 
     if (highPriority.length === 0) {
