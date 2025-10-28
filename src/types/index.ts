@@ -33,3 +33,7 @@ export type {
 
 // 导出工具类型
 export type { Logger } from '../utils/logger'
+
+// 新增：引擎和框架类型定义 (v2.0.0)
+export * from './engine'
+export * from './framework'

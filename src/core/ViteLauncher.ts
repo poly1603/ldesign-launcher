@@ -121,6 +121,9 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
   /** 初始化状态 */
   private initialized: boolean = false
 
+  /** 配置变更定时器 */
+  private configChangeTimer?: NodeJS.Timeout
+
 
 
   /**
@@ -182,11 +185,15 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
       watch: shouldWatch,
       logger: configLogger,
       onConfigChange: (newConfig) => {
-        // 延迟重启，确保配置文件写入完成
-        setTimeout(() => {
+        // 使用防抖处理配置变更
+        if (this.configChangeTimer) {
+          clearTimeout(this.configChangeTimer)
+        }
+        this.configChangeTimer = setTimeout(() => {
           this.restartDevWithConfig(newConfig).catch(error => {
             this.logger.error('自动重启失败', error)
           })
+          this.configChangeTimer = undefined
         }, 200)
       }
     })
@@ -1207,16 +1214,12 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
    */
   private getServerUrl(server: ViteDevServer | PreviewServer): string {
     try {
-      if (server.resolvedUrls?.local?.[0]) {
-        return server.resolvedUrls.local[0]
-      }
-
-      // 回退到手动构建 URL
-      const host = this.config.server?.host || DEFAULT_HOST
+      const { getServerUrl: buildUrl } = require('../utils/server')
+      const hostConfig = this.config.server?.host
       const port = this.config.server?.port || DEFAULT_PORT
-      const protocol = this.config.server?.https ? 'https' : 'http'
+      const https = typeof this.config.server?.https === 'boolean' ? this.config.server.https : false
 
-      return `${protocol}://${host}:${port}`
+      return buildUrl(server, hostConfig, port, https)
     } catch (error) {
       this.logger.warn('获取服务器 URL 失败', { error: (error as Error).message })
       return 'http://localhost:3000'
@@ -1231,16 +1234,12 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
    */
   private getPreviewServerUrl(server: PreviewServer): string {
     try {
-      if (server.resolvedUrls?.local?.[0]) {
-        return server.resolvedUrls.local[0]
-      }
-
-      // 回退到手动构建 URL
-      const host = this.config.preview?.host || DEFAULT_HOST
+      const { getServerUrl: buildUrl } = require('../utils/server')
+      const hostConfig = this.config.preview?.host
       const port = this.config.preview?.port || 4173
-      const protocol = this.config.preview?.https ? 'https' : 'http'
+      const https = typeof this.config.preview?.https === 'boolean' ? this.config.preview.https : false
 
-      return `${protocol}://${host}:${port}`
+      return buildUrl(server, hostConfig, port, https)
     } catch (error) {
       this.logger.warn('获取预览服务器 URL 失败', { error: (error as Error).message })
       return 'http://localhost:4173'
@@ -1442,8 +1441,13 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
   private async enhanceConfigWithSmartPlugins(config: ViteLauncherConfig): Promise<ViteLauncherConfig> {
     try {
       this.logger.info('开始智能插件检测...')
+      // 检查用户是否明确指定了框架类型
+      const explicitFrameworkType = (config as any).framework?.type
+      if (explicitFrameworkType) {
+        this.logger.info('检测到用户指定的框架类型', { type: explicitFrameworkType })
+      }
       // 获取智能检测的插件
-      const smartPlugins = await this.smartPluginManager.getRecommendedPlugins()
+      const smartPlugins = await this.smartPluginManager.getRecommendedPlugins(explicitFrameworkType)
       this.logger.info('智能插件检测完成', { count: smartPlugins.length })
 
       if (smartPlugins.length > 0) {

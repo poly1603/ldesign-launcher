@@ -1,8 +1,8 @@
 {
   "name": "@ldesign/launcher",
   "type": "module",
-  "version": "1.0.0",
-  "description": "基于 Vite JavaScript API 的前端项目启动器，提供统一的开发服务器、构建工具和预览服务",
+  "version": "2.0.0",
+  "description": "基于 Vite JavaScript API 的前端项目启动器，提供统一的开发服务器、构建工具和预览服务，支持多种构建引擎和前端框架",
   "keywords": [
     "vite",
     "launcher",
@@ -163,6 +163,11 @@
     "@vitejs/plugin-react": "^5.0.2",
     "@vitejs/plugin-vue": "^6.0.1",
     "@vitejs/plugin-vue2": "^2.3.3",
+    "@analogjs/vite-plugin-angular": "^1.0.0",
+    "@angular-devkit/build-angular": "^18.0.0",
+    "vite-plugin-solid": "^2.10.0",
+    "@preact/preset-vite": "^2.9.0",
+    "@builder.io/qwik": "^1.11.0",
     "vite": "^4.0.0 || ^5.0.0"
   },
   "peerDependenciesMeta": {
@@ -182,6 +187,21 @@
       "optional": true
     },
     "@sveltejs/vite-plugin-svelte": {
+      "optional": true
+    },
+    "@analogjs/vite-plugin-angular": {
+      "optional": true
+    },
+    "@angular-devkit/build-angular": {
+      "optional": true
+    },
+    "vite-plugin-solid": {
+      "optional": true
+    },
+    "@preact/preset-vite": {
+      "optional": true
+    },
+    "@builder.io/qwik": {
       "optional": true
     }
   },

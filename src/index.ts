@@ -1,14 +1,42 @@
 /**
  * @ldesign/launcher - 基于 Vite JavaScript API 的前端项目启动器
- * 
+ *
  * 提供统一的开发服务器、构建工具和预览服务，支持多种前端技术栈
- * 
+ *
  * @author LDesign Team
- * @version 1.0.0
+ * @version 2.0.0
  * @since 1.0.0
  */
 
-// 导出核心类
+// 导出新架构核心类
+export { Launcher } from './core/Launcher'
+export { bootstrap, isBootstrapped } from './core/bootstrap'
+
+// 导出引擎相关（避免与 types 冲突）
+export { BuildEngine } from './engines/base/BuildEngine'
+export { ViteEngine, ViteConfigTransformer, createViteEngineFactory } from './engines/vite'
+export { VITE_ENGINE_METADATA, registerAllEngines } from './engines'
+
+// 导出注册表
+export * from './registry'
+
+// 导出框架相关（避免与 types 冲突）
+export { FrameworkAdapter } from './frameworks/base/FrameworkAdapter'
+export { FrameworkDetector, createFrameworkDetector } from './frameworks/base/FrameworkDetector'
+export {
+  VUE2_FRAMEWORK_METADATA,
+  VUE3_FRAMEWORK_METADATA,
+  REACT_FRAMEWORK_METADATA,
+  ANGULAR_FRAMEWORK_METADATA,
+  SVELTE_FRAMEWORK_METADATA,
+  SOLID_FRAMEWORK_METADATA,
+  PREACT_FRAMEWORK_METADATA,
+  QWIK_FRAMEWORK_METADATA,
+  LIT_FRAMEWORK_METADATA,
+  registerAllFrameworks
+} from './frameworks'
+
+// 导出旧架构核心类（保持向后兼容）
 export { ViteLauncher } from './core/ViteLauncher'
 export { ConfigManager } from './core/ConfigManager'
 export { PluginMarketManager, pluginMarket } from './core/PluginMarket'
@@ -71,8 +99,8 @@ export type {
   MarketplaceConfig
 } from './marketplace'
 
-// 导出所有类型定义
-export * from './types'
+// 导出类型定义（避免与实现类冲突）
+export type * from './types'
 
 // 导出UI配置相关函数
 export {
@@ -147,13 +175,14 @@ export {
 export { defineConfig } from './utils/config'
 
 // 导出版本信息
-export const version = '1.0.0'
+export const version = '2.0.0'
 
 // 为了保持导出一致性，使用 createLauncher 函数
 // 提供懒加载的方式访问所有模块
 export function createLauncher() {
   return {
     version,
+    Launcher: () => import('./core/Launcher').then(m => m.Launcher),
     ViteLauncher: () => import('./core/ViteLauncher').then(m => m.ViteLauncher),
     ConfigManager: () => import('./core/ConfigManager').then(m => m.ConfigManager),
     PluginMarketManager: () => import('./core/PluginMarket').then(m => m.PluginMarketManager),
@@ -162,3 +191,6 @@ export function createLauncher() {
     createCli: () => import('./cli').then(m => m.createCli)
   }
 }
+
+// 默认导出新的 Launcher
+export { Launcher as default } from './core/Launcher'

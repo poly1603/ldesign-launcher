@@ -18,7 +18,12 @@ export enum ProjectType {
   VUE3 = 'vue3',
   VUE2 = 'vue2',
   REACT = 'react',
+  PREACT = 'preact',
   SVELTE = 'svelte',
+  SOLID = 'solid',
+  LIT = 'lit',
+  QWIK = 'qwik',
+  ANGULAR = 'angular',
   VANILLA = 'vanilla'
 }
 
@@ -119,6 +124,19 @@ export class SmartPluginManager {
       options: {}
     })
 
+    // Preact 插件配置
+    this.availablePlugins.set('preact', {
+      name: 'Preact',
+      packageName: '@preact/preset-vite',
+      required: true,
+      detection: {
+        dependencies: ['preact'],
+        filePatterns: ['**/*.tsx', '**/*.jsx'],
+        configFiles: []
+      },
+      options: {}
+    })
+
     // Svelte 插件配置
     this.availablePlugins.set('svelte', {
       name: 'Svelte',
@@ -128,6 +146,58 @@ export class SmartPluginManager {
         dependencies: ['svelte'],
         filePatterns: ['**/*.svelte'],
         configFiles: ['svelte.config.js', 'svelte.config.ts']
+      },
+      options: {}
+    })
+
+    // Solid 插件配置
+    this.availablePlugins.set('solid', {
+      name: 'Solid',
+      packageName: 'vite-plugin-solid',
+      required: true,
+      detection: {
+        dependencies: ['solid-js'],
+        filePatterns: ['**/*.tsx', '**/*.jsx'],
+        configFiles: []
+      },
+      options: {}
+    })
+
+    // Lit 插件配置
+    this.availablePlugins.set('lit', {
+      name: 'Lit',
+      packageName: '@vitejs/plugin-lit',
+      required: false,
+      detection: {
+        dependencies: ['lit'],
+        filePatterns: ['**/*.ts', '**/*.js'],
+        configFiles: []
+      },
+      options: {}
+    })
+
+    // Qwik 插件配置
+    this.availablePlugins.set('qwik', {
+      name: 'Qwik',
+      packageName: '@builder.io/qwik',
+      required: true,
+      detection: {
+        dependencies: ['@builder.io/qwik'],
+        filePatterns: ['**/*.tsx'],
+        configFiles: []
+      },
+      options: {}
+    })
+
+    // Angular 插件配置
+    this.availablePlugins.set('angular', {
+      name: 'Angular',
+      packageName: '@analogjs/vite-plugin-angular',
+      required: true,
+      detection: {
+        dependencies: ['@angular/core'],
+        filePatterns: ['**/*.ts'],
+        configFiles: ['angular.json']
       },
       options: {}
     })
@@ -162,6 +232,13 @@ export class SmartPluginManager {
             this.logger.info('检测到 Vue 2 项目')
             return this.detectedType
           }
+        }
+
+        // 检测 Preact（必须在 React 之前检测）
+        if (dependencies.preact) {
+          this.detectedType = ProjectType.PREACT
+          this.logger.info('检测到 Preact 项目')
+          return this.detectedType
         }
 
         // 检测 React
@@ -318,9 +395,19 @@ export class SmartPluginManager {
 
   /**
    * 获取推荐的插件列表
+   * @param explicitType - 用户明确指定的框架类型（可选）
    */
-  async getRecommendedPlugins(): Promise<Plugin[]> {
-    const projectType = await this.detectProjectType()
+  async getRecommendedPlugins(explicitType?: string): Promise<Plugin[]> {
+    // 如果用户明确指定了框架类型，则使用指定的类型，否则自动检测
+    let projectType: ProjectType
+    if (explicitType) {
+      this.logger.info('使用用户指定的框架类型', { type: explicitType })
+      projectType = explicitType as ProjectType
+      this.detectedType = projectType
+    } else {
+      projectType = await this.detectProjectType()
+    }
+
     const plugins: Plugin[] = []
 
     this.logger.info('SmartPluginManager: 开始加载推荐插件...', { projectType })
@@ -356,9 +443,29 @@ export class SmartPluginManager {
           const reactPlugin = await this.loadPlugin('react')
           if (reactPlugin) plugins.push(reactPlugin)
           break
+        case ProjectType.PREACT:
+          const preactPlugin = await this.loadPlugin('preact')
+          if (preactPlugin) plugins.push(preactPlugin)
+          break
         case ProjectType.SVELTE:
           const sveltePlugin = await this.loadPlugin('svelte')
           if (sveltePlugin) plugins.push(sveltePlugin)
+          break
+        case ProjectType.SOLID:
+          const solidPlugin = await this.loadPlugin('solid')
+          if (solidPlugin) plugins.push(solidPlugin)
+          break
+        case ProjectType.LIT:
+          const litPlugin = await this.loadPlugin('lit')
+          if (litPlugin) plugins.push(litPlugin)
+          break
+        case ProjectType.QWIK:
+          const qwikPlugin = await this.loadPlugin('qwik')
+          if (qwikPlugin) plugins.push(qwikPlugin)
+          break
+        case ProjectType.ANGULAR:
+          const angularPlugin = await this.loadPlugin('angular')
+          if (angularPlugin) plugins.push(angularPlugin)
           break
       }
 

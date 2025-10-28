@@ -148,6 +148,7 @@ export class CacheManager {
     }
   }
 
+
   /**
    * 获取缓存
    */
@@ -555,17 +556,18 @@ export class CacheManager {
   }
 
   /**
-   * 启动自动清理
+   * 自动清理启动
    */
   private startAutoCleanup(): void {
-    const interval = this.config.autoClean.interval * 60 * 60 * 1000 // 转换为毫秒
-
-    this.cleanupTimer = setInterval(async () => {
-      try {
-        await this.cleanup()
-      } catch (error) {
+    const interval = this.config.autoClean.interval * 60 * 60 * 1000
+    // 清理旧的定时器
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer)
+    }
+    this.cleanupTimer = setInterval(() => {
+      this.cleanup().catch(error => {
         this.logger.error('自动清理失败', error)
-      }
+      })
     }, interval)
 
     // 允许进程在仅有该定时器时正常退出

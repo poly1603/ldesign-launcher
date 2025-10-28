@@ -28,6 +28,18 @@ export interface ViteLauncherConfig extends Omit<UserConfig, 'resolve'> {
   /** 开发工具配置 */
   tools?: ToolsConfig
 
+  /** 构建引擎配置（2.0 新增） */
+  engine?: {
+    type?: 'vite' | 'rspack' | 'webpack' | 'turbopack'
+    [key: string]: any
+  }
+
+  /** 框架配置（2.0 新增） */
+  framework?: {
+    type?: 'auto' | 'vue2' | 'vue3' | 'react' | 'angular' | 'svelte' | 'solid' | 'preact' | 'qwik' | 'lit'
+    [key: string]: any
+  }
+
   /** 扩展的 resolve 配置，支持阶段化别名 */
   resolve?: UserConfig['resolve'] & {
     alias?: AliasEntry[]
@@ -396,17 +408,21 @@ export type ProjectPreset =
   | 'ldesign'
   | 'svelte'
   | 'svelte-ts'
-  | 'vanilla'
-  | 'vanilla-ts'
+  | 'angular'
+  | 'angular-ts'
+  | 'solid'
+  | 'solid-ts'
   | 'lit'
   | 'lit-ts'
+  | 'preact'
+  | 'preact-ts'
+  | 'qwik'
+  | 'astro'
+  | 'vanilla'
+  | 'vanilla-ts'
   | 'nuxt'
   | 'next'
   | 'sveltekit'
-  | 'astro'
-  | 'solid'
-  | 'qwik'
-  | 'angular'
   | 'electron'
   | 'tauri'
   | 'mobile-vue'

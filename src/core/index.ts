@@ -1,10 +1,15 @@
 /**
  * 核心模块统一导出
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
 
+// 新架构导出
+export * from './Launcher'
+export * from './bootstrap'
+
+// 旧架构导出（保持向后兼容）
 export * from './ViteLauncher'
 export * from './ConfigManager'
 export * from './ConfigPresets'
@@ -29,5 +34,5 @@ export {
   type PerformanceMetrics as PerformanceOptimizerMetrics
 } from './PerformanceOptimizer'
 
-// 移除默认导出，保持导出一致性
-// export { ViteLauncher as default } from './ViteLauncher'
+// 默认导出新的 Launcher
+export { Launcher as default } from './Launcher'

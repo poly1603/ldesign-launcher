@@ -197,6 +197,9 @@ export class PerformanceOptimizer extends EventEmitter {
           if (id.includes('element-plus')) return 'element-plus'
           if (id.includes('@vue') || id.includes('/vue/')) return 'vue-vendor'
           if (id.includes('react')) return 'react-vendor'
+          if (id.includes('echarts')) return 'echarts'
+          if (id.includes('three')) return 'three'
+          if (id.includes('monaco-editor')) return 'monaco'
           
           return 'vendor'
         }
@@ -224,9 +227,16 @@ export class PerformanceOptimizer extends EventEmitter {
    * 应用压缩优化
    */
   private applyCompressionOptimization(config: ResolvedConfig): void {
-    // 使用 esbuild 进行压缩
-    config.build.minify = 'esbuild'
-    config.build.target = 'es2020'
+    // 根据环境选择压缩策略
+    if (process.env.NODE_ENV === 'production') {
+      // 生产环境使用 terser 获得更好的压缩效果
+      config.build.minify = 'terser'
+      config.build.target = 'es2020'
+    } else {
+      // 开发环境使用 esbuild 获得更快的构建速度
+      config.build.minify = 'esbuild'
+      config.build.target = 'esnext'
+    }
     
     // CSS 压缩
     config.build.cssMinify = true

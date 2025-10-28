@@ -1,0 +1,19 @@
+{
+  "name": "vue2-demo",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "launcher dev",
+    "build": "launcher build",
+    "preview": "launcher preview"
+  },
+  "dependencies": {
+    "vue": "^2.7.16"
+  },
+  "devDependencies": {
+    "@ldesign/launcher": "workspace:*",
+    "@vitejs/plugin-vue2": "^2.3.1",
+    "vite": "^5.0.0"
+  }
+}
+

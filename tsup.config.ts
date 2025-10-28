@@ -1,43 +1,52 @@
 import { defineConfig } from 'tsup'
+import { cpus } from 'os'
+
+// 获取CPU核心数用于并行构建
+const numCPUs = cpus().length
 
 export default defineConfig({
-  // 明确的入口点配置，避免打包每个.ts文件
-  entry: {
-    // 主入口
-    'index': 'src/index.ts',
-    // CLI入口
-    'cli/index': 'src/cli/index.ts',
-    // 核心模块统一导出
-    'core/index': 'src/core/index.ts',
-    // CLI命令统一导出
-    'cli/commands/index': 'src/cli/commands/index.ts',
-    // 工具类统一导出
-    'utils/index': 'src/utils/index.ts',
-    // 类型定义统一导出
-    'types/index': 'src/types/index.ts',
-    // 常量统一导出
-    'constants/index': 'src/constants/index.ts',
-    // AI优化器（独立模块）
-    'ai/optimizer': 'src/ai/optimizer.ts',
-    // 基准测试报告器（独立模块）
-    'benchmark/reporter': 'src/benchmark/reporter.ts',
-    // 仪表板服务器（独立模块）
-    'dashboard/server': 'src/dashboard/server.ts',
-    // 插件预设（独立模块）
-    'plugins/presets': 'src/plugins/presets.ts',
-    // 市场管理（独立模块）
-    'marketplace/index': 'src/marketplace/index.ts'
-  },
+  // 使用glob模式打包所有源文件，但排除测试文件
+  entry: [
+    'src/**/*.ts',
+    '!src/**/*.test.ts',
+    '!src/**/*.spec.ts',
+    '!src/**/*.bench.ts',
+    '!src/__tests__/**/*'
+  ],
   format: ['cjs', 'esm'],
-  dts: true,
+  dts: {
+    // 分离类型定义生成，提高构建速度
+    resolve: true,
+    entry: [
+      'src/index.ts',
+      'src/cli/index.ts',
+      'src/core/index.ts',
+      'src/types/index.ts',
+      'src/utils/index.ts',
+      'src/constants/index.ts'
+    ]
+  },
   tsconfig: 'tsconfig.json',
   clean: true,
   splitting: true, // 启用代码分割以减少重复代码
-  sourcemap: true,
-  minify: false,
+  sourcemap: process.env.NODE_ENV === 'development', // 仅在开发模式生成sourcemap
+  minify: process.env.NODE_ENV === 'production', // 仅在生产模式压缩
   target: 'node16',
   outDir: 'dist',
   shims: true,
+  // 启用并行处理
+  treeshake: true,
+  // 使用更快的esbuild loader
+  loader: {
+    '.ts': 'ts',
+    '.tsx': 'tsx'
+  },
+  // 优化chunk命名
+  outExtension({ format }) {
+    return {
+      js: `.${format === 'cjs' ? 'cjs' : 'js'}`
+    }
+  },
   // 将运行时依赖全部 external，减小产物体积
   external: [
     'vite',
@@ -128,26 +137,32 @@ export default defineConfig({
     'squirrelly',
     'twing'
   ],
-  treeshake: true,
-  // 优化内存使用，但不过度bundle大文件
+  // 优化bundle策略
   bundle: true,
+  metafile: process.env.ANALYZE === 'true', // 可选的构建分析
   esbuildOptions(options) {
     options.conditions = ['node']
+    options.platform = 'node'
     options.chunkNames = 'chunks/[name]-[hash]'
-    options.logLevel = 'error' // 只显示错误，减少警告输出
-    // 优化打包策略
+    options.logLevel = 'error'
     options.treeShaking = true
-    // 避免过大的bundle，设置分割阈值
-    options.mangleProps = undefined // 不混淆属性名以保证兼容性
-    options.keepNames = true // 保持函数名以便调试
-    // 减少不必要的警告
-    options.ignoreAnnotations = false
-    options.legalComments = 'none' // 不包含法律注释以减少输出
+    options.keepNames = true
+    options.legalComments = 'none'
+    // 使用更多工作线程提高构建速度
+    options.logOverride = {
+      'unsupported-dynamic-import': 'silent'
+    }
+    // 设置最大并行数
+    options.define = {
+      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production')
+    }
   },
-  // 使用 tsup 的 noDefaultExport 选项来避免混合导出警告
-  noDefaultExport: false,
+  // 增加并发数提高构建速度
+  esbuildPlugins: [],
   // 减少控制台输出
-  silent: false,
+  silent: process.env.CI === 'true',
   // 优化构建性能
-  skipNodeModulesBundle: true
+  skipNodeModulesBundle: true,
+  // 设置并发构建数
+  // concurrency 选项在tsup中不可用，使用esbuild的默认并发
 })

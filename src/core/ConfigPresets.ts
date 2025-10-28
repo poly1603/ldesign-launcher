@@ -419,6 +419,524 @@ export class SvelteTypeScriptPreset extends BasePreset {
 }
 
 /**
+ * Angular 预设配置
+ */
+export class AngularPreset extends BasePreset {
+  readonly name: ProjectPreset = 'angular'
+  readonly description = 'Angular 项目配置预设'
+  readonly plugins = ['@analogjs/vite-plugin-angular']
+
+  getConfig(): ViteLauncherConfig {
+    return {
+      ...DEFAULT_VITE_LAUNCHER_CONFIG,
+      plugins: [
+        '@analogjs/vite-plugin-angular' as any
+      ],
+      launcher: {
+        ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
+        preset: 'angular'
+      },
+      server: {
+        ...DEFAULT_VITE_LAUNCHER_CONFIG.server,
+        port: 4200
+      },
+      build: {
+        ...DEFAULT_VITE_LAUNCHER_CONFIG.build,
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              '@angular/core': ['@angular/core'],
+              '@angular/common': ['@angular/common'],
+              '@angular/router': ['@angular/router'],
+              '@angular/forms': ['@angular/forms'],
+              'rxjs': ['rxjs']
+            }
+          }
+        }
+      }
+    }
+  }
+
+  getDependencies() {
+    return {
+      dependencies: [
+        '@angular/animations',
+        '@angular/common',
+        '@angular/compiler',
+        '@angular/core',
+        '@angular/forms',
+        '@angular/platform-browser',
+        '@angular/platform-browser-dynamic',
+        '@angular/router',
+        'rxjs',
+        'zone.js'
+      ],
+      devDependencies: [
+        '@analogjs/vite-plugin-angular',
+        '@angular-devkit/build-angular',
+        '@angular/cli',
+        '@angular/compiler-cli',
+        'typescript'
+      ]
+    }
+  }
+
+  getScripts() {
+    return {
+      ...super.getScripts(),
+      'ng': 'ng',
+      'test': 'ng test',
+      'lint': 'ng lint'
+    }
+  }
+}
+
+/**
+ * Angular + TypeScript 预设配置
+ */
+export class AngularTypeScriptPreset extends BasePreset {
+  readonly name: ProjectPreset = 'angular-ts'
+  readonly description = 'Angular + TypeScript 项目配置预设'
+  readonly plugins = ['@analogjs/vite-plugin-angular']
+
+  getConfig(): ViteLauncherConfig {
+    return {
+      ...DEFAULT_VITE_LAUNCHER_CONFIG,
+      plugins: [
+        '@analogjs/vite-plugin-angular' as any
+      ],
+      launcher: {
+        ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
+        preset: 'angular-ts'
+      },
+      server: {
+        ...DEFAULT_VITE_LAUNCHER_CONFIG.server,
+        port: 4200
+      },
+      esbuild: {
+        target: 'es2022'
+      },
+      build: {
+        ...DEFAULT_VITE_LAUNCHER_CONFIG.build,
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              '@angular/core': ['@angular/core'],
+              '@angular/common': ['@angular/common'],
+              '@angular/router': ['@angular/router'],
+              '@angular/forms': ['@angular/forms'],
+              'rxjs': ['rxjs']
+            }
+          }
+        }
+      }
+    }
+  }
+
+  getDependencies() {
+    return {
+      dependencies: [
+        '@angular/animations',
+        '@angular/common',
+        '@angular/compiler',
+        '@angular/core',
+        '@angular/forms',
+        '@angular/platform-browser',
+        '@angular/platform-browser-dynamic',
+        '@angular/router',
+        'rxjs',
+        'zone.js'
+      ],
+      devDependencies: [
+        '@analogjs/vite-plugin-angular',
+        '@angular-devkit/build-angular',
+        '@angular/cli',
+        '@angular/compiler-cli',
+        '@types/node',
+        'typescript'
+      ]
+    }
+  }
+
+  getScripts() {
+    return {
+      ...super.getScripts(),
+      'ng': 'ng',
+      'test': 'ng test',
+      'lint': 'ng lint',
+      'type-check': 'tsc --noEmit'
+    }
+  }
+}
+
+/**
+ * Solid.js 预设配置
+ */
+export class SolidPreset extends BasePreset {
+  readonly name: ProjectPreset = 'solid'
+  readonly description = 'Solid.js 项目配置预设'
+  readonly plugins = ['vite-plugin-solid']
+
+  getConfig(): ViteLauncherConfig {
+    return {
+      ...DEFAULT_VITE_LAUNCHER_CONFIG,
+      plugins: [
+        'vite-plugin-solid' as any
+      ],
+      launcher: {
+        ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
+        preset: 'solid'
+      },
+      server: {
+        ...DEFAULT_VITE_LAUNCHER_CONFIG.server,
+        port: 3000
+      },
+      build: {
+        ...DEFAULT_VITE_LAUNCHER_CONFIG.build,
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              'solid-js': ['solid-js'],
+              'solid-router': ['@solidjs/router']
+            }
+          }
+        }
+      }
+    }
+  }
+
+  getDependencies() {
+    return {
+      dependencies: ['solid-js', '@solidjs/router'],
+      devDependencies: ['vite-plugin-solid']
+    }
+  }
+}
+
+/**
+ * Solid.js + TypeScript 预设配置
+ */
+export class SolidTypeScriptPreset extends BasePreset {
+  readonly name: ProjectPreset = 'solid-ts'
+  readonly description = 'Solid.js + TypeScript 项目配置预设'
+  readonly plugins = ['vite-plugin-solid']
+
+  getConfig(): ViteLauncherConfig {
+    return {
+      ...DEFAULT_VITE_LAUNCHER_CONFIG,
+      plugins: [
+        'vite-plugin-solid' as any
+      ],
+      launcher: {
+        ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
+        preset: 'solid-ts'
+      },
+      esbuild: {
+        target: 'es2020'
+      },
+      build: {
+        ...DEFAULT_VITE_LAUNCHER_CONFIG.build,
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              'solid-js': ['solid-js'],
+              'solid-router': ['@solidjs/router']
+            }
+          }
+        }
+      }
+    }
+  }
+
+  getDependencies() {
+    return {
+      dependencies: ['solid-js', '@solidjs/router'],
+      devDependencies: [
+        'vite-plugin-solid',
+        'typescript',
+        '@types/node'
+      ]
+    }
+  }
+
+  getScripts() {
+    return {
+      ...super.getScripts(),
+      'type-check': 'tsc --noEmit'
+    }
+  }
+}
+
+/**
+ * Lit 预设配置
+ */
+export class LitPreset extends BasePreset {
+  readonly name: ProjectPreset = 'lit'
+  readonly description = 'Lit 项目配置预设'
+  readonly plugins = []
+
+  getConfig(): ViteLauncherConfig {
+    return {
+      ...DEFAULT_VITE_LAUNCHER_CONFIG,
+      launcher: {
+        ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
+        preset: 'lit'
+      },
+      build: {
+        ...DEFAULT_VITE_LAUNCHER_CONFIG.build,
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              lit: ['lit', 'lit-element', 'lit-html']
+            }
+          }
+        }
+      }
+    }
+  }
+
+  getDependencies() {
+    return {
+      dependencies: ['lit'],
+      devDependencies: []
+    }
+  }
+}
+
+/**
+ * Lit + TypeScript 预设配置
+ */
+export class LitTypeScriptPreset extends BasePreset {
+  readonly name: ProjectPreset = 'lit-ts'
+  readonly description = 'Lit + TypeScript 项目配置预设'
+  readonly plugins = []
+
+  getConfig(): ViteLauncherConfig {
+    return {
+      ...DEFAULT_VITE_LAUNCHER_CONFIG,
+      launcher: {
+        ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
+        preset: 'lit-ts'
+      },
+      esbuild: {
+        target: 'es2020'
+      },
+      build: {
+        ...DEFAULT_VITE_LAUNCHER_CONFIG.build,
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              lit: ['lit', 'lit-element', 'lit-html']
+            }
+          }
+        }
+      }
+    }
+  }
+
+  getDependencies() {
+    return {
+      dependencies: ['lit'],
+      devDependencies: ['typescript', '@types/node']
+    }
+  }
+
+  getScripts() {
+    return {
+      ...super.getScripts(),
+      'type-check': 'tsc --noEmit'
+    }
+  }
+}
+
+/**
+ * Preact 预设配置
+ */
+export class PreactPreset extends BasePreset {
+  readonly name: ProjectPreset = 'preact'
+  readonly description = 'Preact 项目配置预设'
+  readonly plugins = ['@preact/preset-vite']
+
+  getConfig(): ViteLauncherConfig {
+    return {
+      ...DEFAULT_VITE_LAUNCHER_CONFIG,
+      plugins: [
+        '@preact/preset-vite' as any
+      ],
+      launcher: {
+        ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
+        preset: 'preact'
+      },
+      build: {
+        ...DEFAULT_VITE_LAUNCHER_CONFIG.build,
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              preact: ['preact'],
+              'preact-router': ['preact-router']
+            }
+          }
+        }
+      }
+    }
+  }
+
+  getDependencies() {
+    return {
+      dependencies: ['preact', 'preact-router'],
+      devDependencies: ['@preact/preset-vite']
+    }
+  }
+}
+
+/**
+ * Preact + TypeScript 预设配置
+ */
+export class PreactTypeScriptPreset extends BasePreset {
+  readonly name: ProjectPreset = 'preact-ts'
+  readonly description = 'Preact + TypeScript 项目配置预设'
+  readonly plugins = ['@preact/preset-vite']
+
+  getConfig(): ViteLauncherConfig {
+    return {
+      ...DEFAULT_VITE_LAUNCHER_CONFIG,
+      plugins: [
+        '@preact/preset-vite' as any
+      ],
+      launcher: {
+        ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
+        preset: 'preact-ts'
+      },
+      esbuild: {
+        target: 'es2020',
+        jsxFactory: 'h',
+        jsxFragment: 'Fragment'
+      },
+      build: {
+        ...DEFAULT_VITE_LAUNCHER_CONFIG.build,
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              preact: ['preact'],
+              'preact-router': ['preact-router']
+            }
+          }
+        }
+      }
+    }
+  }
+
+  getDependencies() {
+    return {
+      dependencies: ['preact', 'preact-router'],
+      devDependencies: [
+        '@preact/preset-vite',
+        'typescript',
+        '@types/node'
+      ]
+    }
+  }
+
+  getScripts() {
+    return {
+      ...super.getScripts(),
+      'type-check': 'tsc --noEmit'
+    }
+  }
+}
+
+/**
+ * Qwik 预设配置
+ */
+export class QwikPreset extends BasePreset {
+  readonly name: ProjectPreset = 'qwik'
+  readonly description = 'Qwik 项目配置预设'
+  readonly plugins = ['@builder.io/qwik/vite']
+
+  getConfig(): ViteLauncherConfig {
+    return {
+      ...DEFAULT_VITE_LAUNCHER_CONFIG,
+      plugins: [
+        '@builder.io/qwik/vite' as any
+      ],
+      launcher: {
+        ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
+        preset: 'qwik'
+      },
+      build: {
+        ...DEFAULT_VITE_LAUNCHER_CONFIG.build,
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              qwik: ['@builder.io/qwik']
+            }
+          }
+        }
+      }
+    }
+  }
+
+  getDependencies() {
+    return {
+      dependencies: ['@builder.io/qwik'],
+      devDependencies: [
+        '@builder.io/qwik/vite',
+        'typescript',
+        '@types/node'
+      ]
+    }
+  }
+
+  getScripts() {
+    return {
+      ...super.getScripts(),
+      'qwik': 'qwik'
+    }
+  }
+}
+
+/**
+ * Astro 预设配置
+ */
+export class AstroPreset extends BasePreset {
+  readonly name: ProjectPreset = 'astro'
+  readonly description = 'Astro 项目配置预设'
+  readonly plugins = ['@astrojs/vite-plugin-astro']
+
+  getConfig(): ViteLauncherConfig {
+    return {
+      ...DEFAULT_VITE_LAUNCHER_CONFIG,
+      plugins: [
+        '@astrojs/vite-plugin-astro' as any
+      ],
+      launcher: {
+        ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
+        preset: 'astro'
+      },
+      server: {
+        ...DEFAULT_VITE_LAUNCHER_CONFIG.server,
+        port: 4321
+      }
+    }
+  }
+
+  getDependencies() {
+    return {
+      dependencies: ['astro'],
+      devDependencies: ['@astrojs/vite-plugin-astro']
+    }
+  }
+
+  getScripts() {
+    return {
+      dev: 'astro dev',
+      build: 'astro build',
+      preview: 'astro preview'
+    }
+  }
+}
+
+/**
  * 香草 JS 预设配置
  */
 export class VanillaPreset extends BasePreset {
@@ -727,6 +1245,16 @@ export class ConfigPresetsManager {
     this.register(new ReactTypeScriptPreset())
     this.register(new SveltePreset())
     this.register(new SvelteTypeScriptPreset())
+    this.register(new AngularPreset())
+    this.register(new AngularTypeScriptPreset())
+    this.register(new SolidPreset())
+    this.register(new SolidTypeScriptPreset())
+    this.register(new LitPreset())
+    this.register(new LitTypeScriptPreset())
+    this.register(new PreactPreset())
+    this.register(new PreactTypeScriptPreset())
+    this.register(new QwikPreset())
+    this.register(new AstroPreset())
     this.register(new VanillaPreset())
     this.register(new VanillaTypeScriptPreset())
     this.register(new LDesignPreset())
@@ -819,6 +1347,36 @@ export class ConfigPresetsManager {
       // 检测 Svelte
       if (dependencies.svelte) {
         return dependencies.typescript ? 'svelte-ts' : 'svelte'
+      }
+
+      // 检测 Angular
+      if (dependencies['@angular/core']) {
+        return dependencies.typescript ? 'angular-ts' : 'angular'
+      }
+
+      // 检测 Solid.js
+      if (dependencies['solid-js']) {
+        return dependencies.typescript ? 'solid-ts' : 'solid'
+      }
+
+      // 检测 Lit
+      if (dependencies.lit) {
+        return dependencies.typescript ? 'lit-ts' : 'lit'
+      }
+
+      // 检测 Preact
+      if (dependencies.preact) {
+        return dependencies.typescript ? 'preact-ts' : 'preact'
+      }
+
+      // 检测 Qwik
+      if (dependencies['@builder.io/qwik']) {
+        return 'qwik'
+      }
+
+      // 检测 Astro
+      if (dependencies.astro) {
+        return 'astro'
       }
 
       // 检测 TypeScript

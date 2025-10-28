@@ -27,6 +27,7 @@ import { DeployCommand } from './commands/deploy'
 import { MonitorCommand } from './commands/monitor'
 import { VisualCommand } from './commands/visual'
 import { TeamCommand } from './commands/team'
+import { UICommand } from './commands/ui'
 
 /**
  * 创建 CLI 应用
@@ -129,6 +130,7 @@ export function createCli(config?: Partial<CliConfig>) {
     ['monitor', new MonitorCommand()],
     ['visual', new VisualCommand()],
     ['team', new TeamCommand()],
+    ['ui', new UICommand()],
     ['help', new HelpCommand()],
     ['version', new VersionCommand()]
   ])
