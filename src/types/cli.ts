@@ -155,6 +155,24 @@ export interface CliOptions {
 
   /** 是否检查过期 */
   outdated?: boolean
+
+  /** 服务端端口 (UI命令) */
+  'server-port'?: number
+
+  /** 服务端端口别名 */
+  sp?: number
+
+  /** Web前端端口 (UI命令) */
+  'web-port'?: number
+
+  /** Web前端端口别名 */
+  wp?: number
+
+  /** 不打开浏览器 */
+  'no-open'?: boolean
+
+  /** 不执行构建 */
+  'no-build'?: boolean
 }
 
 /**

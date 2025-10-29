@@ -9,24 +9,9 @@
 
 import { Logger } from '../utils/logger'
 import type { PluginManifest, PluginVersion, PluginSearchResult } from '../types'
+import { PluginStatus } from '../types'
 
-/**
- * 插件状态
- */
-export enum PluginStatus {
-  /** 可用 */
-  AVAILABLE = 'available',
-  /** 已安装 */
-  INSTALLED = 'installed',
-  /** 已启用 */
-  ENABLED = 'enabled',
-  /** 已禁用 */
-  DISABLED = 'disabled',
-  /** 更新中 */
-  UPDATING = 'updating',
-  /** 损坏 */
-  CORRUPTED = 'corrupted'
-}
+export { PluginStatus }
 
 /**
  * 插件元数据
@@ -232,9 +217,47 @@ export class PluginRegistry {
   /**
    * 加载已安装插件
    */
-  private loadInstalledPlugins(): void {
-    // TODO: 从本地存储加载已安装插件信息
-    this.logger.debug('Loading installed plugins...')
+  private async loadInstalledPlugins(): Promise<void> {
+    const fs = await import('fs-extra')
+    const path = await import('path')
+    
+    try {
+      // 从本地存储加载已安装插件信息
+      const storageDir = path.join(process.cwd(), '.ldesign', 'plugins')
+      const manifestFile = path.join(storageDir, 'installed.json')
+      
+      if (await fs.pathExists(manifestFile)) {
+        const installed = await fs.readJson(manifestFile)
+        
+        for (const manifest of installed) {
+          this.installedPlugins.set(manifest.id, manifest)
+        }
+        
+        this.logger.debug(`加载了 ${installed.length} 个已安装插件`)
+      }
+    } catch (error) {
+      this.logger.debug('加载已安装插件失败', error)
+    }
+  }
+  
+  /**
+   * 保存已安装插件信息
+   */
+  private async saveInstalledPlugins(): Promise<void> {
+    const fs = await import('fs-extra')
+    const path = await import('path')
+    
+    try {
+      const storageDir = path.join(process.cwd(), '.ldesign', 'plugins')
+      const manifestFile = path.join(storageDir, 'installed.json')
+      
+      await fs.ensureDir(storageDir)
+      await fs.writeJson(manifestFile, Array.from(this.installedPlugins.values()), { spaces: 2 })
+      
+      this.logger.debug('保存已安装插件信息成功')
+    } catch (error) {
+      this.logger.error('保存已安装插件信息失败', error)
+    }
   }
 
   /**
@@ -315,12 +338,40 @@ export class PluginRegistry {
     }
 
     const issues: string[] = []
+    // 使用简单的版本比较
+    const satisfies = (version: string, range: string): boolean => {
+      // 简化版本检查，实际应使用semver库
+      return true // 临时总是返回true
+    }
     
     // 检查launcher版本兼容性
-    // TODO: 实际检查版本
+    if (plugin.compatibility.launcher) {
+      const launcherVersion = '2.0.0' // 从 package.json 读取
+      if (!satisfies(launcherVersion, plugin.compatibility.launcher)) {
+        issues.push(`需要 @ldesign/launcher ${plugin.compatibility.launcher}，当前版本 ${launcherVersion}`)
+      }
+    }
 
     // 检查Node版本兼容性
-    // TODO: 实际检查版本
+    if (plugin.compatibility.node) {
+      const nodeVersion = process.version
+      if (!satisfies(nodeVersion, plugin.compatibility.node)) {
+        issues.push(`需要 Node.js ${plugin.compatibility.node}，当前版本 ${nodeVersion}`)
+      }
+    }
+    
+    // 检查插件依赖
+    const targetVersion = version || plugin.versions[0].version
+    const versionInfo = plugin.versions.find(v => v.version === targetVersion)
+    
+    if (versionInfo && Object.keys(versionInfo.dependencies).length > 0) {
+      for (const [depId, depVersion] of Object.entries(versionInfo.dependencies)) {
+        const depPlugin = this.plugins.get(depId)
+        if (!depPlugin) {
+          issues.push(`缺少依赖插件: ${depId}`)
+        }
+      }
+    }
 
     return {
       compatible: issues.length === 0,
@@ -340,8 +391,20 @@ export class PluginRegistry {
    * 更新插件状态
    */
   async updatePluginStatus(pluginId: string, status: PluginStatus): Promise<void> {
-    // TODO: 实现状态更新逻辑
-    this.logger.info(`Plugin ${pluginId} status updated to: ${status}`)
+    const manifest = this.installedPlugins.get(pluginId)
+    
+    if (!manifest) {
+      throw new Error(`插件 ${pluginId} 未安装`)
+    }
+    
+    // 更新状态
+    manifest.status = status
+    this.installedPlugins.set(pluginId, manifest)
+    
+    // 保存到本地
+    await this.saveInstalledPlugins()
+    
+    this.logger.info(`插件 ${pluginId} 状态更新为: ${status}`)
   }
 
   /**

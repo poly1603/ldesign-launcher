@@ -210,6 +210,8 @@ export interface PluginManifest {
   config: Record<string, any>
   /** 是否启用 */
   enabled: boolean
+  /** 插件状态 */
+  status?: PluginStatus
   /** 安装时间 */
   installedAt?: string
 }
@@ -261,10 +263,18 @@ export enum PluginStatus {
   LOADING = 'loading',
   /** 已加载 */
   LOADED = 'loaded',
+  /** 可用 */
+  AVAILABLE = 'available',
+  /** 已安装 */
+  INSTALLED = 'installed',
   /** 已启用 */
   ENABLED = 'enabled',
   /** 已禁用 */
   DISABLED = 'disabled',
+  /** 更新中 */
+  UPDATING = 'updating',
+  /** 损坏 */
+  CORRUPTED = 'corrupted',
   /** 错误状态 */
   ERROR = 'error'
 }
