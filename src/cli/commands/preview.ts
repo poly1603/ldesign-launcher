@@ -162,6 +162,37 @@ export class PreviewCommand implements CliCommandDefinition {
         console.log('')
       }
 
+      // 🎯 零配置特性：自动检测框架
+      let detectedFramework = null
+      if (!context.options.silent) {
+        logger.info('🔍 正在检测项目框架...')
+      }
+
+      try {
+        const { createFrameworkDetector } = await import('../../frameworks/base/FrameworkDetector')
+        const detector = createFrameworkDetector()
+        detectedFramework = await detector.detectBest(context.cwd)
+
+        if (detectedFramework && detectedFramework.detected) {
+          if (!context.options.silent) {
+            const frameworkName = detectedFramework.type?.toUpperCase() || 'UNKNOWN'
+            const confidencePercent = (detectedFramework.confidence * 100).toFixed(0)
+            logger.success(
+              `✓ 检测到 ${pc.bold(pc.green(frameworkName))} 框架 ` +
+              `(置信度: ${pc.cyan(confidencePercent + '%')})`
+            )
+          }
+        } else {
+          if (!context.options.silent) {
+            logger.warn('⚠ 未检测到已知框架，将使用默认配置')
+          }
+        }
+      } catch (error) {
+        if (context.options.debug) {
+          logger.warn(`框架检测失败: ${(error as Error).message}`)
+        }
+      }
+
       logger.info('正在启动预览服务器...')
 
       // 创建 ViteLauncher 实例

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import './App.css'
+import { ConfigDisplay } from './components/ConfigDisplay'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -12,6 +13,9 @@ function App() {
       </header>
 
       <main className="main">
+        {/* 配置信息展示 */}
+        <ConfigDisplay />
+
         <div className="counter">
           <h2>计数器组件</h2>
           <div className="counter-display">

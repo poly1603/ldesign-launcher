@@ -6,6 +6,9 @@
     </header>
 
     <main class="main">
+      <!-- 配置信息展示 -->
+      <ConfigDisplay />
+
       <Counter />
       <HelloWorld msg="欢迎使用 Vue 2!" />
     </main>
@@ -20,12 +23,14 @@
 import Vue from 'vue'
 import Counter from './components/Counter.vue'
 import HelloWorld from './components/HelloWorld.vue'
+import ConfigDisplay from './components/ConfigDisplay.vue'
 
 export default Vue.extend({
   name: 'App',
   components: {
     Counter,
-    HelloWorld
+    HelloWorld,
+    ConfigDisplay
   }
 })
 </script>

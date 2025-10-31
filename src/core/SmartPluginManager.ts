@@ -20,6 +20,7 @@ export enum ProjectType {
   REACT = 'react',
   PREACT = 'preact',
   SVELTE = 'svelte',
+  SVELTEKIT = 'sveltekit',
   SOLID = 'solid',
   LIT = 'lit',
   QWIK = 'qwik',
@@ -177,19 +178,24 @@ export class SmartPluginManager {
     })
 
     // Qwik 插件配置
+    // 注意：Qwik 插件需要特殊处理，从 @builder.io/qwik/optimizer 导入
     this.availablePlugins.set('qwik', {
       name: 'Qwik',
-      packageName: '@builder.io/qwik',
+      packageName: '@builder.io/qwik/optimizer',
       required: true,
       detection: {
         dependencies: ['@builder.io/qwik'],
         filePatterns: ['**/*.tsx'],
         configFiles: []
       },
-      options: {}
+      options: {
+        // Qwik 插件需要特殊的导入方式
+        importName: 'qwikVite'
+      }
     })
 
     // Angular 插件配置
+    // 注意：Angular 插件需要特殊处理，使用 default export
     this.availablePlugins.set('angular', {
       name: 'Angular',
       packageName: '@analogjs/vite-plugin-angular',
@@ -199,7 +205,11 @@ export class SmartPluginManager {
         filePatterns: ['**/*.ts'],
         configFiles: ['angular.json']
       },
-      options: {}
+      options: {
+        // Angular 插件配置
+        jit: true,
+        tsconfig: './tsconfig.json'
+      }
     })
   }
 
@@ -402,7 +412,21 @@ export class SmartPluginManager {
     let projectType: ProjectType
     if (explicitType) {
       this.logger.info('使用用户指定的框架类型', { type: explicitType })
-      projectType = explicitType as ProjectType
+      // 映射字符串类型到ProjectType枚举
+      const typeMap: Record<string, ProjectType> = {
+        'vue': ProjectType.VUE3,
+        'vue2': ProjectType.VUE2,
+        'vue3': ProjectType.VUE3,
+        'react': ProjectType.REACT,
+        'svelte': ProjectType.SVELTE,
+        'solid': ProjectType.SOLID,
+        'preact': ProjectType.PREACT,
+        'lit': ProjectType.LIT,
+        'qwik': ProjectType.QWIK,
+        'angular': ProjectType.ANGULAR,
+        'vanilla': ProjectType.VANILLA
+      }
+      projectType = typeMap[explicitType] || (explicitType as ProjectType)
       this.detectedType = projectType
     } else {
       projectType = await this.detectProjectType()
@@ -416,17 +440,17 @@ export class SmartPluginManager {
       // 根据项目类型加载对应插件
       switch (projectType) {
         case ProjectType.VUE3:
-          const vuePlugin = await this.loadPlugin('vue3')
-          if (vuePlugin) plugins.push(vuePlugin)
+          const vuePlugins = await this.loadPlugin('vue3')
+          if (vuePlugins) plugins.push(...vuePlugins)
 
           // 尝试加载 Vue JSX 插件（如果已安装依赖，则自动加载）
           const hasJsxDep = await this.hasDependency('@vitejs/plugin-vue-jsx')
           this.logger.debug('Vue JSX 插件检测', { hasJsxDep })
           if (hasJsxDep) {
             this.logger.info('检测到 Vue JSX 依赖，自动加载插件')
-            const vueJsxPlugin = await this.loadPlugin('vue3-jsx')
-            if (vueJsxPlugin) {
-              plugins.push(vueJsxPlugin)
+            const vueJsxPlugins = await this.loadPlugin('vue3-jsx')
+            if (vueJsxPlugins) {
+              plugins.push(...vueJsxPlugins)
               this.logger.info('Vue JSX 插件加载成功')
             } else {
               this.logger.warn('Vue JSX 插件加载失败')
@@ -436,36 +460,36 @@ export class SmartPluginManager {
           }
           break
         case ProjectType.VUE2:
-          const vue2Plugin = await this.loadPlugin('vue2')
-          if (vue2Plugin) plugins.push(vue2Plugin)
+          const vue2Plugins = await this.loadPlugin('vue2')
+          if (vue2Plugins) plugins.push(...vue2Plugins)
           break
         case ProjectType.REACT:
-          const reactPlugin = await this.loadPlugin('react')
-          if (reactPlugin) plugins.push(reactPlugin)
+          const reactPlugins = await this.loadPlugin('react')
+          if (reactPlugins) plugins.push(...reactPlugins)
           break
         case ProjectType.PREACT:
-          const preactPlugin = await this.loadPlugin('preact')
-          if (preactPlugin) plugins.push(preactPlugin)
+          const preactPlugins = await this.loadPlugin('preact')
+          if (preactPlugins) plugins.push(...preactPlugins)
           break
         case ProjectType.SVELTE:
-          const sveltePlugin = await this.loadPlugin('svelte')
-          if (sveltePlugin) plugins.push(sveltePlugin)
+          const sveltePlugins = await this.loadPlugin('svelte')
+          if (sveltePlugins) plugins.push(...sveltePlugins)
           break
         case ProjectType.SOLID:
-          const solidPlugin = await this.loadPlugin('solid')
-          if (solidPlugin) plugins.push(solidPlugin)
+          const solidPlugins = await this.loadPlugin('solid')
+          if (solidPlugins) plugins.push(...solidPlugins)
           break
         case ProjectType.LIT:
-          const litPlugin = await this.loadPlugin('lit')
-          if (litPlugin) plugins.push(litPlugin)
+          const litPlugins = await this.loadPlugin('lit')
+          if (litPlugins) plugins.push(...litPlugins)
           break
         case ProjectType.QWIK:
-          const qwikPlugin = await this.loadPlugin('qwik')
-          if (qwikPlugin) plugins.push(qwikPlugin)
+          const qwikPlugins = await this.loadPlugin('qwik')
+          if (qwikPlugins) plugins.push(...qwikPlugins)
           break
         case ProjectType.ANGULAR:
-          const angularPlugin = await this.loadPlugin('angular')
-          if (angularPlugin) plugins.push(angularPlugin)
+          const angularPlugins = await this.loadPlugin('angular')
+          if (angularPlugins) plugins.push(...angularPlugins)
           break
       }
 
@@ -483,8 +507,9 @@ export class SmartPluginManager {
 
   /**
    * 加载指定插件
+   * @returns 插件数组（某些框架插件会返回多个插件）
    */
-  private async loadPlugin(pluginKey: string): Promise<Plugin | null> {
+  private async loadPlugin(pluginKey: string): Promise<Plugin[] | null> {
     const config = this.availablePlugins.get(pluginKey)
     if (!config) {
       this.logger.warn(`SmartPluginManager: 未知插件: ${pluginKey}`)
@@ -497,33 +522,108 @@ export class SmartPluginManager {
     })
 
     try {
-      // 动态导入插件 - 使用正确的模块解析上下文
-      // 从项目根目录解析模块，而不是从 launcher 包解析
-      const { createRequire } = await import('module')
-      const require = createRequire(PathUtils.resolve(this.cwd, 'package.json'))
+      // 动态导入插件 - 从项目的 node_modules 导入
+      let pluginModule: any
 
-      // 先尝试 require 解析路径
-      const modulePath = require.resolve(config.packageName)
+      // Angular 和某些插件需要纯 ESM 导入，跳过 require 尝试
+      const forceESM = pluginKey === 'angular' || config.packageName.includes('@analogjs')
 
-      // 将 Windows 路径转换为 file:// URL
-      const { pathToFileURL } = await import('url')
-      const moduleUrl = pathToFileURL(modulePath).href
+      if (!forceESM) {
+        try {
+          // 方法1: 使用项目的 require 来解析模块（支持 CommonJS）
+          const { createRequire } = await import('module')
+          const projectRequire = createRequire(PathUtils.resolve(this.cwd, 'package.json'))
 
-      // 然后使用动态导入
-      const pluginModule = await import(moduleUrl)
-      const pluginFactory = pluginModule.default || pluginModule
-      const plugin = pluginFactory(config.options)
+          // 使用项目的 require 来导入模块
+          pluginModule = projectRequire(config.packageName)
+        } catch (requireError) {
+          // require 失败，继续尝试 ESM import
+          pluginModule = null
+        }
+      }
 
-      this.logger.debug(`插件加载成功: ${config.name}`)
-      return plugin
+      // 如果 require 失败或强制 ESM，使用动态 import
+      if (!pluginModule) {
+        // 方法2: 使用动态 import（支持 ESM only 包）
+        const { pathToFileURL } = await import('url')
+
+        // 尝试从项目的 node_modules 构建路径
+        const modulePath = PathUtils.resolve(this.cwd, 'node_modules', config.packageName)
+
+        // 检查 package.json 的 exports 字段
+        const pkgJsonPath = PathUtils.resolve(modulePath, 'package.json')
+        const pkgJson = JSON.parse(await import('fs').then(fs => fs.promises.readFile(pkgJsonPath, 'utf-8')))
+
+        // 解析入口点
+        let entryPoint = modulePath
+        if (pkgJson.exports) {
+          if (typeof pkgJson.exports === 'string') {
+            entryPoint = PathUtils.resolve(modulePath, pkgJson.exports)
+          } else if (pkgJson.exports['.']) {
+            const dotExport = pkgJson.exports['.']
+            if (typeof dotExport === 'string') {
+              entryPoint = PathUtils.resolve(modulePath, dotExport)
+            } else if (dotExport.import) {
+              entryPoint = PathUtils.resolve(modulePath, dotExport.import.default || dotExport.import)
+            } else if (dotExport.default) {
+              entryPoint = PathUtils.resolve(modulePath, dotExport.default)
+            }
+          }
+        } else if (pkgJson.module) {
+          entryPoint = PathUtils.resolve(modulePath, pkgJson.module)
+        } else if (pkgJson.main) {
+          entryPoint = PathUtils.resolve(modulePath, pkgJson.main)
+        }
+
+        // 将路径转换为 file:// URL（Windows 兼容）
+        const moduleUrl = pathToFileURL(entryPoint).href
+
+        // 使用动态 import 加载 ESM 模块
+        pluginModule = await import(moduleUrl)
+      }
+
+      // 处理不同的插件导出方式
+      let pluginFactory = pluginModule.default || pluginModule
+
+      // Svelte插件特殊处理：@sveltejs/vite-plugin-svelte 导出 { svelte }
+      if (pluginKey === 'svelte' && pluginModule.svelte && typeof pluginModule.svelte === 'function') {
+        pluginFactory = pluginModule.svelte
+      }
+
+      // Qwik插件特殊处理：@builder.io/qwik/optimizer 导出 { qwikVite }
+      if (pluginKey === 'qwik' && pluginModule.qwikVite && typeof pluginModule.qwikVite === 'function') {
+        pluginFactory = pluginModule.qwikVite
+      }
+
+      // Angular插件特殊处理：@analogjs/vite-plugin-angular 使用 default export
+      if (pluginKey === 'angular' && pluginModule.default && typeof pluginModule.default === 'function') {
+        pluginFactory = pluginModule.default
+      }
+
+      // 如果插件有命名导出（如其他插件可能使用的命名导出）
+      if (typeof pluginFactory !== 'function' && pluginModule.svelte) {
+        pluginFactory = pluginModule.svelte
+      }
+      if (typeof pluginFactory !== 'function' && pluginModule.vitePluginSvelte) {
+        pluginFactory = pluginModule.vitePluginSvelte
+      }
+
+      // 调用插件工厂函数
+      const plugin = typeof pluginFactory === 'function' ? pluginFactory(config.options) : pluginFactory
+
+      // 确保返回的是数组格式（Vite插件可能是数组）
+      const pluginArray = Array.isArray(plugin) ? plugin : [plugin]
+
+      this.logger.debug(`插件加载成功: ${config.name}`, { count: pluginArray.length })
+
+      // 返回所有插件（某些框架如 React 会返回多个插件）
+      return pluginArray.length > 0 ? pluginArray : null
     } catch (error) {
-      // 只在调试模式下显示插件加载失败的详细信息
-      if (process.env.NODE_ENV === 'development' || process.env.DEBUG) {
-        this.logger.debug('插件加载失败，可能未安装', {
-          name: config.name,
-          package: config.packageName,
-          error: (error as Error).message
-        })
+      // 显示插件加载失败的警告信息
+      this.logger.warn(`插件加载失败: ${config.name} (${config.packageName})`)
+      this.logger.warn(`错误详情: ${(error as Error).message}`)
+      if ((error as Error).stack) {
+        this.logger.debug(`错误堆栈: ${(error as Error).stack}`)
       }
       return null
     }

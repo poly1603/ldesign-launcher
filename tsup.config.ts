@@ -4,51 +4,85 @@ import { cpus } from 'os'
 // 获取CPU核心数用于并行构建
 const numCPUs = cpus().length
 
-export default defineConfig({
-  // 使用glob模式打包所有源文件，但排除测试文件
-  entry: [
-    'src/**/*.ts',
-    '!src/**/*.test.ts',
-    '!src/**/*.spec.ts',
-    '!src/**/*.bench.ts',
-    '!src/__tests__/**/*'
-  ],
-  format: ['cjs', 'esm'],
-  dts: {
-    // 分离类型定义生成，提高构建速度
-    resolve: true,
+export default defineConfig([
+  // 客户端代码构建配置（浏览器环境）
+  {
+    entry: {
+      'client/app-config': 'src/client/app-config.ts',
+      'client/index': 'src/client/index.ts',
+      'client/react/useAppConfig': 'src/client/react/useAppConfig.ts',
+      'client/vue/useAppConfig': 'src/client/vue/useAppConfig.ts',
+      'client/vue2/useAppConfig': 'src/client/vue2/useAppConfig.ts',
+      'client/svelte/useAppConfig': 'src/client/svelte/useAppConfig.ts',
+      'client/solid/useAppConfig': 'src/client/solid/useAppConfig.ts',
+      'client/qwik/useAppConfig': 'src/client/qwik/useAppConfig.ts',
+      'client/lit/useAppConfig': 'src/client/lit/useAppConfig.ts',
+    },
+    format: ['esm'], // 客户端只需要 ESM 格式
+    dts: true, // 生成类型定义文件
+    tsconfig: 'tsconfig.json',
+    clean: false, // 不清理，因为有多个配置
+    splitting: false, // 客户端代码不分割，避免引入 Node.js 模块
+    sourcemap: false,
+    minify: false,
+    target: 'es2020', // 浏览器目标
+    outDir: 'dist',
+    platform: 'browser', // 明确指定为浏览器平台
+    treeshake: true,
+    loader: {
+      '.ts': 'ts',
+      '.tsx': 'tsx'
+    },
+    outExtension({ format }) {
+      return {
+        js: `.${format === 'cjs' ? 'cjs' : 'js'}`
+      }
+    },
+    // 客户端代码需要将框架库标记为 external，避免重复打包
+    external: [
+      'react',
+      'react-dom',
+      'vue',
+      'svelte',
+      'solid-js',
+      '@builder.io/qwik',
+      'lit',
+      'preact'
+    ],
+  },
+  // 服务端代码构建配置（Node.js 环境）
+  {
     entry: [
-      'src/index.ts',
-      'src/cli/index.ts',
-      'src/core/index.ts',
-      'src/types/index.ts',
-      'src/utils/index.ts',
-      'src/constants/index.ts'
-    ]
-  },
-  tsconfig: 'tsconfig.json',
-  clean: true,
-  splitting: true, // 启用代码分割以减少重复代码
-  sourcemap: process.env.NODE_ENV === 'development', // 仅在开发模式生成sourcemap
-  minify: process.env.NODE_ENV === 'production', // 仅在生产模式压缩
-  target: 'node16',
-  outDir: 'dist',
-  shims: true,
-  // 启用并行处理
-  treeshake: true,
-  // 使用更快的esbuild loader
-  loader: {
-    '.ts': 'ts',
-    '.tsx': 'tsx'
-  },
-  // 优化chunk命名
-  outExtension({ format }) {
-    return {
-      js: `.${format === 'cjs' ? 'cjs' : 'js'}`
-    }
-  },
-  // 将运行时依赖全部 external，减小产物体积
-  external: [
+      'src/**/*.ts',
+      '!src/**/*.test.ts',
+      '!src/**/*.spec.ts',
+      '!src/**/*.bench.ts',
+      '!src/__tests__/**/*',
+      '!src/client/**/*', // 排除客户端代码
+    ],
+    format: ['cjs', 'esm'],
+    dts: true, // 生成类型定义文件
+    tsconfig: 'tsconfig.json',
+    clean: true, // 第一个配置清理
+    splitting: true,
+    sourcemap: process.env.NODE_ENV === 'development',
+    minify: process.env.NODE_ENV === 'production',
+    target: 'node16',
+    outDir: 'dist',
+    platform: 'node', // 明确指定为 Node.js 平台
+    shims: true,
+    treeshake: true,
+    loader: {
+      '.ts': 'ts',
+      '.tsx': 'tsx'
+    },
+    outExtension({ format }) {
+      return {
+        js: `.${format === 'cjs' ? 'cjs' : 'js'}`
+      }
+    },
+    // 将运行时依赖全部 external，减小产物体积
+    external: [
     'vite',
     '@vitejs/plugin-vue',
     '@vitejs/plugin-vue2',
@@ -136,33 +170,34 @@ export default defineConfig({
     'coffee-script',
     'squirrelly',
     'twing'
-  ],
-  // 优化bundle策略
-  bundle: true,
-  metafile: process.env.ANALYZE === 'true', // 可选的构建分析
-  esbuildOptions(options) {
-    options.conditions = ['node']
-    options.platform = 'node'
-    options.chunkNames = 'chunks/[name]-[hash]'
-    options.logLevel = 'error'
-    options.treeShaking = true
-    options.keepNames = true
-    options.legalComments = 'none'
-    // 使用更多工作线程提高构建速度
-    options.logOverride = {
-      'unsupported-dynamic-import': 'silent'
-    }
-    // 设置最大并行数
-    options.define = {
-      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production')
-    }
-  },
-  // 增加并发数提高构建速度
-  esbuildPlugins: [],
-  // 减少控制台输出
-  silent: process.env.CI === 'true',
-  // 优化构建性能
-  skipNodeModulesBundle: true,
-  // 设置并发构建数
-  // concurrency 选项在tsup中不可用，使用esbuild的默认并发
-})
+    ],
+    // 优化bundle策略
+    bundle: true,
+    metafile: process.env.ANALYZE === 'true', // 可选的构建分析
+    esbuildOptions(options) {
+      options.conditions = ['node']
+      options.platform = 'node'
+      options.chunkNames = 'chunks/[name]-[hash]'
+      options.logLevel = 'error'
+      options.treeShaking = true
+      options.keepNames = true
+      options.legalComments = 'none'
+      // 使用更多工作线程提高构建速度
+      options.logOverride = {
+        'unsupported-dynamic-import': 'silent'
+      }
+      // 设置最大并行数
+      options.define = {
+        'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production')
+      }
+    },
+    // 增加并发数提高构建速度
+    esbuildPlugins: [],
+    // 减少控制台输出
+    silent: process.env.CI === 'true',
+    // 优化构建性能
+    skipNodeModulesBundle: true,
+    // 设置并发构建数
+    // concurrency 选项在tsup中不可用，使用esbuild的默认并发
+  }
+])

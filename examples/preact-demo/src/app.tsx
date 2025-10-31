@@ -1,5 +1,6 @@
 import { Counter } from './components/Counter'
 import { HelloWorld } from './components/HelloWorld'
+import { ConfigDisplay } from './components/ConfigDisplay'
 import './app.css'
 
 export function App() {
@@ -11,6 +12,9 @@ export function App() {
       </header>
 
       <main class="main">
+        {/* 配置信息展示 */}
+        <ConfigDisplay />
+
         <Counter />
         <HelloWorld msg="欢迎使用 Preact!" />
       </main>

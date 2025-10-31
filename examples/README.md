@@ -2,100 +2,45 @@
 
 本目录包含使用 `@ldesign/launcher` 的各种框架示例项目。
 
-## 📦 可用示例
+## 📁 配置文件管理
 
-### ✅ 完整示例（已实现）
+所有示例项目的配置文件都统一放在 `.ldesign` 目录中，实现配置文件的集中管理。
 
-1. **vue3-demo** - Vue 3 示例项目
-   - 完整的组件示例
-   - TypeScript 支持
-   - HMR 热更新
-   - 状态：✅ 完整可用
-
-2. **react-demo** - React 18 示例项目
-   - Hooks 示例
-   - TypeScript 支持
-   - Fast Refresh
-   - 状态：✅ 完整可用
-
-### 🚧 基础示例（待完善）
-
-以下示例项目已创建基础结构，包含必要的配置文件，可以正常运行 dev/build/preview 命令：
-
-3. **vue2-demo** - Vue 2 示例项目
-4. **svelte-demo** - Svelte 示例项目
-5. **solid-demo** - Solid.js 示例项目
-6. **angular-demo** - Angular 示例项目
-7. **preact-demo** - Preact 示例项目
-8. **qwik-demo** - Qwik 示例项目
-9. **lit-demo** - Lit 示例项目
-
-## 🚀 快速开始
-
-### 运行任意示例
-
-```bash
-# 进入示例目录
-cd [framework]-demo
-
-# 安装依赖
-npm install
-
-# 启动开发服务器
-npm run dev
-
-# 生产构建
-npm run build
-
-# 预览构建产物
-npm run preview
-```
-
-### 示例：运行 Vue 3 示例
-
-```bash
-cd vue3-demo
-npm install
-npm run dev
-```
-
-浏览器将自动打开 http://localhost:3000
-
-## 📋 示例项目结构
-
-每个示例项目都包含以下文件：
+### 配置文件结构
 
 ```
-[framework]-demo/
-├── src/                 # 源代码目录
-│   ├── main.ts/tsx/js  # 应用入口
-│   ├── App.*           # 根组件
-│   └── components/     # 组件目录
-├── index.html          # HTML 模板
-├── launcher.config.ts  # Launcher 配置
-├── package.json        # 项目配置
-├── tsconfig.json       # TypeScript 配置
-└── README.md           # 项目说明
+project/
+├── .ldesign/
+│   ├── launcher.config.ts              # 基础配置
+│   ├── launcher.config.development.ts  # 开发环境配置
+│   ├── launcher.config.production.ts   # 生产环境配置
+│   ├── launcher.config.test.ts         # 测试环境配置
+│   ├── app.config.ts                   # 应用配置（基础）
+│   ├── app.config.development.ts       # 应用配置（开发环境）
+│   └── app.config.production.ts        # 应用配置（生产环境）
+├── src/
+├── package.json
+└── ...
 ```
 
-## 🎯 配置说明
+### 配置文件说明
 
-所有示例都使用 `launcher.config.ts` 进行配置：
+#### 1. launcher.config.ts
+
+Launcher 的基础配置文件，定义框架类型、服务器配置、构建配置等。
 
 ```typescript
 import { defineConfig } from '@ldesign/launcher'
 
 export default defineConfig({
   framework: {
-    type: 'vue3',  // 或 'react', 'svelte', 'solid' 等
-    options: {}
+    type: 'react'  // 框架类型
   },
-  
   server: {
+    host: '0.0.0.0',
     port: 3000,
-    open: true
+    open: false
   },
-  
   build: {
     outDir: 'dist',
     sourcemap: true
@@ -103,73 +48,220 @@ export default defineConfig({
 })
 ```
 
-## 📚 框架特定说明
+#### 2. launcher.config.[environment].ts
 
-### Vue 3
-- 使用 `@vitejs/plugin-vue`
-- 支持 SFC (Single File Components)
-- 支持 TypeScript
-- 默认端口：3000
+环境特定的配置文件，会覆盖基础配置。
 
-### React
-- 使用 `@vitejs/plugin-react`
-- 支持 Fast Refresh
-- 支持 TypeScript + JSX
-- 默认端口：3000
+支持的环境名称：
+- `development` - 开发环境
+- `production` - 生产环境
+- `test` - 测试环境
+- `staging` - 预发布环境
+- `preview` - 预览环境
 
-### Vue 2
-- 使用 `@vitejs/plugin-vue2`
-- 支持 Vue 2.7+
-- 默认端口：3000
+**示例：launcher.config.development.ts**
 
-### Svelte
-- 使用 `@sveltejs/vite-plugin-svelte`
-- 支持 SFC
-- 默认端口：5173
+```typescript
+import { defineConfig } from '@ldesign/launcher'
 
-### Solid.js
-- 使用 `vite-plugin-solid`
-- 支持 JSX
-- 默认端口：3000
+export default defineConfig({
+  framework: {
+    type: 'react'
+  },
+  server: {
+    port: 3000,
+    open: true,
+    hmr: true
+  },
+  build: {
+    sourcemap: true,
+    minify: false
+  },
+  define: {
+    __DEV__: true,
+    __API_URL__: JSON.stringify('http://localhost:8080/api')
+  }
+})
+```
 
-### Angular
-- 使用 `@analogjs/vite-plugin-angular`
-- 支持 TypeScript
-- 默认端口：4200
+**示例：launcher.config.production.ts**
 
-### Preact
-- 使用 `@preact/preset-vite`
-- 兼容 React API
-- 默认端口：3000
+```typescript
+import { defineConfig } from '@ldesign/launcher'
 
-### Qwik
-- 使用 `@builder.io/qwik`
-- 支持可恢复性
-- 默认端口：5173
+export default defineConfig({
+  framework: {
+    type: 'react'
+  },
+  build: {
+    sourcemap: false,
+    minify: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom']
+        }
+      }
+    }
+  },
+  define: {
+    __DEV__: false,
+    __API_URL__: JSON.stringify('https://api.example.com')
+  }
+})
+```
 
-### Lit
-- 使用原生 Web Components
-- 无需额外插件
-- 默认端口：3000
+#### 3. app.config.ts
 
-## 🔧 开发建议
+应用配置文件，会被注入到 `import.meta.env.appConfig` 中，可以在应用代码中访问。
 
-1. **首次运行**：确保先在根目录运行 `npm install` 安装 launcher 包
-2. **端口冲突**：如果端口被占用，可以在 `launcher.config.ts` 中修改端口
-3. **类型检查**：运行 `npm run type-check` 进行 TypeScript 类型检查
-4. **构建优化**：生产构建会自动进行代码分割和优化
+```typescript
+export default {
+  app: {
+    name: 'My App',
+    version: '1.0.0',
+    description: 'My awesome app'
+  },
+  api: {
+    baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:8080/api',
+    timeout: 30000
+  },
+  features: {
+    enableAnalytics: false,
+    enableDebug: true
+  }
+}
+```
 
-## 📖 相关文档
+#### 4. app.config.[environment].ts
 
-- [Launcher 快速开始](../docs/QUICK_START.md)
-- [Launcher 架构文档](../docs/ARCHITECTURE.md)
-- [从 1.x 迁移](../docs/MIGRATION.md)
+环境特定的应用配置。
 
-## 🤝 贡献
+```typescript
+export default {
+  app: {
+    name: 'My App',
+    version: '1.0.0'
+  },
+  api: {
+    baseUrl: 'https://api.example.com',
+    timeout: 30000
+  },
+  features: {
+    enableAnalytics: true,
+    enableDebug: false
+  }
+}
+```
 
-欢迎提交 PR 完善示例项目！
+### 配置文件加载优先级
 
-## 📄 许可证
+Launcher 会按以下优先级查找和加载配置文件：
 
-MIT
+1. `.ldesign/launcher.config.[environment].ts` - 环境特定配置（最高优先级）
+2. `launcher.config.[environment].ts` - 项目根目录的环境配置
+3. `.ldesign/launcher.config.ts` - 基础配置
+4. `launcher.config.ts` - 项目根目录的基础配置
+5. `vite.config.ts` - Vite 配置文件（兼容模式）
+
+应用配置加载优先级：
+
+1. `.ldesign/app.config.[environment].ts` - 环境特定应用配置
+2. `.ldesign/app.config.ts` - 基础应用配置
+
+### 使用环境配置
+
+#### 方式 1：通过命令行参数
+
+```bash
+# 使用开发环境配置
+pnpm run dev --mode development
+
+# 使用生产环境配置
+pnpm run build --mode production
+```
+
+#### 方式 2：通过环境变量
+
+```bash
+# Windows
+set NODE_ENV=production && pnpm run build
+
+# Linux/Mac
+NODE_ENV=production pnpm run build
+```
+
+#### 方式 3：在 package.json 中定义脚本
+
+```json
+{
+  "scripts": {
+    "dev": "launcher dev",
+    "dev:prod": "launcher dev --mode production",
+    "build": "launcher build",
+    "build:dev": "launcher build --mode development"
+  }
+}
+```
+
+## 🎯 支持的框架
+
+| 框架 | 示例项目 | 端口 | 说明 |
+|------|----------|------|------|
+| React | react-demo | 3000 | React 18 + TypeScript |
+| Vue 3 | vue3-demo | 3007 | Vue 3 + TypeScript |
+| Vue 2 | vue2-demo | 3006 | Vue 2 + TypeScript |
+| Svelte | svelte-demo | 3004 | Svelte + TypeScript |
+| Solid | solid-demo | 3003 | Solid.js + TypeScript |
+| Preact | preact-demo | 3002 | Preact + TypeScript |
+| Lit | lit-demo | 3001 | Lit + TypeScript |
+| Qwik | qwik-demo | 5173 | Qwik + TypeScript |
+
+## 🚀 快速开始
+
+### 1. 安装依赖
+
+```bash
+pnpm install
+```
+
+### 2. 启动开发服务器
+
+```bash
+cd react-demo
+pnpm run dev
+```
+
+### 3. 构建生产版本
+
+```bash
+pnpm run build
+```
+
+### 4. 预览生产构建
+
+```bash
+pnpm run preview
+```
+
+## 📝 注意事项
+
+1. **配置文件位置**：所有配置文件都应放在 `.ldesign` 目录中
+2. **环境配置**：使用 `launcher.config.[environment].ts` 格式命名环境配置
+3. **应用配置**：使用 `app.config.ts` 定义应用级配置，可在代码中通过 `import.meta.env.appConfig` 访问
+4. **零配置**：所有示例项目都使用 `@ldesign/launcher` 的内置 Vite 7，无需单独安装 Vite
+
+## 🔧 配置示例
+
+查看各个示例项目的 `.ldesign` 目录，了解不同框架的配置方式：
+
+- **React Demo**: `.ldesign/launcher.config.ts` - 包含完整的多环境配置示例
+- **Vue3 Demo**: `.ldesign/launcher.config.ts` - Vue 3 特定配置
+- **其他框架**: 类似的配置结构
+
+## 📚 更多信息
+
+- [Launcher 文档](../../README.md)
+- [配置参考](../../docs/config.md)
+- [API 文档](../../docs/api.md)
 

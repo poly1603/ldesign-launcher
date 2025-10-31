@@ -11,12 +11,12 @@ export * from './base'
 // 导出各框架适配器
 export * from './vue'
 export * from './react'
-export * from './angular'
 export * from './svelte'
 export * from './solid'
 export * from './preact'
 export * from './qwik'
 export * from './lit'
+export * from './marko'
 
 // 导出框架元数据
 import type { FrameworkMetadata } from '../types/framework'
@@ -95,30 +95,6 @@ export const REACT_FRAMEWORK_METADATA: FrameworkMetadata = {
   defaultPort: 3000,
   fileExtensions: ['.js', '.ts', '.jsx', '.tsx'],
   configFiles: ['vite.config.ts', 'vite.config.js', 'tsconfig.json']
-}
-
-/**
- * Angular 框架元数据
- */
-export const ANGULAR_FRAMEWORK_METADATA: FrameworkMetadata = {
-  name: 'angular',
-  displayName: 'Angular',
-  description: 'Angular - 现代 Web 开发平台',
-  website: 'https://angular.io',
-  documentation: 'https://angular.io/docs',
-  dependencies: ['@angular/core', '@analogjs/vite-plugin-angular'],
-  supportedEngines: ['vite'],
-  features: {
-    jsx: false,
-    sfc: false,
-    cssModules: true,
-    ssr: true,
-    ssg: true,
-    hmr: true
-  },
-  defaultPort: 4200,
-  fileExtensions: ['.ts', '.html', '.css', '.scss'],
-  configFiles: ['angular.json', 'vite.config.ts']
 }
 
 /**
@@ -250,28 +226,54 @@ export const LIT_FRAMEWORK_METADATA: FrameworkMetadata = {
 }
 
 /**
+ * Marko 框架元数据
+ */
+export const MARKO_FRAMEWORK_METADATA: FrameworkMetadata = {
+  name: 'marko',
+  displayName: 'Marko',
+  description: 'Marko - 快速、轻量的 UI 框架',
+  website: 'https://markojs.com',
+  documentation: 'https://markojs.com/docs/',
+  dependencies: ['marko', '@marko/vite'],
+  supportedEngines: ['vite'],
+  features: {
+    jsx: false,
+    sfc: true,
+    cssModules: true,
+    cssInJs: false,
+    ssr: true,
+    ssg: true,
+    hmr: true,
+    fastRefresh: true
+  },
+  defaultPort: 3000,
+  fileExtensions: ['.marko', '.js', '.ts'],
+  configFiles: ['vite.config.ts', 'vite.config.js', 'marko.json']
+}
+
+/**
  * 初始化并注册所有框架
  */
 export async function registerAllFrameworks(): Promise<void> {
   const { registerFramework } = await import('../registry/FrameworkRegistry')
   const { vue2AdapterFactory, vue3AdapterFactory } = await import('./vue')
   const { reactAdapterFactory } = await import('./react')
-  const { angularAdapterFactory } = await import('./angular')
   const { svelteAdapterFactory } = await import('./svelte')
   const { solidAdapterFactory } = await import('./solid')
   const { preactAdapterFactory } = await import('./preact')
   const { qwikAdapterFactory } = await import('./qwik')
   const { litAdapterFactory } = await import('./lit')
+  const { markoAdapterFactory } = await import('./marko')
 
   // 注册所有框架（优先级：数字越大优先级越高）
   registerFramework('vue2', vue2AdapterFactory, VUE2_FRAMEWORK_METADATA, 9)
   registerFramework('vue3', vue3AdapterFactory, VUE3_FRAMEWORK_METADATA, 10)
   registerFramework('react', reactAdapterFactory, REACT_FRAMEWORK_METADATA, 10)
   registerFramework('preact', preactAdapterFactory, PREACT_FRAMEWORK_METADATA, 8)
-  registerFramework('angular', angularAdapterFactory, ANGULAR_FRAMEWORK_METADATA, 8)
   registerFramework('svelte', svelteAdapterFactory, SVELTE_FRAMEWORK_METADATA, 8)
   registerFramework('solid', solidAdapterFactory, SOLID_FRAMEWORK_METADATA, 8)
   registerFramework('qwik', qwikAdapterFactory, QWIK_FRAMEWORK_METADATA, 7)
   registerFramework('lit', litAdapterFactory, LIT_FRAMEWORK_METADATA, 7)
+  registerFramework('marko', markoAdapterFactory, MARKO_FRAMEWORK_METADATA, 7)
 }
 

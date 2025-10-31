@@ -13,18 +13,24 @@ import type { BuildEngine } from './engine'
 
 /**
  * 支持的前端框架类型
+ *
+ * 包含 Vite 官方支持的框架和社区流行框架
  */
-export type FrameworkType = 
-  | 'vue2' 
-  | 'vue3' 
-  | 'react' 
-  | 'angular' 
-  | 'svelte' 
+export type FrameworkType =
+  | 'vue2'
+  | 'vue3'
+  | 'react'
+  | 'react-swc'
+  | 'angular'
+  | 'svelte'
+  | 'sveltekit'
   | 'solid'
   | 'preact'
   | 'qwik'
   | 'lit'
+  | 'marko'
   | 'vanilla'
+  | 'vanilla-ts'
   | 'auto'  // 自动检测
 
 /**

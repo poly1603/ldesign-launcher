@@ -209,13 +209,138 @@ export abstract class FrameworkAdapter implements IFrameworkAdapter {
     // 移除版本前缀（^, ~, >=, 等）
     const cleanVersion = versionString.replace(/^[\^~>=<]+/, '')
     const parts = cleanVersion.split('.')
-    
+
     return {
       major: parseInt(parts[0] || '0', 10),
       minor: parseInt(parts[1] || '0', 10),
       patch: parseInt(parts[2] || '0', 10),
       full: cleanVersion
     }
+  }
+
+  /**
+   * 辅助方法：读取文件内容
+   */
+  protected async readFileContent(cwd: string, filePath: string): Promise<string | null> {
+    const fullPath = PathUtils.join(cwd, filePath)
+
+    if (!await FileSystem.exists(fullPath)) {
+      return null
+    }
+
+    try {
+      return await FileSystem.readFile(fullPath, { encoding: 'utf-8' })
+    } catch (error) {
+      this.logger.warn(`读取文件 ${filePath} 失败: ${(error as Error).message}`)
+      return null
+    }
+  }
+
+  /**
+   * 辅助方法：检查文件内容是否包含特定模式
+   */
+  protected async fileContainsPattern(
+    cwd: string,
+    filePath: string,
+    pattern: RegExp | string
+  ): Promise<boolean> {
+    const content = await this.readFileContent(cwd, filePath)
+    if (!content) {
+      return false
+    }
+
+    if (typeof pattern === 'string') {
+      return content.includes(pattern)
+    }
+
+    return pattern.test(content)
+  }
+
+  /**
+   * 辅助方法：检查文件中的 import 语句
+   *
+   * @param cwd - 项目根目录
+   * @param filePath - 文件路径
+   * @param packageNames - 要检查的包名列表
+   * @returns 找到的包名列表
+   */
+  protected async findImportsInFile(
+    cwd: string,
+    filePath: string,
+    packageNames: string[]
+  ): Promise<string[]> {
+    const content = await this.readFileContent(cwd, filePath)
+    if (!content) {
+      return []
+    }
+
+    const foundImports: string[] = []
+
+    for (const packageName of packageNames) {
+      // 匹配各种 import 语法
+      const patterns = [
+        new RegExp(`import\\s+.*?from\\s+['"]${packageName}['"]`, 'g'),
+        new RegExp(`import\\s+['"]${packageName}['"]`, 'g'),
+        new RegExp(`require\\s*\\(['"]${packageName}['"]\\)`, 'g'),
+      ]
+
+      const hasImport = patterns.some(pattern => pattern.test(content))
+      if (hasImport) {
+        foundImports.push(packageName)
+      }
+    }
+
+    return foundImports
+  }
+
+  /**
+   * 辅助方法：检查项目结构模式
+   *
+   * @param cwd - 项目根目录
+   * @param patterns - 文件/目录模式列表
+   * @returns 匹配的模式数量
+   */
+  protected async checkProjectStructure(
+    cwd: string,
+    patterns: string[]
+  ): Promise<number> {
+    let matchCount = 0
+
+    for (const pattern of patterns) {
+      const fullPath = PathUtils.join(cwd, pattern)
+      if (await FileSystem.exists(fullPath)) {
+        matchCount++
+      }
+    }
+
+    return matchCount
+  }
+
+  /**
+   * 辅助方法：扫描入口文件
+   *
+   * @param cwd - 项目根目录
+   * @returns 找到的入口文件列表
+   */
+  protected async findEntryFiles(cwd: string): Promise<string[]> {
+    const commonEntryPatterns = [
+      'src/main.ts',
+      'src/main.tsx',
+      'src/main.js',
+      'src/main.jsx',
+      'src/index.ts',
+      'src/index.tsx',
+      'src/index.js',
+      'src/index.jsx',
+      'src/App.tsx',
+      'src/App.jsx',
+      'src/App.vue',
+      'src/app.ts',
+      'src/app.js',
+      'index.html'
+    ]
+
+    return this.findFiles(cwd, commonEntryPatterns)
   }
 }
 

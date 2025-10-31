@@ -1,6 +1,7 @@
 import type { Component } from 'solid-js'
 import Counter from './components/Counter'
 import HelloWorld from './components/HelloWorld'
+import { ConfigDisplay } from './components/ConfigDisplay'
 import styles from './App.module.css'
 
 const App: Component = () => {
@@ -12,6 +13,9 @@ const App: Component = () => {
       </header>
 
       <main class={styles.main}>
+        {/* 配置信息展示 */}
+        <ConfigDisplay />
+
         <Counter />
         <HelloWorld msg="欢迎使用 Solid!" />
       </main>

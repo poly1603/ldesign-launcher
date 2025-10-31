@@ -1,6 +1,7 @@
 <script lang="ts">
   import Counter from './lib/Counter.svelte'
   import HelloWorld from './lib/HelloWorld.svelte'
+  import ConfigDisplay from './components/ConfigDisplay.svelte'
 </script>
 
 <div class="app">
@@ -10,6 +11,9 @@
   </header>
 
   <main class="main">
+    <!-- 配置信息展示 -->
+    <ConfigDisplay />
+
     <Counter />
     <HelloWorld msg="欢迎使用 Svelte!" />
   </main>

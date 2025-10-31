@@ -67,6 +67,38 @@
       "import": "./dist/cli/commands/index.js",
       "require": "./dist/cli/commands/index.cjs"
     },
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "import": "./dist/client/index.js"
+    },
+    "./client/react": {
+      "types": "./dist/client/react/useAppConfig.d.ts",
+      "import": "./dist/client/react/useAppConfig.js"
+    },
+    "./client/vue": {
+      "types": "./dist/client/vue/useAppConfig.d.ts",
+      "import": "./dist/client/vue/useAppConfig.js"
+    },
+    "./client/vue2": {
+      "types": "./dist/client/vue2/useAppConfig.d.ts",
+      "import": "./dist/client/vue2/useAppConfig.js"
+    },
+    "./client/svelte": {
+      "types": "./dist/client/svelte/useAppConfig.d.ts",
+      "import": "./dist/client/svelte/useAppConfig.js"
+    },
+    "./client/solid": {
+      "types": "./dist/client/solid/useAppConfig.d.ts",
+      "import": "./dist/client/solid/useAppConfig.js"
+    },
+    "./client/qwik": {
+      "types": "./dist/client/qwik/useAppConfig.d.ts",
+      "import": "./dist/client/qwik/useAppConfig.js"
+    },
+    "./client/lit": {
+      "types": "./dist/client/lit/useAppConfig.d.ts",
+      "import": "./dist/client/lit/useAppConfig.js"
+    },
     "./package.json": "./package.json"
   },
   "bin": {
@@ -82,9 +114,9 @@
     "node": ">=16.0.0"
   },
   "scripts": {
-    "build": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" NODE_ENV=production tsup",
-    "build:js": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" tsup --no-dts",
-    "build:dts": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" tsup --dts-only",
+    "build": "cross-env NODE_OPTIONS=\"--max-old-space-size=16384\" NODE_ENV=production tsup",
+    "build:js": "cross-env NODE_OPTIONS=\"--max-old-space-size=16384\" tsup --no-dts",
+    "build:dts": "cross-env NODE_OPTIONS=\"--max-old-space-size=16384\" tsup --dts-only",
     "build:tsc": "tsc",
     "dev": "tsup --watch",
     "test": "vitest",
@@ -129,6 +161,7 @@
     "ttf2eot": "^3.1.0",
     "ttf2woff": "^3.0.0",
     "ttf2woff2": "^5.0.0",
+    "vite": "^7.1.12",
     "ws": "^8.18.3",
     "yauzl": "^3.0.0"
   },
@@ -145,7 +178,7 @@
     "@types/yauzl": "^2.10.3",
     "@typescript-eslint/eslint-plugin": "^6.14.0",
     "@typescript-eslint/parser": "^6.14.0",
-    "@vitest/ui": "^1.0.0",
+    "@vitest/ui": "^4.0.5",
     "cross-env": "^10.0.0",
     "eslint": "^9.18.0",
     "rimraf": "^5.0.5",
@@ -154,26 +187,22 @@
     "typescript": "^5.7.3",
     "vite-plugin-node-polyfills": "^0.24.0",
     "vitepress": "^1.6.4",
-    "vitest": "^1.0.0",
+    "vitest": "^4.0.5",
     "@antfu/eslint-config": "^6.0.0"
   },
   "peerDependencies": {
     "@sveltejs/vite-plugin-svelte": "^6.1.3",
-    "@vitejs/plugin-legacy": "^5.2.0",
-    "@vitejs/plugin-react": "^5.0.2",
+    "@vitejs/plugin-legacy": "^7.2.1",
+    "@vitejs/plugin-react": "^5.1.0",
     "@vitejs/plugin-vue": "^6.0.1",
     "@vitejs/plugin-vue2": "^2.3.3",
-    "@analogjs/vite-plugin-angular": "^1.0.0",
-    "@angular-devkit/build-angular": "^18.0.0",
+
     "vite-plugin-solid": "^2.10.0",
     "@preact/preset-vite": "^2.9.0",
     "@builder.io/qwik": "^1.11.0",
-    "vite": "^4.0.0 || ^5.0.0"
+    "@marko/vite": "^1.0.0"
   },
   "peerDependenciesMeta": {
-    "vite": {
-      "optional": false
-    },
     "@vitejs/plugin-legacy": {
       "optional": true
     },
@@ -202,6 +231,9 @@
       "optional": true
     },
     "@builder.io/qwik": {
+      "optional": true
+    },
+    "@marko/vite": {
       "optional": true
     }
   },

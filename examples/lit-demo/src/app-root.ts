@@ -2,6 +2,7 @@ import { LitElement, html, css } from 'lit'
 import { customElement } from 'lit/decorators.js'
 import './components/counter-component'
 import './components/hello-world'
+import './components/config-display'
 
 @customElement('app-root')
 export class AppRoot extends LitElement {
@@ -54,6 +55,9 @@ export class AppRoot extends LitElement {
         </header>
 
         <main class="main">
+          <!-- 配置信息展示 -->
+          <config-display></config-display>
+
           <counter-component></counter-component>
           <hello-world msg="欢迎使用 Lit!"></hello-world>
         </main>

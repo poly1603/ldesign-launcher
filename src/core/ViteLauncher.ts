@@ -1442,7 +1442,8 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
     try {
       this.logger.info('开始智能插件检测...')
       // 检查用户是否明确指定了框架类型
-      const explicitFrameworkType = (config as any).framework?.type
+      // 支持两种配置方式：config.framework.type 和 config.launcher.framework
+      const explicitFrameworkType = (config as any).framework?.type || (config as any).launcher?.framework
       if (explicitFrameworkType) {
         this.logger.info('检测到用户指定的框架类型', { type: explicitFrameworkType })
       }

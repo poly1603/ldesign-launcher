@@ -105,7 +105,10 @@ export class QwikAdapter extends FrameworkAdapter {
       try {
         // 动态导入 @builder.io/qwik
         const { qwikVite } = await import('@builder.io/qwik/optimizer')
-        const plugin = qwikVite(options?.options)
+
+        // 简化的 Qwik 插件配置
+        const plugin = qwikVite(options?.options || {})
+
         // 插件可能返回单个插件或插件数组
         if (Array.isArray(plugin)) {
           plugins.push(...plugin)
@@ -119,9 +122,9 @@ export class QwikAdapter extends FrameworkAdapter {
           const { qwikCity } = await import('@builder.io/qwik-city/vite')
           const cityPlugin = qwikCity()
           if (Array.isArray(cityPlugin)) {
-            plugins.push(...cityPlugin)
-          } else {
-            plugins.push(cityPlugin)
+            plugins.push(...(cityPlugin as any))
+          } else if (cityPlugin) {
+            plugins.push(cityPlugin as any)
           }
         } catch (error) {
           this.logger.warn('未找到 @builder.io/qwik-city，跳过 Qwik City 支持')

@@ -125,9 +125,9 @@ export class Vue3Adapter extends FrameworkAdapter {
             const { default: vueJsx } = await import('@vitejs/plugin-vue-jsx')
             const jsxPlugin = vueJsx()
             if (Array.isArray(jsxPlugin)) {
-              plugins.push(...jsxPlugin)
+              plugins.push(...(jsxPlugin as any))
             } else {
-              plugins.push(jsxPlugin)
+              plugins.push(jsxPlugin as any)
             }
           } catch (error) {
             this.logger.warn('未找到 @vitejs/plugin-vue-jsx，跳过 JSX 支持')

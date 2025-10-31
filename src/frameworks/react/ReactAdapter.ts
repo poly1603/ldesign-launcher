@@ -48,26 +48,29 @@ export class ReactAdapter extends FrameworkAdapter {
 
     let confidence = 0
 
-    // 检查 package.json 中的 react 依赖
+    // 1. 检查 package.json 中的 react 依赖（最重要的指标）
     const reactVersion = await this.getDependencyVersion(cwd, 'react')
     if (reactVersion) {
       evidence.dependencies!.push('react')
-      confidence += 0.5
+      confidence += 0.4
     }
 
-    // 检查 react-dom 依赖
+    // 2. 检查 react-dom 依赖
     if (await this.hasDependency(cwd, 'react-dom')) {
       evidence.dependencies!.push('react-dom')
-      confidence += 0.2
+      confidence += 0.15
     }
 
-    // 检查 @vitejs/plugin-react 依赖
+    // 3. 检查 @vitejs/plugin-react 或 @vitejs/plugin-react-swc 依赖
     if (await this.hasDependency(cwd, '@vitejs/plugin-react')) {
       evidence.dependencies!.push('@vitejs/plugin-react')
-      confidence += 0.2
+      confidence += 0.15
+    } else if (await this.hasDependency(cwd, '@vitejs/plugin-react-swc')) {
+      evidence.dependencies!.push('@vitejs/plugin-react-swc')
+      confidence += 0.15
     }
 
-    // 检查 React 入口文件
+    // 4. 检查 React 入口文件
     const reactFiles = await this.findFiles(cwd, [
       'src/App.tsx',
       'src/App.jsx',
@@ -78,10 +81,33 @@ export class ReactAdapter extends FrameworkAdapter {
     ])
     if (reactFiles.length > 0) {
       evidence.files = reactFiles
-      confidence += 0.2
+      confidence += 0.1
     }
 
-    // 检查配置文件
+    // 5. 检查入口文件中的 React import
+    const entryFiles = await this.findEntryFiles(cwd)
+    for (const file of entryFiles) {
+      const imports = await this.findImportsInFile(cwd, file, ['react', 'react-dom'])
+      if (imports.length > 0) {
+        confidence += 0.1
+        break
+      }
+    }
+
+    // 6. 检查项目结构（React 典型目录结构）
+    const structurePatterns = [
+      'src/components',
+      'src/hooks',
+      'src/contexts',
+      'src/pages',
+      'public'
+    ]
+    const structureMatches = await this.checkProjectStructure(cwd, structurePatterns)
+    if (structureMatches >= 2) {
+      confidence += 0.05
+    }
+
+    // 7. 检查配置文件
     const configFiles = await this.findFiles(cwd, [
       'vite.config.ts',
       'vite.config.js',
@@ -89,10 +115,29 @@ export class ReactAdapter extends FrameworkAdapter {
     ])
     if (configFiles.length > 0) {
       evidence.configFiles = configFiles
-      confidence += 0.1
+      confidence += 0.05
     }
 
+    // 8. 检查 tsconfig.json 中的 React 配置
+    if (await this.hasFile(cwd, 'tsconfig.json')) {
+      const hasReactJsx = await this.fileContainsPattern(
+        cwd,
+        'tsconfig.json',
+        /"jsx":\s*"react(-jsx|-jsxdev)?"/
+      )
+      if (hasReactJsx) {
+        confidence += 0.05
+      }
+    }
+
+    // 确保置信度不超过 1
+    confidence = Math.min(confidence, 1)
+
     const detected = confidence >= 0.5
+
+    this.logger.debug(
+      `React 检测结果: ${detected ? '✓' : '✗'} (置信度: ${(confidence * 100).toFixed(1)}%)`
+    )
 
     return {
       detected,

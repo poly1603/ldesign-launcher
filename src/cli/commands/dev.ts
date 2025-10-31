@@ -183,6 +183,51 @@ export class DevCommand implements CliCommandDefinition {
         console.log('')
       }
 
+      // 🎯 零配置特性：自动检测框架
+      let detectedFramework = null
+      if (!context.options.silent) {
+        logger.info('🔍 正在检测项目框架...')
+      }
+
+      try {
+        const { createFrameworkDetector } = await import('../../frameworks/base/FrameworkDetector')
+        const detector = createFrameworkDetector()
+        detectedFramework = await detector.detectBest(context.cwd)
+
+        if (detectedFramework && detectedFramework.detected) {
+          if (!context.options.silent) {
+            const frameworkName = detectedFramework.type?.toUpperCase() || 'UNKNOWN'
+            const confidencePercent = (detectedFramework.confidence * 100).toFixed(0)
+            logger.success(
+              `✓ 检测到 ${pc.bold(pc.green(frameworkName))} 框架 ` +
+              `(置信度: ${pc.cyan(confidencePercent + '%')})`
+            )
+
+            // 显示检测依据
+            if (context.options.debug && detectedFramework.evidence) {
+              const { dependencies, files, configFiles } = detectedFramework.evidence
+              if (dependencies && dependencies.length > 0) {
+                logger.debug(`  依赖: ${dependencies.join(', ')}`)
+              }
+              if (files && files.length > 0) {
+                logger.debug(`  文件: ${files.join(', ')}`)
+              }
+              if (configFiles && configFiles.length > 0) {
+                logger.debug(`  配置: ${configFiles.join(', ')}`)
+              }
+            }
+          }
+        } else {
+          if (!context.options.silent) {
+            logger.warn('⚠ 未检测到已知框架，将使用默认配置')
+          }
+        }
+      } catch (error) {
+        if (context.options.debug) {
+          logger.warn(`框架检测失败: ${(error as Error).message}`)
+        }
+      }
+
       logger.info('正在启动开发服务器...')
 
       // 先创建基础的 ViteLauncher 实例，只传入必要的配置
@@ -192,6 +237,11 @@ export class DevCommand implements CliCommandDefinition {
           mode: mode,
           debug: context.options.debug || false
         }
+      }
+
+      // 如果检测到框架，添加框架信息到配置
+      if (detectedFramework && detectedFramework.detected && detectedFramework.type) {
+        launcherConfig.launcher.framework = detectedFramework.type
       }
 
       // 只有当明确指定了配置文件时才设置 configFile
@@ -204,6 +254,7 @@ export class DevCommand implements CliCommandDefinition {
         logger.debug('创建 ViteLauncher 实例', {
           cwd: context.cwd,
           environment: environment,
+          framework: detectedFramework?.type,
           config: launcherConfig
         })
       }
