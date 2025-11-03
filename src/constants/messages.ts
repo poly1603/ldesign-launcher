@@ -129,12 +129,7 @@ export const CLI_HELP_MESSAGES = {
   dev      启动开发服务器
   build    执行生产构建
   preview  预览构建结果
-  test     运行测试
-  dashboard 启动仪表板
-  ai       AI辅助优化
   config   配置管理
-  plugin   插件管理
-  cache    缓存管理
   help     显示帮助信息
   version  显示版本信息
 

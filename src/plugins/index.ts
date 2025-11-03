@@ -1,15 +1,13 @@
 /**
  * 插件导出
  * 
+ * 只保留核心插件：配置注入和预设
+ * 
  * @author LDesign Team
- * @since 1.0.0
+ * @since 2.1.0
  */
 
-export { createDependencyAnalyzerPlugin } from './dependency-analyzer'
-export { createSmartCachePlugin } from './smart-cache'
-export { createDevEnhancementPlugin } from './dev-enhancement'
-export { createFontConverterPlugin } from './font-converter'
-export { createSVGComponentPlugin } from './svg-component-generator'
-export { createImageOptimizerPlugin } from './image-optimizer'
-export { createAPIDocPlugin } from './api-doc-generator'
-export { createPWASupportPlugin } from './pwa-support'
+// 核心插件
+export * from './config-injection'
+export * from './app-config'
+export * from './presets'

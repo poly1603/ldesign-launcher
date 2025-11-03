@@ -17,17 +17,6 @@ import { PreviewCommand } from './commands/preview'
 import { ConfigCommand } from './commands/config'
 import { HelpCommand } from './commands/help'
 import { VersionCommand } from './commands/version'
-import { PluginCommand } from './commands/plugin'
-import { CacheCommand } from './commands/cache'
-import { TestCommand } from './commands/test'
-import { DashboardCommand } from './commands/dashboard'
-import { AICommand } from './commands/ai'
-import { MicroCommand } from './commands/micro'
-import { DeployCommand } from './commands/deploy'
-import { MonitorCommand } from './commands/monitor'
-import { VisualCommand } from './commands/visual'
-import { TeamCommand } from './commands/team'
-import { UICommand } from './commands/ui'
 
 /**
  * 创建 CLI 应用
@@ -119,18 +108,7 @@ export function createCli(config?: Partial<CliConfig>) {
     ['dev', new DevCommand()],
     ['build', new BuildCommand()],
     ['preview', new PreviewCommand()],
-    ['test', new TestCommand()],
-    ['dashboard', new DashboardCommand()],
-    ['ai', new AICommand()],
     ['config', new ConfigCommand()],
-    ['plugin', new PluginCommand()],
-    ['cache', new CacheCommand()],
-    ['micro', new MicroCommand()],
-    ['deploy', new DeployCommand()],
-    ['monitor', new MonitorCommand()],
-    ['visual', new VisualCommand()],
-    ['team', new TeamCommand()],
-    ['ui', new UICommand()],
     ['help', new HelpCommand()],
     ['version', new VersionCommand()]
   ])

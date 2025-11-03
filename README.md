@@ -175,36 +175,26 @@ await launcher.build()
 await launcher.preview()
 ```
 
-## 🛠️ 开发工具
+## 📚 功能定位
 
-@ldesign/launcher 提供了丰富的开发工具，帮助提升开发效率：
+@ldesign/launcher 是一个**专注于项目启动**的工具，提供：
 
-```bash
-# 字体转换 - 将字体转换为 WebFont 格式
-launcher tools font --source ./fonts --output ./public/fonts --subset --css
+- ✅ **开发服务器** (`launcher dev`)
+- ✅ **生产构建** (`launcher build`)
+- ✅ **构建预览** (`launcher preview`)
+- ✅ **配置管理** (`launcher config`)
 
-# SVG 组件生成 - 根据框架类型生成对应组件
-launcher tools svg --source ./icons --framework vue --typescript
+**不包含的功能**：
+- ❌ 部署工具（请使用 [@ldesign/deployer](../deployer)）
+- ❌ 测试工具（请使用 [@ldesign/testing](../testing)）
+- ❌ 代码生成（请使用 [@ldesign/generator](../generator)）
+- ❌ 字体/SVG/图片处理等工具
 
-# 图片优化 - 支持现代图片格式和响应式图片
-launcher tools image --responsive --formats webp,avif
+**与其他工具的关系**：
+- **@ldesign/builder**: 用于构建 npm 包/组件库，launcher 用于启动应用
+- **@ldesign/cli**: 统一 CLI 入口，包含 launcher 和其他工具
 
-# 国际化管理 - 自动提取翻译键和验证完整性
-launcher tools i18n --extract --validate --generate-types
-
-# API 文档生成 - 支持多种文档格式
-launcher tools api-docs --format openapi --interactive
-
-# 主题管理 - 支持多主题和暗色模式
-launcher tools theme --generate-switcher --dark-mode
-
-# PWA 支持 - 自动生成 PWA 相关文件
-launcher tools pwa --generate-sw --offline-page offline.html
-```
-
-详细的工具使用说明请参考 [工具文档](./docs/TOOLS.md)。
-
-### 配置文件
+## 🔧 配置文件
 
 创建 `launcher.config.ts` 或 `launcher.config.js`：
 

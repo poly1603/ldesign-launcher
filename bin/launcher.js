@@ -38,11 +38,16 @@ async function main() {
   try {
     let mod
     let createCli
+    let bootstrap
 
     try {
       // 直接使用 ESM 构建，因为这是一个 ESM 包
       mod = await import('../dist/cli/index.js')
       createCli = mod.createCli || (typeof mod.default === 'function' ? mod.default : mod.default?.createCli)
+      
+      // 导入 bootstrap 函数以初始化框架注册
+      const coreModule = await import('../dist/index.js')
+      bootstrap = coreModule.bootstrap
 
       if (!createCli) {
         console.log('ESM模块导出:', Object.keys(mod))
@@ -58,6 +63,11 @@ async function main() {
 
     if (typeof createCli !== 'function') {
       throw new Error('无法定位 createCli 导出')
+    }
+
+    // 初始化 Launcher 系统（注册所有引擎和框架）
+    if (typeof bootstrap === 'function') {
+      await bootstrap()
     }
 
     // 创建并运行 CLI

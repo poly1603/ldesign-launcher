@@ -9,6 +9,11 @@ export default defineConfig({
     port: 5173,
     open: false
   },
+  preview: {
+    host: '0.0.0.0',
+    port: 4176,
+    strictPort: false
+  },
   build: {
     outDir: 'dist'
   }

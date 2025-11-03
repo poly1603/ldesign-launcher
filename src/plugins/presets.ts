@@ -8,8 +8,6 @@
  */
 
 import type { Plugin } from 'vite'
-import { createPerformanceOptimizer } from '../core/PerformanceOptimizer'
-import { createDevExperience } from '../core/DevExperience'
 
 export interface PresetOptions {
   /** 项目根目录 */
@@ -63,26 +61,7 @@ export function reactPreset(options: PresetOptions = {}): Plugin[] {
     console.warn('请安装 @vitejs/plugin-react')
   }
   
-  // 性能优化
-  if (options.enableOptimization !== false) {
-    plugins.push(createPerformanceOptimizer({
-      enableAutoSplitting: true,
-      splitStrategy: 'vendor',
-      customSplitRules: {
-        'react-vendor': (id) => id.includes('react') || id.includes('react-dom'),
-        'ui-components': (id) => id.includes('antd') || id.includes('mui')
-      }
-    }).createVitePlugin())
-  }
-  
-  // 开发体验
-  if (options.enableDevExperience !== false) {
-    plugins.push(createDevExperience({
-      enableErrorOverlay: true,
-      enableFastRefresh: true,
-      autoOpenBrowser: true
-    }).createVitePlugin())
-  }
+  // 性能优化和开发体验增强由外部工具包提供
   
   return plugins
 }
@@ -101,25 +80,7 @@ export function vuePreset(options: PresetOptions = {}): Plugin[] {
   // 需要手动安装: npm install unplugin-auto-import unplugin-vue-components
   console.warn('自动导入功能需要手动安装依赖: npm install unplugin-auto-import unplugin-vue-components')
   
-  // 性能优化
-  if (options.enableOptimization !== false) {
-    plugins.push(createPerformanceOptimizer({
-      enableAutoSplitting: true,
-      splitStrategy: 'vendor',
-      customSplitRules: {
-        'vue-vendor': (id) => id.includes('@vue'),
-        'ui-components': (id) => id.includes('element-plus') || id.includes('naive-ui')
-      }
-    }).createVitePlugin())
-  }
-  
-  // 开发体验
-  if (options.enableDevExperience !== false) {
-    plugins.push(createDevExperience({
-      enableErrorOverlay: true,
-      autoOpenBrowser: true
-    }).createVitePlugin())
-  }
+  // 性能优化和开发体验增强由外部工具包提供
   
   return plugins
 }
@@ -161,13 +122,7 @@ export function sveltePreset(options: PresetOptions = {}): Plugin[] {
   // Svelte插件需要手动安装
   console.warn('Svelte预设需要手动安装依赖: npm install @sveltejs/vite-plugin-svelte')
   
-  // 优化
-  if (options.enableOptimization !== false) {
-    plugins.push(createPerformanceOptimizer({
-      enableAutoSplitting: true,
-      splitStrategy: 'modules'
-    }).createVitePlugin())
-  }
+  // 优化由外部工具包提供
   
   return plugins
 }
@@ -200,12 +155,7 @@ export function libraryPreset(options: PresetOptions = {}): Plugin[] {
     // 可选
   }
   
-  // 性能优化（针对库）
-  plugins.push(createPerformanceOptimizer({
-    enableCompression: true,
-    enableTreeShaking: true,
-    enableInlining: false // 库不内联资源
-  }).createVitePlugin())
+  // 性能优化由外部工具包提供
   
   return plugins
 }
@@ -228,12 +178,7 @@ export function electronPreset(options: PresetOptions = {}): Plugin[] {
 export function ssrPreset(options: PresetOptions = {}): Plugin[] {
   const plugins: Plugin[] = []
   
-  // SSR 特定优化
-  plugins.push(createPerformanceOptimizer({
-    enableAutoSplitting: true,
-    splitStrategy: 'vendor',
-    enableCompression: true
-  }).createVitePlugin())
+  // SSR 特定优化由外部工具包提供
   
   return plugins
 }

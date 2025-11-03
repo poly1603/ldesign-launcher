@@ -13,6 +13,11 @@ export default defineConfig({
     port: 3001,
     open: false
   },
+  preview: {
+    host: '0.0.0.0',
+    port: 4177,
+    strictPort: false
+  },
   build: {
     outDir: 'dist'
   }

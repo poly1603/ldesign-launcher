@@ -83,6 +83,7 @@ export default defineConfig([
     },
     // 将运行时依赖全部 external，减小产物体积
     external: [
+    // Vite 及插件
     'vite',
     '@vitejs/plugin-vue',
     '@vitejs/plugin-vue2',

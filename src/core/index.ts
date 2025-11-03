@@ -1,38 +1,28 @@
 /**
  * 核心模块统一导出
+ * 
+ * 只保留核心启动和配置功能
  *
  * @author LDesign Team
- * @since 1.0.0
+ * @since 2.1.0
  */
 
-// 新架构导出
+// 核心启动器
 export * from './Launcher'
+export * from './ViteLauncher'
 export * from './bootstrap'
 
-// 旧架构导出（保持向后兼容）
-export * from './ViteLauncher'
+// 配置管理
 export * from './ConfigManager'
 export * from './ConfigPresets'
-export * from './CacheManager'
+
+// 插件管理
 export * from './PluginManager'
-export * from './PluginMarket'
 export * from './SmartPluginManager'
-export * from './DevExperience'
-export * from './TestIntegration'
-export * from './ProjectTemplates'
+export * from './SmartPresetManager'
+
+// 别名管理
 export * from './AliasManager'
 
-// 分别导出以避免命名冲突
-export {
-  PerformanceMonitor,
-  PerformanceReport,
-  type PerformanceMetrics as PerformanceMonitorMetrics
-} from './PerformanceMonitor'
-
-export {
-  PerformanceOptimizer,
-  type PerformanceMetrics as PerformanceOptimizerMetrics
-} from './PerformanceOptimizer'
-
-// 默认导出新的 Launcher
+// 默认导出
 export { Launcher as default } from './Launcher'

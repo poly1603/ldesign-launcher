@@ -49,8 +49,16 @@ export class ViteConfigTransformer implements ConfigTransformer {
       
       // 如果有代理配置，确保正确传递
       server: {
+        host: '0.0.0.0', // 默认监听所有接口
         ...viteConfig.server,
         proxy: this.transformProxyConfig(proxy)
+      },
+      
+      // 预览服务器配置
+      preview: {
+        host: '0.0.0.0', // 默认监听所有接口
+        strictPort: false, // 如果端口占用则尝试下一个
+        ...viteConfig.preview
       }
     }
 

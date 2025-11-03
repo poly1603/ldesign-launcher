@@ -14,6 +14,12 @@ export default defineConfig({
     open: false
   },
   
+  preview: {
+    host: '0.0.0.0',
+    port: 4175,
+    strictPort: false
+  },
+  
   build: {
     outDir: 'dist',
     sourcemap: true

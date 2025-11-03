@@ -13,7 +13,7 @@ export * from './config'
 export * from './launcher'
 export * from './plugin'
 export * from './server'
-export * from './build'
+export * from './ui-config'
 export * from './cli'
 
 // 从 ui-config 中选择性导出，避免与 config.ts 中的 EnvironmentConfig 冲突

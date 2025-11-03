@@ -78,6 +78,8 @@ export class ViteEngine extends BuildEngine {
       const viteConfig = this.transformConfig(config) as ViteUserConfig
 
       // 动态导入 Vite
+      // 注：如果显示 "The CJS build of Vite's Node API is deprecated" 警告，
+      // 这是因为 launcher 被构建为 CJS 格式以兼容更多环境，可以忽略。
       const { createServer } = await import('vite')
 
       // 创建开发服务器
