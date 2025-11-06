@@ -149,8 +149,8 @@ export function extractPortFromUrl(url: string): number {
  * ```
  */
 export async function isPortAvailable(port: number, host: string = '0.0.0.0'): Promise<boolean> {
-  return new Promise((resolve) => {
-    const net = require('net')
+  return new Promise(async (resolve) => {
+    const net = await import('net')
     const server = net.createServer()
 
     server.once('error', () => {
@@ -204,8 +204,8 @@ export async function findAvailablePort(
  * getNetworkUrls('http', 3000) // ['http://192.168.1.100:3000', ...]
  * ```
  */
-export function getNetworkUrls(protocol: 'http' | 'https', port: number): string[] {
-  const os = require('os')
+export async function getNetworkUrls(protocol: 'http' | 'https', port: number): Promise<string[]> {
+  const os = await import('os')
   const interfaces = os.networkInterfaces()
   const urls: string[] = []
 
@@ -321,14 +321,14 @@ export async function openBrowser(url: string): Promise<boolean> {
  * getServerSummary('http://localhost:3000', 3000, 'localhost')
  * ```
  */
-export function getServerSummary(url: string, port: number, host: string): {
+export async function getServerSummary(url: string, port: number, host: string): Promise<{
   url: string
   port: number
   host: string
   networkUrls: string[]
-} {
+}> {
   const protocol = url.startsWith('https') ? 'https' : 'http'
-  const networkUrls = getNetworkUrls(protocol as 'http' | 'https', port)
+  const networkUrls = await getNetworkUrls(protocol as 'http' | 'https', port)
 
   return {
     url,
@@ -372,13 +372,13 @@ export function parseHost(host: string | boolean | undefined): string {
  * logServerInfo('http://localhost:3000', 3000, 'localhost')
  * ```
  */
-export function logServerInfo(url: string, port: number, host: string): void {
+export async function logServerInfo(url: string, port: number, host: string): Promise<void> {
   console.log(`\n  服务器已启动:`)
   console.log(`  - 本地: ${url}`)
   console.log(`  - 端口: ${port}`)
   console.log(`  - 主机: ${host}`)
 
-  const networkUrls = getNetworkUrls(url.startsWith('https') ? 'https' : 'http', port)
+  const networkUrls = await getNetworkUrls(url.startsWith('https') ? 'https' : 'http', port)
   if (networkUrls.length > 0) {
     console.log(`  - 网络: ${networkUrls[0]}`)
   }
@@ -395,7 +395,7 @@ export function logServerInfo(url: string, port: number, host: string): void {
  * getNetworkInterfaces() // { eth0: [...], wlan0: [...], ... }
  * ```
  */
-export function getNetworkInterfaces(): Record<string, any[]> {
-  const os = require('os')
+export async function getNetworkInterfaces(): Promise<Record<string, any[]>> {
+  const os = await import('os')
   return os.networkInterfaces()
 }

@@ -15,15 +15,33 @@
 import { createSignal, onMount, onCleanup, Accessor } from 'solid-js'
 import { appConfigManager, AppConfig } from '../app-config'
 
+/**
+ * useAppConfig Hook 返回值类型
+ * 
+ * @interface UseAppConfigReturn
+ */
 export interface UseAppConfigReturn {
+  /** 应用配置对象（Signal） */
   config: Accessor<AppConfig>
+  
+  /** 环境信息（Signal） */
   environment: Accessor<{
+    /** 当前运行模式 (development/production/test) */
     mode: string
+    /** 是否为开发环境 */
     isDev: boolean
+    /** 是否为生产环境 */
     isProd: boolean
   }>
 }
 
+/**
+ * Solid.js Hook 获取应用配置
+ * 
+ * 提供响应式的应用配置访问，当配置更新时自动触发组件更新。
+ * 
+ * @returns {UseAppConfigReturn} Signal 配置对象和环境信息
+ */
 export function useAppConfig(): UseAppConfigReturn {
   const [config, setConfig] = createSignal<AppConfig>(appConfigManager.getConfig())
   const [environment] = createSignal(appConfigManager.getEnvironment())

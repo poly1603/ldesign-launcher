@@ -137,6 +137,9 @@ export interface LauncherConfigOptions {
 
   /** 路径别名配置 */
   alias?: AliasOptions
+
+  /** 配置变更防抖时间(毫秒，默认200) */
+  configChangeDebounce?: number
 }
 
 /**

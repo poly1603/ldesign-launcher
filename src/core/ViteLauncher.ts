@@ -115,8 +115,8 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
   /** 环境名称 */
   private environment?: string
 
-  /** 智能插件管理器 */
-  private smartPluginManager: SmartPluginManager
+  /** 智能插件管理器（懒加载） */
+  private smartPluginManager?: SmartPluginManager
 
   /** 初始化状态 */
   private initialized: boolean = false
@@ -189,12 +189,13 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
         if (this.configChangeTimer) {
           clearTimeout(this.configChangeTimer)
         }
+        const debounceTime = this.config.launcher?.configChangeDebounce || 200
         this.configChangeTimer = setTimeout(() => {
           this.restartDevWithConfig(newConfig).catch(error => {
             this.logger.error('自动重启失败', error)
           })
           this.configChangeTimer = undefined
-        }, 200)
+        }, debounceTime)
       }
     })
 
@@ -203,14 +204,7 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
       this.logger.debug('ConfigManager 初始化完成')
     }
 
-    // 初始化智能插件管理器
-    const smartLogger = new Logger('SmartPluginManager', {
-      level: isSilent ? 'silent' : this.logger.getLevel(),
-      colors: true,
-      timestamp: isDebug,
-      compact: !isDebug
-    })
-    this.smartPluginManager = new SmartPluginManager(this.cwd, smartLogger)
+    // 智能插件管理器将在需要时初始化（懒加载优化）
 
 
 
@@ -308,6 +302,25 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
 
       // 应用别名配置（dev 阶段）
       mergedConfig = this.applyAliasConfig(mergedConfig, 'dev')
+
+      // 自动查找可用端口
+      const desiredPort = mergedConfig.server?.port || 3000
+      const { findAvailablePort } = await import('../utils/server')
+      const availablePort = await findAvailablePort(desiredPort)
+      
+      if (availablePort === null) {
+        throw new Error(`无法找到可用端口（尝试从 ${desiredPort} 开始）`)
+      }
+      
+      if (availablePort !== desiredPort) {
+        this.logger.warn(`端口 ${desiredPort} 已被占用，自动使用端口 ${availablePort}`)
+      }
+      
+      // 设置可用端口
+      if (!mergedConfig.server) {
+        mergedConfig.server = {}
+      }
+      mergedConfig.server.port = availablePort
 
       // 添加智能检测的插件
       mergedConfig = await this.enhanceConfigWithSmartPlugins(mergedConfig)
@@ -639,6 +652,25 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
 
       // 应用别名配置（preview 阶段）
       mergedConfig = this.applyAliasConfig(mergedConfig, 'preview')
+
+      // 自动查找可用端口
+      const desiredPort = mergedConfig.preview?.port || 4173
+      const { findAvailablePort } = await import('../utils/server')
+      const availablePort = await findAvailablePort(desiredPort)
+      
+      if (availablePort === null) {
+        throw new Error(`无法找到可用端口（尝试从 ${desiredPort} 开始）`)
+      }
+      
+      if (availablePort !== desiredPort) {
+        this.logger.warn(`端口 ${desiredPort} 已被占用，自动使用端口 ${availablePort}`)
+      }
+      
+      // 设置可用端口
+      if (!mergedConfig.preview) {
+        mergedConfig.preview = {}
+      }
+      mergedConfig.preview.port = availablePort
 
       // 处理HTTPS配置
       mergedConfig = await this.processHTTPSConfig(mergedConfig)
@@ -1441,6 +1473,20 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
   private async enhanceConfigWithSmartPlugins(config: ViteLauncherConfig): Promise<ViteLauncherConfig> {
     try {
       this.logger.info('开始智能插件检测...')
+      
+      // 懒加载初始化 SmartPluginManager
+      if (!this.smartPluginManager) {
+        const isDebug = this.logger.getLevel() === 'debug'
+        const isSilent = this.logger.getLevel() === 'silent'
+        const smartLogger = new Logger('SmartPluginManager', {
+          level: isSilent ? 'silent' : this.logger.getLevel(),
+          colors: true,
+          timestamp: isDebug,
+          compact: !isDebug
+        })
+        this.smartPluginManager = new SmartPluginManager(this.cwd, smartLogger)
+      }
+      
       // 检查用户是否明确指定了框架类型
       // 支持两种配置方式：config.framework.type 和 config.launcher.framework
       const explicitFrameworkType = (config as any).framework?.type || (config as any).launcher?.framework
@@ -1622,6 +1668,7 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
     try {
       // 优先使用 qrcode 库
       try {
+        // @ts-ignore - qrcode is an optional dependency
         const qrlib: any = await import('qrcode')
         const qrcode = qrlib?.default || qrlib
 

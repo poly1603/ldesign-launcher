@@ -144,8 +144,7 @@ export class MarkoAdapter extends FrameworkAdapter {
     if (engine.name === 'vite') {
       try {
         // 动态导入 @marko/vite
-        // @ts-expect-error - @marko/vite is an optional peer dependency
-        const { default: marko } = await import('@marko/vite')
+        const { default: marko } = await import('@marko/vite') as any
         const plugin = marko(options?.options)
         // marko() 可能返回单个插件或插件数组
         if (Array.isArray(plugin)) {

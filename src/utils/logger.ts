@@ -56,8 +56,8 @@ export class Logger {
   private formatMessage(level: LogLevel, message: string, data?: any): string {
     let formatted = ''
 
-    // 添加时间戳（总是显示，用于性能分析）
-    if (this.timestamp || true) { // 强制显示时间戳
+    // 添加时间戳
+    if (this.timestamp) {
       const now = new Date()
       const timeStr = now.toTimeString().slice(0, 8) // HH:MM:SS
       const msStr = String(now.getMilliseconds()).padStart(3, '0')

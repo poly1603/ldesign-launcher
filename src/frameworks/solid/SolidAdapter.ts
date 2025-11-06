@@ -72,8 +72,11 @@ export class SolidAdapter extends FrameworkAdapter {
     if (engine.name === 'vite') {
       try {
         const { default: solid } = await import('vite-plugin-solid')
-        // 直接传递用户配置的选项
-        const plugin = solid(options?.options)
+        // 只在有实际配置时传递选项,否则使用默认配置
+        const solidOptions = options?.options && Object.keys(options.options).length > 0
+          ? options.options
+          : undefined
+        const plugin = solid(solidOptions)
         // 插件可能返回单个插件或插件数组
         return Array.isArray(plugin) ? plugin : [plugin]
       } catch (error) {

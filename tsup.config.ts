@@ -23,8 +23,8 @@ export default defineConfig([
     tsconfig: 'tsconfig.json',
     clean: false, // 不清理，因为有多个配置
     splitting: false, // 客户端代码不分割，避免引入 Node.js 模块
-    sourcemap: false,
-    minify: false,
+    sourcemap: process.env.NODE_ENV === 'development',
+    minify: process.env.NODE_ENV === 'production', // 生产环境启用压缩
     target: 'es2020', // 浏览器目标
     outDir: 'dist',
     platform: 'browser', // 明确指定为浏览器平台

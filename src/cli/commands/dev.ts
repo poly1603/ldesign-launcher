@@ -424,6 +424,7 @@ export class DevCommand implements CliCommandDefinition {
           // 优先尝试使用 'qrcode' 的终端输出
           let printed = false
           try {
+            // @ts-ignore - qrcode is an optional dependency
             const qrlib: any = await import('qrcode')
             const qrcode = qrlib?.default || qrlib
 

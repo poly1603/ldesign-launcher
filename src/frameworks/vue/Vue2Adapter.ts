@@ -108,25 +108,24 @@ export class Vue2Adapter extends FrameworkAdapter {
     if (engine.name === 'vite') {
       try {
         // 动态导入 @vitejs/plugin-vue2
-        const { default: createVuePlugin } = await import('@vitejs/plugin-vue2')
+        const { default: createVuePlugin } = await import('@vitejs/plugin-vue2') as any
         const plugin = createVuePlugin(options?.options)
         // 插件可能返回单个插件或插件数组
         if (Array.isArray(plugin)) {
-          plugins.push(...plugin)
+          plugins.push(...(plugin as any[]))
         } else {
-          plugins.push(plugin)
+          plugins.push(plugin as any)
         }
 
         // 如果启用了 JSX，添加 JSX 插件
         if (options?.jsx) {
           try {
-            // @ts-ignore - 可选依赖，可能不存在
-            const { default: vueJsx } = await import('@vitejs/plugin-vue2-jsx')
+            const { default: vueJsx } = await import('@vitejs/plugin-vue2-jsx') as any
             const jsxPlugin = vueJsx()
             if (Array.isArray(jsxPlugin)) {
-              plugins.push(...jsxPlugin)
+              plugins.push(...(jsxPlugin as any[]))
             } else {
-              plugins.push(jsxPlugin)
+              plugins.push(jsxPlugin as any)
             }
           } catch (error) {
             this.logger.warn('未找到 @vitejs/plugin-vue2-jsx，跳过 JSX 支持')

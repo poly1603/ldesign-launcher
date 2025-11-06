@@ -138,6 +138,12 @@ export class AliasManager {
       return aliasPath
     }
 
+    // 如果是 node_modules 包路径（不以 . / \ 开头），保持原样
+    // 例如: 'vue/dist/vue.esm.js', 'lodash', '@babel/core' 等
+    if (!aliasPath.startsWith('.') && !aliasPath.startsWith('/') && !aliasPath.startsWith('\\')) {
+      return aliasPath
+    }
+
     // 解析相对路径为绝对路径（基于当前工作目录）
     return path.resolve(this.cwd, aliasPath)
   }

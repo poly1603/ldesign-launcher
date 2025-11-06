@@ -227,6 +227,7 @@ export class SSLManager {
 
     try {
       // 使用Node.js的mkcert包
+      // @ts-ignore - mkcert 包没有类型定义
       const mkcert = await import('mkcert')
 
       // 检查是否已有CA，如果没有则创建

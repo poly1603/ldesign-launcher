@@ -107,13 +107,20 @@ export class QwikAdapter extends FrameworkAdapter {
         const { qwikVite } = await import('@builder.io/qwik/optimizer')
 
         // 使用新的 API 格式（传递单个对象参数）
-        const qwikOptions = {
-          client: {
-            devInput: options?.options?.devInput,
-            outDir: options?.options?.outDir
-          },
-          ...(options?.options || {})
+        // 如果指定了 devInput，使用它；否则使用默认值
+        const qwikOptions: any = {}
+
+        if (options?.options?.devInput) {
+          qwikOptions.client = {
+            devInput: options.options.devInput
+          }
         }
+
+        if (options?.options?.outDir) {
+          if (!qwikOptions.client) qwikOptions.client = {}
+          qwikOptions.client.outDir = options.options.outDir
+        }
+
         const plugin = qwikVite(qwikOptions)
 
         // 插件可能返回单个插件或插件数组

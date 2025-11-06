@@ -57,7 +57,10 @@ export class ErrorHandler {
 
   constructor(options: ErrorHandlerOptions = {}) {
     this.logger = options.logger || new Logger('ErrorHandler')
-    this.exitOnError = options.exitOnError !== false
+    // 区分环境：开发环境默认不退出，生产环境默认退出
+    this.exitOnError = options.exitOnError !== undefined 
+      ? options.exitOnError 
+      : process.env.NODE_ENV === 'production'
     this.maxRetries = options.maxRetries || 3
     this.retryDelay = options.retryDelay || 1000
   }
