@@ -37,3 +37,5 @@ export type { UseAppConfigReturn as UseAppConfigReturnQwik } from './qwik/useApp
 // Lit
 export { AppConfigController, AppConfigMixin } from './lit/useAppConfig'
 
+// Angular
+export { AppConfigService } from './angular/useAppConfig'

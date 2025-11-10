@@ -109,6 +109,10 @@
       "types": "./dist/client/lit/useAppConfig.d.ts",
       "import": "./dist/client/lit/useAppConfig.js"
     },
+    "./client/angular": {
+      "types": "./dist/client/angular/useAppConfig.d.ts",
+      "import": "./dist/client/angular/useAppConfig.js"
+    },
     "./package.json": "./package.json"
   },
   "bin": {

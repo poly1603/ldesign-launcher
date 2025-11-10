@@ -45,10 +45,29 @@ class AppConfigManager {
   private getInitialConfig(): AppConfig {
     const envConfig = (import.meta.env as any).appConfig
     
-    if (!envConfig) {
-      console.warn('⚠️ 未找到应用配置，使用默认配置')
-      return this.getDefaultConfig()
+    // 检查配置是否存在且有内容
+    // 如果 envConfig 是 undefined、null、空对象 {}，都使用默认配置
+    const isEmpty = !envConfig 
+      || typeof envConfig !== 'object' 
+      || Object.keys(envConfig).length === 0
+      || (envConfig.constructor === Object && Object.keys(envConfig).length === 0)
+    
+    if (isEmpty) {
+      console.warn('⚠️ 未找到应用配置或配置为空，使用默认配置', {
+        hasEnvConfig: !!envConfig,
+        envConfigType: typeof envConfig,
+        envConfigKeys: envConfig ? Object.keys(envConfig) : [],
+        envConfigValue: envConfig
+      })
+      const defaultConfig = this.getDefaultConfig()
+      console.log('✅ 使用默认配置:', defaultConfig)
+      return defaultConfig
     }
+    
+    console.log('✅ 从 import.meta.env.appConfig 加载配置', {
+      keys: Object.keys(envConfig),
+      config: envConfig
+    })
     
     return envConfig
   }

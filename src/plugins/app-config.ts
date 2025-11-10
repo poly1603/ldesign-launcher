@@ -88,7 +88,7 @@ async function loadAppConfig(filePath: string, logger: Logger): Promise<any> {
       }
 
       try {
-        logger.debug('尝试使用 jiti 加载配置')
+        logger.debug('尝试使用 jiti 加载配置', { file: filePath })
 
         // 临时抑制 CJS API deprecated 警告
         const originalEmitWarning = process.emitWarning
@@ -112,20 +112,30 @@ async function loadAppConfig(filePath: string, logger: Logger): Promise<any> {
 
         // 处理不同的导出格式
         if (typeof module === 'function') {
-          return await module()
+          const result = await module()
+          logger.debug('jiti 加载配置成功（函数导出）', { file: filePath, keys: Object.keys(result || {}) })
+          return result
         }
 
-        logger.debug('jiti 加载配置成功')
-        return module?.default || module || {}
+        const result = module?.default || module || {}
+        logger.debug('jiti 加载配置成功', { file: filePath, keys: Object.keys(result || {}) })
+        return result
       } catch (error) {
-        logger.warn('jiti 加载配置文件失败，尝试其他方法: ' + (error as Error).message)
+        logger.warn('jiti 加载配置文件失败，尝试其他方法', {
+          file: filePath,
+          error: (error as Error).message,
+          stack: (error as Error).stack
+        })
 
         // 如果 jiti 失败，尝试简单的动态导入（仅适用于 ESM）
         try {
           const module = await import(filePath + '?t=' + Date.now())
-          return module?.default || module || {}
+          const result = module?.default || module || {}
+          logger.debug('动态导入配置成功', { file: filePath, keys: Object.keys(result || {}) })
+          return result
         } catch (importError) {
           logger.warn('动态导入也失败', {
+            file: filePath,
             error: (importError as Error).message
           })
           return {}
@@ -137,7 +147,8 @@ async function loadAppConfig(filePath: string, logger: Logger): Promise<any> {
   } catch (error) {
     logger.warn('加载应用配置失败', {
       file: filePath,
-      error: (error as Error).message
+      error: (error as Error).message,
+      stack: (error as Error).stack
     })
     return {}
   }
@@ -172,8 +183,21 @@ export function createAppConfigPlugin(options: AppConfigPluginOptions = {}): Plu
         const relativePath = configFilePath.replace(cwd, '').replace(/^[/\\]/, '')
         logger.info(`📄 找到应用配置文件: ${fileName} (${relativePath})`)
         appConfig = await loadAppConfig(configFilePath, logger)
+
+        // 验证配置是否成功加载
+        if (!appConfig || Object.keys(appConfig).length === 0) {
+          logger.warn('⚠️ 配置文件加载为空，使用默认配置', { file: configFilePath })
+        } else {
+          logger.info(`✅ 配置加载成功，包含 ${Object.keys(appConfig).length} 个顶级键`, {
+            keys: Object.keys(appConfig)
+          })
+        }
       } else {
-        logger.debug('未找到应用配置文件', { environment })
+        logger.warn('⚠️ 未找到应用配置文件', {
+          environment,
+          cwd,
+          searchedFiles: getEnvironmentAppConfigFiles(environment).map(f => resolve(cwd, f))
+        })
       }
 
       // 定义环境变量，避免重复定义
@@ -183,6 +207,9 @@ export function createAppConfigPlugin(options: AppConfigPluginOptions = {}): Plu
       const appConfigKey = 'import.meta.env.appConfig'
       if (!config.define[appConfigKey]) {
         config.define[appConfigKey] = JSON.stringify(appConfig)
+        logger.debug('✅ 已将配置注入到 import.meta.env.appConfig', {
+          configSize: JSON.stringify(appConfig).length
+        })
       }
     },
 
@@ -193,22 +220,34 @@ export function createAppConfigPlugin(options: AppConfigPluginOptions = {}): Plu
     configureServer(devServer) {
       server = devServer
 
-      if (!configFilePath) return
+      // 获取所有可能的配置文件路径（包括环境特定的配置文件）
+      const configFiles = getEnvironmentAppConfigFiles(environment)
+      const watchPaths = configFiles.map(f => resolve(cwd, f))
 
-      // 监听配置文件变化
-      watcher = chokidar(configFilePath, {
+      // 监听所有可能的配置文件变化
+      watcher = chokidar(watchPaths, {
         persistent: true,
         ignoreInitial: true
       })
 
-      watcher.on('change', async () => {
-        logger.info('应用配置文件已更改，重新加载...')
+      // 处理配置文件变化的通用函数
+      const handleConfigChange = async (changedFilePath: string) => {
+        logger.info('应用配置文件已更改，重新加载...', { file: changedFilePath })
 
-        const newConfig = await loadAppConfig(configFilePath!, logger)
+        // 重新查找配置文件（优先级可能改变）
+        const newConfigFilePath = await findAppConfigFile(cwd, configFile, environment)
+
+        if (!newConfigFilePath) {
+          logger.warn('未找到有效的配置文件')
+          return
+        }
+
+        const newConfig = await loadAppConfig(newConfigFilePath, logger)
 
         // 检查配置是否真的改变
         if (JSON.stringify(newConfig) !== JSON.stringify(appConfig)) {
           appConfig = newConfig
+          configFilePath = newConfigFilePath
 
           // 更新环境变量定义
           if (config.command === 'serve') {
@@ -242,28 +281,33 @@ export function createAppConfigPlugin(options: AppConfigPluginOptions = {}): Plu
             })
           }
         }
+      }
+
+      watcher.on('change', handleConfigChange)
+
+      watcher.on('add', async (addedFilePath: string) => {
+        logger.info('检测到新的应用配置文件', { file: addedFilePath })
+        await handleConfigChange(addedFilePath)
       })
 
-      watcher.on('add', async () => {
-        logger.info('检测到新的应用配置文件')
-        configFilePath = await findAppConfigFile(cwd, configFile, environment)
-        if (configFilePath) {
-          appConfig = await loadAppConfig(configFilePath, logger)
+      watcher.on('unlink', async (deletedFilePath: string) => {
+        logger.info('应用配置文件已删除', { file: deletedFilePath })
+
+        // 重新查找配置文件
+        const newConfigFilePath = await findAppConfigFile(cwd, configFile, environment)
+
+        if (newConfigFilePath) {
+          // 还有其他配置文件可用
+          await handleConfigChange(newConfigFilePath)
+        } else {
+          // 没有配置文件了
+          appConfig = {}
+          configFilePath = null
           server!.ws.send({
             type: 'full-reload',
             path: '*'
           })
         }
-      })
-
-      watcher.on('unlink', () => {
-        logger.info('应用配置文件已删除')
-        appConfig = {}
-        configFilePath = null
-        server!.ws.send({
-          type: 'full-reload',
-          path: '*'
-        })
       })
     },
 
