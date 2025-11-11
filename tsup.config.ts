@@ -20,7 +20,10 @@ export default defineConfig([
       'client/angular/useAppConfig': 'src/client/angular/useAppConfig.ts',
     },
     format: ['esm'], // 客户端只需要 ESM 格式
-    dts: true, // 生成类型定义文件
+    dts: {
+      only: false,
+      resolve: true
+    }, // 生成类型定义文件
     tsconfig: 'tsconfig.json',
     clean: false, // 不清理，因为有多个配置
     splitting: false, // 客户端代码不分割，避免引入 Node.js 模块
@@ -65,7 +68,10 @@ export default defineConfig([
       '!src/client/**/*', // 排除客户端代码
     ],
     format: ['cjs', 'esm'],
-    dts: true, // 生成类型定义文件
+    dts: {
+      only: false,
+      resolve: true
+    }, // 生成类型定义文件
     tsconfig: 'tsconfig.json',
     clean: true, // 第一个配置清理
     splitting: true,

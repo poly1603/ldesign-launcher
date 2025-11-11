@@ -9,7 +9,7 @@
 
 import type { Plugin, ResolvedConfig, ViteDevServer } from 'vite'
 import { resolve, join } from 'path'
-import { watch as chokidar, FSWatcher } from 'chokidar'
+import chokidar from 'chokidar'
 import { existsSync, readFile } from 'fs'
 import { promisify } from 'util'
 import { Logger } from '../utils/logger'
@@ -168,7 +168,7 @@ export function createAppConfigPlugin(options: AppConfigPluginOptions = {}): Plu
   let config: ResolvedConfig
   let appConfig: any = {}
   let configFilePath: string | null = null
-  let watcher: FSWatcher | null = null
+  let watcher: any = null
   let server: ViteDevServer | null = null
 
   return {
@@ -225,7 +225,7 @@ export function createAppConfigPlugin(options: AppConfigPluginOptions = {}): Plu
       const watchPaths = configFiles.map(f => resolve(cwd, f))
 
       // 监听所有可能的配置文件变化
-      watcher = chokidar(watchPaths, {
+      watcher = chokidar.watch(watchPaths, {
         persistent: true,
         ignoreInitial: true
       })
@@ -283,14 +283,14 @@ export function createAppConfigPlugin(options: AppConfigPluginOptions = {}): Plu
         }
       }
 
-      watcher.on('change', handleConfigChange)
+      watcher!.on('change', handleConfigChange)
 
-      watcher.on('add', async (addedFilePath: string) => {
+      watcher!.on('add', async (addedFilePath: string) => {
         logger.info('检测到新的应用配置文件', { file: addedFilePath })
         await handleConfigChange(addedFilePath)
       })
 
-      watcher.on('unlink', async (deletedFilePath: string) => {
+      watcher!.on('unlink', async (deletedFilePath: string) => {
         logger.info('应用配置文件已删除', { file: deletedFilePath })
 
         // 重新查找配置文件

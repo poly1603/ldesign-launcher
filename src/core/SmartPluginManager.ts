@@ -206,9 +206,8 @@ export class SmartPluginManager {
         configFiles: ['angular.json']
       },
       options: {
-        // Angular 插件配置
-        jit: true,
-        tsconfig: './tsconfig.json'
+        // Angular 插件配置 - 必须使用 tsconfig.app.json
+        tsconfig: './tsconfig.app.json'
       }
     })
   }
@@ -488,8 +487,13 @@ export class SmartPluginManager {
           if (qwikPlugins) plugins.push(...qwikPlugins)
           break
         case ProjectType.ANGULAR:
-          const angularPlugins = await this.loadPlugin('angular')
-          if (angularPlugins) plugins.push(...angularPlugins)
+          // 使用简单的 Angular 插件替代 Analog (Analog 不兼容 Vite 7)
+          const { simpleAngularPlugin } = await import('../frameworks/angular/simple-angular-plugin')
+          const angularPlugin = simpleAngularPlugin({
+            tsconfig: './tsconfig.app.json',
+          })
+          plugins.push(angularPlugin)
+          this.logger.info('✅ Angular 插件加载成功 (使用简单插件)')
           break
       }
 
@@ -531,7 +535,8 @@ export class SmartPluginManager {
       if (!forceESM) {
         try {
           // 方法1: 使用项目的 require 来解析模块（支持 CommonJS）
-          const { createRequire } = await import('module')
+          const moduleImport = await import('module')
+          const createRequire = (moduleImport as any).createRequire || (moduleImport as any).default?.createRequire
           const projectRequire = createRequire(PathUtils.resolve(this.cwd, 'package.json'))
 
           // 使用项目的 require 来导入模块

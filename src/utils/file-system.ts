@@ -117,6 +117,14 @@ export class FileSystem {
     // 确保目录存在
     await this.ensureDir(dirname(path))
 
+    if (data instanceof Buffer) {
+      // 将 Buffer 转换为 Uint8Array
+      const uint8Data = new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+      return fs.writeFile(path, uint8Data, {
+        mode: options.mode,
+        flag: options.flag
+      })
+    }
     return fs.writeFile(path, data, {
       encoding: options.encoding || 'utf8',
       mode: options.mode,
@@ -131,6 +139,14 @@ export class FileSystem {
     // 确保目录存在
     await this.ensureDir(dirname(path))
 
+    if (data instanceof Buffer) {
+      // 将 Buffer 转换为 Uint8Array
+      const uint8Data = new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+      return fs.appendFile(path, uint8Data, {
+        mode: options.mode,
+        flag: options.flag
+      })
+    }
     return fs.appendFile(path, data, {
       encoding: options.encoding || 'utf8',
       mode: options.mode,

@@ -129,10 +129,11 @@
     "node": ">=16.0.0"
   },
   "scripts": {
-    "build": "cross-env NODE_OPTIONS=\"--max-old-space-size=16384\" NODE_ENV=production tsup",
-    "build:js": "cross-env NODE_OPTIONS=\"--max-old-space-size=16384\" tsup --no-dts",
-    "build:dts": "cross-env NODE_OPTIONS=\"--max-old-space-size=16384\" tsup --dts-only",
-    "build:tsc": "tsc",
+    "build": "npm run clean && npm run build:js && npm run build:types",
+    "build:js": "cross-env NODE_OPTIONS=\"--max-old-space-size=32768\" tsup --no-dts",
+    "build:dts": "cross-env NODE_OPTIONS=\"--max-old-space-size=32768\" tsup --dts-only",
+    "build:types": "tsc -p tsconfig.build.json",
+    "build:tsc": "tsc --noEmit false",
     "dev": "tsup --watch",
     "test": "vitest",
     "test:ui": "vitest --ui",

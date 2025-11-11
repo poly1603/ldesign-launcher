@@ -1,6 +1,6 @@
 /**
  * 框架适配器模块统一导出
- * 
+ *
  * @author LDesign Team
  * @since 2.0.0
  */
@@ -17,6 +17,8 @@ export * from './preact'
 export * from './qwik'
 export * from './lit'
 export * from './marko'
+export * from './angular'
+
 
 // 导出框架元数据
 import type { FrameworkMetadata } from '../types/framework'
@@ -226,6 +228,32 @@ export const LIT_FRAMEWORK_METADATA: FrameworkMetadata = {
 }
 
 /**
+ * Angular 框架元数据
+ */
+export const ANGULAR_FRAMEWORK_METADATA: FrameworkMetadata = {
+  name: 'angular',
+  displayName: 'Angular',
+  description: 'Angular - 企业级应用框架（Analog + Vite）',
+  website: 'https://angular.dev',
+  documentation: 'https://angular.dev/overview',
+  dependencies: ['@angular/core', '@analogjs/vite-plugin-angular'],
+  supportedEngines: ['vite'],
+  features: {
+    jsx: false,
+    sfc: false,
+    cssModules: true,
+    cssInJs: false,
+    ssr: false,
+    ssg: false,
+    hmr: true,
+    fastRefresh: false,
+  },
+  defaultPort: 3000,
+  fileExtensions: ['.ts', '.js', '.html', '.css'],
+  configFiles: ['vite.config.ts', 'tsconfig.json']
+}
+
+/**
  * Marko 框架元数据
  */
 export const MARKO_FRAMEWORK_METADATA: FrameworkMetadata = {
@@ -264,6 +292,8 @@ export async function registerAllFrameworks(): Promise<void> {
   const { qwikAdapterFactory } = await import('./qwik')
   const { litAdapterFactory } = await import('./lit')
   const { markoAdapterFactory } = await import('./marko')
+  const { angularAdapterFactory } = await import('./angular')
+
 
   // 注册所有框架（优先级：数字越大优先级越高）
   registerFramework('vue2', vue2AdapterFactory, VUE2_FRAMEWORK_METADATA, 9)
@@ -273,6 +303,8 @@ export async function registerAllFrameworks(): Promise<void> {
   registerFramework('svelte', svelteAdapterFactory, SVELTE_FRAMEWORK_METADATA, 8)
   registerFramework('solid', solidAdapterFactory, SOLID_FRAMEWORK_METADATA, 8)
   registerFramework('qwik', qwikAdapterFactory, QWIK_FRAMEWORK_METADATA, 7)
+  registerFramework('angular', angularAdapterFactory, ANGULAR_FRAMEWORK_METADATA, 10)
+
   registerFramework('lit', litAdapterFactory, LIT_FRAMEWORK_METADATA, 7)
   registerFramework('marko', markoAdapterFactory, MARKO_FRAMEWORK_METADATA, 7)
 }
