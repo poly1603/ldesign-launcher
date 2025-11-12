@@ -24,5 +24,9 @@ export * from './SmartPresetManager'
 // 别名管理
 export * from './AliasManager'
 
+// 服务器和构建管理
+export * from './ServerManager'
+export * from './BuildManager'
+
 // 默认导出
 export { Launcher as default } from './Launcher'

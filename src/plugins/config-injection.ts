@@ -37,22 +37,29 @@ export function createConfigInjectionPlugin(options: ConfigInjectionOptions): Pl
 
   // 创建安全的配置对象，避免循环引用
   const createSafeConfig = (cfg: ViteLauncherConfig, packageInfo?: { name?: string; version?: string }) => {
-    // 辅助函数：移除函数和循环引用
-    const sanitizeValue = (value: any, depth = 0): any => {
-      if (depth > 10) return '[深度超限]'
+    // 辅助函数：移除函数和循环引用，提高深度限制
+    const sanitizeValue = (value: any, depth = 0, seen = new WeakSet()): any => {
+      // 提高深度限制从 10 到 20
+      if (depth > 20) return '[深度超限]'
       if (value === null || value === undefined) return value
       if (typeof value === 'function') return '[Function]'
       if (typeof value === 'symbol') return '[Symbol]'
 
       if (Array.isArray(value)) {
-        return value.map(item => sanitizeValue(item, depth + 1))
+        return value.map(item => sanitizeValue(item, depth + 1, seen))
       }
 
       if (typeof value === 'object') {
+        // 检测循环引用
+        if (seen.has(value)) {
+          return '[循环引用]'
+        }
+        seen.add(value)
+
         const result: any = {}
         for (const key in value) {
           if (Object.prototype.hasOwnProperty.call(value, key)) {
-            result[key] = sanitizeValue(value[key], depth + 1)
+            result[key] = sanitizeValue(value[key], depth + 1, seen)
           }
         }
         return result
@@ -112,13 +119,15 @@ export function createConfigInjectionPlugin(options: ConfigInjectionOptions): Pl
         config.define = {}
       }
 
-      // 注入 launcher 配置
+      // 注入 launcher 配置到 import.meta.env
       config.define['import.meta.env.VITE_LAUNCHER_CONFIG'] = JSON.stringify(safeConfig)
       config.define['import.meta.env.VITE_LAUNCHER_ENVIRONMENT'] = JSON.stringify(environment)
       config.define['import.meta.env.VITE_LAUNCHER_COMMAND'] = JSON.stringify(command)
       config.define['import.meta.env.VITE_LAUNCHER_TIMESTAMP'] = JSON.stringify(Date.now())
 
-      // 静默注入配置到环境变量
+      if (verbose) {
+        logger.info('✅ Launcher 配置已注入', { environment, command, configKeys: Object.keys(safeConfig) })
+      }
     },
 
     configureServer(server) {
@@ -167,8 +176,54 @@ export function createConfigInjectionPlugin(options: ConfigInjectionOptions): Pl
 
         next()
       })
+    },
 
-      // 静默启动，不输出额外信息
+    configurePreviewServer(server) {
+      // 为预览服务器也配置相同的 API 端点
+      server.middlewares.use((req, res, next) => {
+        if (req.url === '/__ldesign_config') {
+          res.setHeader('Content-Type', 'application/json')
+          res.setHeader('Access-Control-Allow-Origin', '*')
+
+          try {
+            const configInfo = {
+              environment,
+              config: safeConfig,
+              timestamp: Date.now(),
+              preview: {
+                port: server.config.preview?.port,
+                host: server.config.preview?.host,
+                https: !!server.config.preview?.https
+              },
+              api: {
+                version: '1.0.0',
+                endpoints: {
+                  config: '/__ldesign_config',
+                  clientUtils: '/__ldesign_client_utils.js'
+                }
+              }
+            }
+
+            res.end(JSON.stringify(configInfo, null, 2))
+          } catch (error) {
+            res.statusCode = 500
+            res.end(JSON.stringify({
+              error: 'Configuration serialization failed',
+              message: error instanceof Error ? error.message : String(error)
+            }))
+          }
+          return
+        }
+
+        if (req.url === '/__ldesign_client_utils.js') {
+          res.setHeader('Content-Type', 'application/javascript')
+          res.setHeader('Access-Control-Allow-Origin', '*')
+          res.end(getClientConfigUtils())
+          return
+        }
+
+        next()
+      })
     },
 
     handleHotUpdate(ctx) {

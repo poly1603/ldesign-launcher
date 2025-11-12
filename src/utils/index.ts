@@ -15,6 +15,7 @@ export * from './path-utils'
 
 // 导出所有工具函数
 export * from './config'
+export * from './config-merger'
 export * from './build'
 export * from './plugin'
 export * from './performance'

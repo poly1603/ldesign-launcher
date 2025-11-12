@@ -737,7 +737,15 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
         cwd: this.cwd,
         environment: currentEnvironment
       })
-      mergedConfig.plugins = [appCfgPlugin, ...(mergedConfig.plugins || [])]
+
+      // 注入 config-injection 插件（确保 preview 模式下也能访问配置）
+      const configInjectionPlugin = createConfigInjectionPlugin({
+        config: mergedConfig,
+        environment: currentEnvironment,
+        verbose: mergedConfig.launcher?.debug || false
+      })
+
+      mergedConfig.plugins = [appCfgPlugin, configInjectionPlugin, ...(mergedConfig.plugins || [])]
 
       // 创建预览服务器
       // Vite 的 preview() 函数会自动启动 httpServer 并监听配置的 host 和 port

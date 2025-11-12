@@ -7,6 +7,8 @@
 
 /// <reference types="vite/client" />
 
+import { notification } from './notification'
+
 export interface AppConfig {
   app: {
     name: string
@@ -104,6 +106,13 @@ class AppConfigManager {
         console.log('🔄 配置已更新:', newConfig)
         this.config = newConfig
         this.notifyListeners()
+        
+        // 显示美观的通知
+        notification.success(
+          '✨ 应用配置已更新',
+          '配置文件已重新加载，页面将自动更新',
+          3000
+        )
       })
       
       this.hmrInitialized = true

@@ -195,9 +195,10 @@ export class PluginManager extends EventEmitter implements IPluginManager {
    * 启用插件
    * 
    * @param pluginName - 插件名称
+   * @param context - 插件上下文（可选）
    * @returns 启用结果
    */
-  async enable(pluginName: string): Promise<AsyncResult> {
+  async enable(pluginName: string, context?: any): Promise<AsyncResult> {
     try {
       const pluginInfo = this.plugins.get(pluginName)
       if (!pluginInfo) {
@@ -219,11 +220,9 @@ export class PluginManager extends EventEmitter implements IPluginManager {
       // 更新状态
       pluginInfo.status = PluginStatus.LOADING
 
-      // 执行插件初始化
+      // 执行插件初始化（传入上下文）
       if (pluginInfo.plugin.init) {
-        // 注意：这里需要传入 launcher 实例，但为了避免循环依赖，暂时传入 null
-        // 在实际使用时，应该由 ViteLauncher 类来管理插件
-        await pluginInfo.plugin.init(null as any)
+        await pluginInfo.plugin.init(context)
       }
 
       // 更新状态和统计信息

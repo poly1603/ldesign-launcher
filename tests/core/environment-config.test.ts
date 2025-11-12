@@ -7,7 +7,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ConfigManager } from '../../src/core/ConfigManager'
-import { getEnvironmentConfigFiles, SUPPORTED_ENVIRONMENTS } from '../../src/constants/defaults'
+import { getEnvironmentConfigFiles, SUPPORTED_ENVIRONMENT_NAMES } from '../../src/constants/defaults'
 import { FileSystem } from '../../src/utils/file-system'
 import { PathUtils } from '../../src/utils/path-utils'
 import type { ViteLauncherConfig } from '../../src/types'
@@ -26,7 +26,7 @@ describe('Environment Config System', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     configManager = new ConfigManager()
-    
+
     // 设置默认的 mock 行为
     mockPathUtils.resolve.mockImplementation((...paths) => paths.join('/'))
     mockFileSystem.exists.mockResolvedValue(false)
@@ -40,7 +40,7 @@ describe('Environment Config System', () => {
   describe('getEnvironmentConfigFiles', () => {
     it('应该返回默认配置文件列表当没有指定环境时', () => {
       const files = getEnvironmentConfigFiles()
-      
+
       expect(files).toContain('.ldesign/launcher.config.ts')
       expect(files).toContain('launcher.config.ts')
       expect(files).toContain('vite.config.ts')
@@ -48,7 +48,7 @@ describe('Environment Config System', () => {
 
     it('应该返回环境特定配置文件列表', () => {
       const files = getEnvironmentConfigFiles('development')
-      
+
       expect(files).toContain('.ldesign/launcher.development.config.ts')
       expect(files).toContain('launcher.development.config.ts')
       expect(files).toContain('.ldesign/launcher.config.ts') // 回退配置
@@ -56,14 +56,14 @@ describe('Environment Config System', () => {
 
     it('应该处理无效的环境名称', () => {
       const files = getEnvironmentConfigFiles('invalid-env')
-      
+
       // 应该回退到默认配置文件列表
       expect(files).toContain('.ldesign/launcher.config.ts')
       expect(files).not.toContain('.ldesign/launcher.invalid-env.config.ts')
     })
 
     it('应该支持所有预定义的环境', () => {
-      for (const env of SUPPORTED_ENVIRONMENTS) {
+      for (const env of SUPPORTED_ENVIRONMENT_NAMES) {
         const files = getEnvironmentConfigFiles(env)
         expect(files).toContain(`.ldesign/launcher.${env}.config.ts`)
         expect(files).toContain(`launcher.${env}.config.ts`)
@@ -103,7 +103,7 @@ describe('Environment Config System', () => {
       // Mock 文件存在
       mockFileSystem.exists.mockImplementation((path) => {
         return Promise.resolve(
-          path.includes('launcher.config.ts') || 
+          path.includes('launcher.config.ts') ||
           path.includes('launcher.development.config.ts')
         )
       })

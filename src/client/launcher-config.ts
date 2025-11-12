@@ -7,6 +7,8 @@
 
 /// <reference types="vite/client" />
 
+import { notification } from './notification'
+
 /**
  * Launcher 配置接口
  */
@@ -101,6 +103,13 @@ class LauncherConfigManager {
         console.log('🔄 Launcher 配置已更新:', newConfig)
         this.config = newConfig
         this.notifyListeners()
+        
+        // 显示美观的通知
+        notification.info(
+          '🚀 Launcher 配置已更新',
+          '配置文件已重新加载，某些更改可能需要重启服务器',
+          4000
+        )
       })
       
       this.hmrInitialized = true

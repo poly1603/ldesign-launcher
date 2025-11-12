@@ -12,6 +12,10 @@ export type { AppConfig } from './app-config'
 export { launcherConfigManager, getLauncherConfig, subscribeLauncherConfig, getLauncherEnvironment } from './launcher-config'
 export type { LauncherConfig } from './launcher-config'
 
+// 导出通知功能
+export { notification, showNotification, closeNotification, closeAllNotifications } from './notification'
+export type { NotificationOptions } from './notification'
+
 // 导出框架特定的 Hook/Composable
 // 注意：这些导出是可选的，只在对应框架的项目中使用
 

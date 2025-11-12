@@ -17,6 +17,7 @@ import { PreviewCommand } from './commands/preview'
 import { ConfigCommand } from './commands/config'
 import { HelpCommand } from './commands/help'
 import { VersionCommand } from './commands/version'
+import { doctorCommand } from './commands/doctor'
 
 /**
  * 创建 CLI 应用
@@ -122,6 +123,7 @@ export function createCli(config?: Partial<CliConfig>) {
     ['build', new BuildCommand()],
     ['preview', new PreviewCommand()],
     ['config', new ConfigCommand()],
+    ['doctor', { execute: async (ctx: any) => doctorCommand(ctx.cwd || process.cwd()) }],
     ['help', new HelpCommand()],
     ['version', new VersionCommand()]
   ])
