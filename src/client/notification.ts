@@ -287,7 +287,7 @@ class NotificationManager {
     if (!notification) return
 
     notification.classList.add('closing')
-    
+
     setTimeout(() => {
       if (notification.parentNode) {
         notification.parentNode.removeChild(notification)
@@ -310,11 +310,11 @@ class NotificationManager {
    */
   destroy() {
     this.closeAll()
-    
+
     if (this.container && this.container.parentNode) {
       this.container.parentNode.removeChild(this.container)
     }
-    
+
     if (this.styleElement && this.styleElement.parentNode) {
       this.styleElement.parentNode.removeChild(this.styleElement)
     }
@@ -355,13 +355,13 @@ export function closeAllNotifications(): void {
 export const notification = {
   info: (title: string, message: string, duration = 4000) =>
     showNotification({ title, message, type: 'info', duration }),
-  
+
   success: (title: string, message: string, duration = 4000) =>
     showNotification({ title, message, type: 'success', duration }),
-  
+
   warning: (title: string, message: string, duration = 5000) =>
     showNotification({ title, message, type: 'warning', duration }),
-  
+
   error: (title: string, message: string, duration = 6000) =>
     showNotification({ title, message, type: 'error', duration })
 }

@@ -57,7 +57,7 @@ class LauncherConfigManager {
   constructor() {
     // 从 import.meta.env 或 API 获取初始配置
     this.config = this.getInitialConfig()
-    
+
     // 自动初始化 HMR
     this.initHMR()
   }
@@ -68,13 +68,13 @@ class LauncherConfigManager {
   private getInitialConfig(): LauncherConfig {
     // 方法1: 从 import.meta.env 获取
     const envConfig = (import.meta.env as any).VITE_LAUNCHER_CONFIG
-    
+
     if (envConfig) {
       const parsed = typeof envConfig === 'string' ? JSON.parse(envConfig) : envConfig
       console.log('✅ 从 import.meta.env.VITE_LAUNCHER_CONFIG 加载 Launcher 配置', parsed)
       return parsed
     }
-    
+
     // 使用默认配置
     console.warn('⚠️ 未找到 Launcher 配置，使用默认配置')
     return this.getDefaultConfig()
@@ -96,14 +96,14 @@ class LauncherConfigManager {
    */
   private initHMR() {
     if (this.hmrInitialized) return
-    
+
     if (import.meta.hot) {
       // 监听 launcher 配置更新
       import.meta.hot.on('launcher-config-updated', (newConfig: LauncherConfig) => {
         console.log('🔄 Launcher 配置已更新:', newConfig)
         this.config = newConfig
         this.notifyListeners()
-        
+
         // 显示美观的通知
         notification.info(
           '🚀 Launcher 配置已更新',
@@ -111,7 +111,7 @@ class LauncherConfigManager {
           4000
         )
       })
-      
+
       this.hmrInitialized = true
       console.log('✅ Launcher 配置 HMR 已启用')
     }
@@ -148,7 +148,7 @@ class LauncherConfigManager {
    */
   subscribe(listener: ConfigChangeListener): () => void {
     this.listeners.add(listener)
-    
+
     // 返回取消订阅函数
     return () => {
       this.listeners.delete(listener)

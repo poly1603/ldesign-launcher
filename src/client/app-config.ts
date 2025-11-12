@@ -36,7 +36,7 @@ class AppConfigManager {
   constructor() {
     // 从 import.meta.env 获取初始配置
     this.config = this.getInitialConfig()
-    
+
     // 自动初始化 HMR
     this.initHMR()
   }
@@ -46,14 +46,14 @@ class AppConfigManager {
    */
   private getInitialConfig(): AppConfig {
     const envConfig = (import.meta.env as any).appConfig
-    
+
     // 检查配置是否存在且有内容
     // 如果 envConfig 是 undefined、null、空对象 {}，都使用默认配置
-    const isEmpty = !envConfig 
-      || typeof envConfig !== 'object' 
+    const isEmpty = !envConfig
+      || typeof envConfig !== 'object'
       || Object.keys(envConfig).length === 0
       || (envConfig.constructor === Object && Object.keys(envConfig).length === 0)
-    
+
     if (isEmpty) {
       console.warn('⚠️ 未找到应用配置或配置为空，使用默认配置', {
         hasEnvConfig: !!envConfig,
@@ -65,12 +65,12 @@ class AppConfigManager {
       console.log('✅ 使用默认配置:', defaultConfig)
       return defaultConfig
     }
-    
+
     console.log('✅ 从 import.meta.env.appConfig 加载配置', {
       keys: Object.keys(envConfig),
       config: envConfig
     })
-    
+
     return envConfig
   }
 
@@ -100,13 +100,13 @@ class AppConfigManager {
    */
   private initHMR() {
     if (this.hmrInitialized) return
-    
+
     if (import.meta.hot) {
       import.meta.hot.on('app-config-updated', (newConfig: AppConfig) => {
         console.log('🔄 配置已更新:', newConfig)
         this.config = newConfig
         this.notifyListeners()
-        
+
         // 显示美观的通知
         notification.success(
           '✨ 应用配置已更新',
@@ -114,7 +114,7 @@ class AppConfigManager {
           3000
         )
       })
-      
+
       this.hmrInitialized = true
       console.log('✅ 应用配置 HMR 已启用')
     }
@@ -134,7 +134,7 @@ class AppConfigManager {
    */
   subscribe(listener: ConfigChangeListener): () => void {
     this.listeners.add(listener)
-    
+
     // 返回取消订阅函数
     return () => {
       this.listeners.delete(listener)
