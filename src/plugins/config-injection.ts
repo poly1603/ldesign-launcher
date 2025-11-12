@@ -37,52 +37,52 @@ export function createConfigInjectionPlugin(options: ConfigInjectionOptions): Pl
 
   // 创建安全的配置对象，避免循环引用
   const createSafeConfig = (cfg: ViteLauncherConfig, packageInfo?: { name?: string; version?: string }) => {
+    // 辅助函数：移除函数和循环引用
+    const sanitizeValue = (value: any, depth = 0): any => {
+      if (depth > 10) return '[深度超限]'
+      if (value === null || value === undefined) return value
+      if (typeof value === 'function') return '[Function]'
+      if (typeof value === 'symbol') return '[Symbol]'
+
+      if (Array.isArray(value)) {
+        return value.map(item => sanitizeValue(item, depth + 1))
+      }
+
+      if (typeof value === 'object') {
+        const result: any = {}
+        for (const key in value) {
+          if (Object.prototype.hasOwnProperty.call(value, key)) {
+            result[key] = sanitizeValue(value[key], depth + 1)
+          }
+        }
+        return result
+      }
+
+      return value
+    }
+
     return {
+      // 基本信息
       name: packageInfo?.name || 'LDesign App',
       version: packageInfo?.version || '1.0.0',
       environment: environment,
-      server: {
-        host: cfg.server?.host || 'localhost',
-        port: cfg.server?.port || 3000,
-        https: !!cfg.server?.https,
-        open: !!cfg.server?.open
-      },
-      proxy: cfg.proxy ? {
-        api: cfg.proxy.api ? {
-          target: cfg.proxy.api.target,
-          pathPrefix: cfg.proxy.api.pathPrefix,
-          rewrite: cfg.proxy.api.rewrite
-        } : undefined,
-        assets: cfg.proxy.assets ? {
-          target: cfg.proxy.assets.target,
-          pathPrefix: cfg.proxy.assets.pathPrefix
-        } : undefined,
-        websocket: cfg.proxy.websocket ? {
-          target: cfg.proxy.websocket.target,
-          pathPrefix: cfg.proxy.websocket.pathPrefix
-        } : undefined,
-        upload: cfg.proxy.upload ? {
-          target: cfg.proxy.upload.target,
-          pathPrefix: cfg.proxy.upload.pathPrefix
-        } : undefined,
-        custom: Array.isArray(cfg.proxy.custom) ? cfg.proxy.custom.map(item => ({
-          path: item.path,
-          target: item.target
-        })) : undefined,
-        global: cfg.proxy.global ? {
-          timeout: cfg.proxy.global.timeout,
-          verbose: cfg.proxy.global.verbose,
-          secure: cfg.proxy.global.secure,
-          environment: cfg.proxy.global.environment
-        } : undefined
-      } : undefined,
-      build: {
-        target: cfg.build?.target || 'es2015',
-        outDir: cfg.build?.outDir || 'dist',
-        sourcemap: !!cfg.build?.sourcemap,
-        minify: cfg.build?.minify !== false
-      },
-      plugins: Array.isArray(cfg.plugins) ? cfg.plugins.length : 0
+
+      // 完整的配置（移除函数和循环引用）
+      server: sanitizeValue(cfg.server),
+      preview: sanitizeValue(cfg.preview),
+      build: sanitizeValue(cfg.build),
+      resolve: sanitizeValue(cfg.resolve),
+      css: sanitizeValue(cfg.css),
+      optimizeDeps: sanitizeValue(cfg.optimizeDeps),
+      launcher: sanitizeValue(cfg.launcher),
+      define: sanitizeValue(cfg.define),
+      envPrefix: cfg.envPrefix,
+
+      // 代理配置
+      proxy: cfg.proxy ? sanitizeValue(cfg.proxy) : undefined,
+
+      // 插件数量（不暴露插件实例）
+      pluginsCount: Array.isArray(cfg.plugins) ? cfg.plugins.length : 0
     }
   }
 

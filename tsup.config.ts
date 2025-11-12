@@ -9,9 +9,10 @@ export default defineConfig([
   {
     entry: {
       'client/app-config': 'src/client/app-config.ts',
+      'client/launcher-config': 'src/client/launcher-config.ts',
       'client/index': 'src/client/index.ts',
       'client/react/useAppConfig': 'src/client/react/useAppConfig.ts',
-      'client/vue/useAppConfig': 'src/client/vue/useAppConfig.ts',
+      'client/vue/index': 'src/client/vue/index.ts',
       'client/vue2/useAppConfig': 'src/client/vue2/useAppConfig.ts',
       'client/svelte/useAppConfig': 'src/client/svelte/useAppConfig.ts',
       'client/solid/useAppConfig': 'src/client/solid/useAppConfig.ts',

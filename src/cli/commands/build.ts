@@ -144,10 +144,23 @@ export class BuildCommand implements CliCommandDefinition {
 
   /**
    * 执行命令
-   * 
+   *
    * @param context - CLI 上下文
    */
   async handler(context: CliContext): Promise<void> {
+    // 抑制 Node.js 的实验性功能警告（如 CommonJS 加载 ES Module）
+    const originalEmitWarning = process.emitWarning
+    process.emitWarning = (warning, ...args: any[]) => {
+      // 过滤掉 ExperimentalWarning
+      if (typeof warning === 'string' && warning.includes('ExperimentalWarning')) {
+        return
+      }
+      if (typeof warning === 'object' && warning.name === 'ExperimentalWarning') {
+        return
+      }
+      return originalEmitWarning.call(process, warning, ...args)
+    }
+
     const logger = new Logger('build', {
       level: context.options.silent ? 'silent' : (context.options.debug ? 'debug' : 'info'),
       colors: context.terminal.supportsColor,

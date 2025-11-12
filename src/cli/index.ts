@@ -20,11 +20,24 @@ import { VersionCommand } from './commands/version'
 
 /**
  * 创建 CLI 应用
- * 
+ *
  * @param config - CLI 配置
  * @returns CLI 应用实例
  */
 export function createCli(config?: Partial<CliConfig>) {
+  // 抑制 Node.js 的实验性功能警告（如 CommonJS 加载 ES Module）
+  const originalEmitWarning = process.emitWarning
+  process.emitWarning = (warning, ...args: any[]) => {
+    // 过滤掉 ExperimentalWarning
+    if (typeof warning === 'string' && warning.includes('ExperimentalWarning')) {
+      return
+    }
+    if (typeof warning === 'object' && warning.name === 'ExperimentalWarning') {
+      return
+    }
+    return originalEmitWarning.call(process, warning, ...args)
+  }
+
   // 根据环境变量和参数决定日志级别和模式
   const isDebug = process.argv.includes('--debug') || process.argv.includes('-d')
   const isSilent = process.argv.includes('--silent') || process.argv.includes('-s')

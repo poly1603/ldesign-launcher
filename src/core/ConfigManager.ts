@@ -137,8 +137,8 @@ export class ConfigManager extends EventEmitter {
 
             // 优化jiti配置，启用缓存以提升性能
             const jitiLoader = createJiti(process.cwd(), {
-              cache: true,           // ✅ 启用缓存，避免重复编译
-              requireCache: true,    // ✅ 启用require缓存
+              cache: false,          // 关闭缓存，确保热更新时总是重新编译加载
+              requireCache: false,   // 关闭 require 缓存，避免命中旧模块
               interopDefault: true,
               esmResolve: true,
               debug: false,          // 禁用debug输出
@@ -459,12 +459,29 @@ export class ConfigManager extends EventEmitter {
 
     // 检查是否有需要重启的配置变更
     for (const configPath of restartRequiredConfigs) {
-      const oldValue = this.getNestedValue(oldConfig, configPath)
-      const newValue = this.getNestedValue(newConfig, configPath)
+      let oldValue = this.getNestedValue(oldConfig, configPath)
+      let newValue = this.getNestedValue(newConfig, configPath)
+
+      // 特殊处理：define 里包含易变动的内置常量（如 __BUILD_TIME__），不应触发重启
+      if (configPath === 'define') {
+        const normalizeDefine = (val: any) => {
+          if (!val || typeof val !== 'object') return val
+          try {
+            // 浅拷贝后移除易变 key
+            const clone: Record<string, unknown> = { ...val }
+            delete clone.__BUILD_TIME__
+            return clone
+          } catch {
+            return val
+          }
+        }
+        oldValue = normalizeDefine(oldValue)
+        newValue = normalizeDefine(newValue)
+      }
 
       this.logger.debug(`🔍 检查配置路径: ${configPath}`)
-      this.logger.debug(`📋 旧值: ${JSON.stringify(oldValue)}`)
-      this.logger.debug(`📋 新值: ${JSON.stringify(newValue)}`)
+      this.logger.debug(`📋 旧值(标准化后): ${JSON.stringify(oldValue)}`)
+      this.logger.debug(`📋 新值(标准化后): ${JSON.stringify(newValue)}`)
 
       if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
         changes.needsRestart = true
@@ -479,7 +496,7 @@ export class ConfigManager extends EventEmitter {
     }
 
     // 检测alias配置变更（可以热更新）
-    if (JSON.stringify(oldConfig.launcher?.alias) !== JSON.stringify(newConfig.launcher?.alias)) {
+    if (JSON.stringify(oldConfig.resolve?.alias) !== JSON.stringify(newConfig.resolve?.alias)) {
       changes.aliasChanged = true
       this.logger.info('🔗 检测到别名配置变更')
     }
@@ -490,7 +507,7 @@ export class ConfigManager extends EventEmitter {
       'build.rollupOptions',
       'preview.port',
       'preview.host',
-      'launcher.alias'
+      'resolve.alias'
     ]
 
     for (const configPath of hotUpdateConfigs) {
@@ -1160,7 +1177,9 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
           const oldConfig = JSON.parse(JSON.stringify(this.config))
 
           // 重新加载配置文件
-          const newConfig = await this.loadConfig(filePath)
+          const cwd = process.cwd()
+          const envToLoad = environment || process.env.NODE_ENV || 'development'
+          const newConfig = await this.loadEnvironmentConfig(cwd, envToLoad)
           this.logger.info('✅ 配置文件重新加载成功')
 
           // 发送系统通知
@@ -1191,6 +1210,7 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
               this.logger.info('ℹ️ 别名配置已更新，通过 HMR 热更新...')
               // TODO: 实现alias热更新逻辑
               this.emit('aliasChanged', newConfig)
+              this.emit('configHotUpdate', newConfig)
             } else if (configChanges.otherChanged) {
               // 其他launcher配置变更 -> 热更新
               this.logger.info('⚙️ 其他配置已更改，应用热更新...')

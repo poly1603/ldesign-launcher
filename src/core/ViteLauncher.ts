@@ -175,10 +175,10 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
     const configFile = this.config.launcher?.configFile ||
       PathUtils.resolve(this.cwd, '.ldesign', `launcher.${this.environment}.config.ts`)
 
-    // 只在dev模式下启用文件监听，build和preview模式不需要监听
-    const shouldWatch = (this.config.launcher?.autoRestart || false) &&
-      (this.environment === 'development' ||
-        (process.env.NODE_ENV === 'development' && this.environment !== 'production'))
+    // 在开发环境下默认启用文件监听，build和preview模式不需要监听
+    // 不依赖 autoRestart 配置，因为此时配置可能还未加载
+    const shouldWatch = this.environment === 'development' ||
+      (process.env.NODE_ENV === 'development' && this.environment !== 'production')
 
     this.configManager = new ConfigManager({
       configFile,
@@ -196,6 +196,19 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
           })
           this.configChangeTimer = undefined
         }, debounceTime)
+      }
+    })
+
+    // 监听配置热更新事件
+    this.configManager.on('configHotUpdate', (newConfig) => {
+      // 通过 WebSocket 通知客户端
+      if (this.devServer && this.devServer.ws) {
+        this.devServer.ws.send({
+          type: 'custom',
+          event: 'launcher-config-updated',
+          data: newConfig
+        })
+        this.logger.info('🔥 已通知客户端 Launcher 配置更新')
       }
     })
 
@@ -307,15 +320,15 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
       const desiredPort = mergedConfig.server?.port || 3000
       const { findAvailablePort } = await import('../utils/server')
       const availablePort = await findAvailablePort(desiredPort)
-      
+
       if (availablePort === null) {
         throw new Error(`无法找到可用端口（尝试从 ${desiredPort} 开始）`)
       }
-      
+
       if (availablePort !== desiredPort) {
         this.logger.warn(`端口 ${desiredPort} 已被占用，自动使用端口 ${availablePort}`)
       }
-      
+
       // 设置可用端口
       if (!mergedConfig.server) {
         mergedConfig.server = {}
@@ -376,11 +389,37 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
 
       mergedConfig.plugins = [appCfgPlugin, configInjectionPlugin, ...(mergedConfig.plugins || [])]
 
+      // 调试：打印服务器配置
+      if (this.logger.getLevel() === 'debug') {
+        this.logger.debug('Vite server 配置:', {
+          host: mergedConfig.server?.host,
+          port: mergedConfig.server?.port,
+          strictPort: mergedConfig.server?.strictPort,
+          https: mergedConfig.server?.https
+        })
+      }
+
       // 创建开发服务器
       this.devServer = await createServer(mergedConfig)
 
-      // 启动服务器
+      this.logger.debug('Vite 服务器已创建，准备启动监听...')
+
+      // 启动服务器并等待其真正开始监听
       await this.devServer!.listen()
+
+      this.logger.debug('Vite listen() 调用完成')
+
+      // 确保服务器已经开始监听（Vite 5+ 需要显式调用 printUrls）
+      if (this.devServer && typeof (this.devServer as any).printUrls === 'function') {
+        this.logger.debug('调用 printUrls()');
+        (this.devServer as any).printUrls()
+      }
+
+      // 验证服务器是否真的在监听
+      if (this.devServer && this.devServer.httpServer) {
+        const address = this.devServer.httpServer.address()
+        this.logger.debug('HTTP 服务器地址:', address)
+      }
 
       // 在服务端打印 appConfig 载入信息（调试）
       try {
@@ -657,20 +696,25 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
       const desiredPort = mergedConfig.preview?.port || 4173
       const { findAvailablePort } = await import('../utils/server')
       const availablePort = await findAvailablePort(desiredPort)
-      
+
       if (availablePort === null) {
         throw new Error(`无法找到可用端口（尝试从 ${desiredPort} 开始）`)
       }
-      
+
       if (availablePort !== desiredPort) {
         this.logger.warn(`端口 ${desiredPort} 已被占用，自动使用端口 ${availablePort}`)
       }
-      
-      // 设置可用端口
+
+      // 设置可用端口和 host
       if (!mergedConfig.preview) {
         mergedConfig.preview = {}
       }
       mergedConfig.preview.port = availablePort
+
+      // 确保 host 配置存在，默认为 '0.0.0.0' 以支持 IPv4 和 IPv6
+      if (!mergedConfig.preview.host) {
+        mergedConfig.preview.host = '0.0.0.0'
+      }
 
       // 处理HTTPS配置
       mergedConfig = await this.processHTTPSConfig(mergedConfig)
@@ -679,6 +723,7 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
       await this.executeHook('beforePreview')
 
       this.logger.info('正在启动预览服务器...')
+      this.logger.debug(`Preview 配置: host=${mergedConfig.preview.host}, port=${mergedConfig.preview.port}`)
 
       // 动态导入 Vite（优先从项目 cwd 解析）
       const { importViteFromCwd } = await import('../utils/vite-resolver')
@@ -695,6 +740,7 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
       mergedConfig.plugins = [appCfgPlugin, ...(mergedConfig.plugins || [])]
 
       // 创建预览服务器
+      // Vite 的 preview() 函数会自动启动 httpServer 并监听配置的 host 和 port
       this.previewServer = await preview(mergedConfig)
 
       // 执行预览后钩子
@@ -1473,7 +1519,7 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
   private async enhanceConfigWithSmartPlugins(config: ViteLauncherConfig): Promise<ViteLauncherConfig> {
     try {
       this.logger.info('开始智能插件检测...')
-      
+
       // 懒加载初始化 SmartPluginManager
       if (!this.smartPluginManager) {
         const isDebug = this.logger.getLevel() === 'debug'
@@ -1486,7 +1532,7 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
         })
         this.smartPluginManager = new SmartPluginManager(this.cwd, smartLogger)
       }
-      
+
       // 检查用户是否明确指定了框架类型
       // 支持两种配置方式：config.framework.type 和 config.launcher.framework
       const explicitFrameworkType = (config as any).framework?.type || (config as any).launcher?.framework

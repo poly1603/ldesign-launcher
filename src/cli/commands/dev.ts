@@ -159,6 +159,19 @@ export class DevCommand implements CliCommandDefinition {
    * @param context - CLI 上下文
    */
   async handler(context: CliContext): Promise<void> {
+    // 抑制 Node.js 的实验性功能警告（如 CommonJS 加载 ES Module）
+    const originalEmitWarning = process.emitWarning
+    process.emitWarning = (warning, ...args: any[]) => {
+      // 过滤掉 ExperimentalWarning
+      if (typeof warning === 'string' && warning.includes('ExperimentalWarning')) {
+        return
+      }
+      if (typeof warning === 'object' && warning.name === 'ExperimentalWarning') {
+        return
+      }
+      return originalEmitWarning.call(process, warning, ...args)
+    }
+
     const logger = new Logger('dev', {
       level: context.options.silent ? 'silent' : (context.options.debug ? 'debug' : 'info'),
       colors: context.terminal.supportsColor,
@@ -423,6 +436,8 @@ export class DevCommand implements CliCommandDefinition {
 
           // 优先尝试使用 'qrcode' 的终端输出
           let printed = false
+          let qrcodeNotInstalled = false
+
           try {
             // @ts-ignore - qrcode is an optional dependency
             const qrlib: any = await import('qrcode')
@@ -442,7 +457,11 @@ export class DevCommand implements CliCommandDefinition {
               printed = true
             }
           } catch (e1) {
-            logger.debug('尝试使用 qrcode 生成终端二维码失败: ' + (e1 as Error).message)
+            const errorMsg = (e1 as Error).message
+            if (errorMsg.includes('Cannot find package') || errorMsg.includes('Cannot find module')) {
+              qrcodeNotInstalled = true
+            }
+            logger.debug('尝试使用 qrcode 生成终端二维码失败: ' + errorMsg)
           }
 
           // 回退到 qrcode-terminal（如已安装）
@@ -488,8 +507,18 @@ export class DevCommand implements CliCommandDefinition {
                 }
               }
             } catch (e2) {
-              logger.debug('尝试使用 qrcode-terminal 生成终端二维码失败: ' + (e2 as Error).message)
+              const errorMsg = (e2 as Error).message
+              if (errorMsg.includes('Cannot find package') || errorMsg.includes('Cannot find module')) {
+                qrcodeNotInstalled = true
+              }
+              logger.debug('尝试使用 qrcode-terminal 生成终端二维码失败: ' + errorMsg)
             }
+          }
+
+          // 如果二维码包未安装，提供友好的提示
+          if (!printed && qrcodeNotInstalled) {
+            logger.info(pc.dim('💡 提示: 安装 qrcode 包可显示二维码，方便手机扫码访问'))
+            logger.info(pc.dim('   运行: pnpm add -D qrcode'))
           }
         } catch (e) {
           logger.debug('二维码生成失败: ' + (e as Error).message)

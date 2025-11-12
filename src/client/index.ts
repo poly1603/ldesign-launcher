@@ -8,6 +8,10 @@
 export { appConfigManager, getAppConfig, subscribeConfig, getEnvironment } from './app-config'
 export type { AppConfig } from './app-config'
 
+// 导出 Launcher 配置管理器
+export { launcherConfigManager, getLauncherConfig, subscribeLauncherConfig, getLauncherEnvironment } from './launcher-config'
+export type { LauncherConfig } from './launcher-config'
+
 // 导出框架特定的 Hook/Composable
 // 注意：这些导出是可选的，只在对应框架的项目中使用
 
@@ -18,6 +22,8 @@ export type { UseAppConfigReturn as UseAppConfigReturnReact } from './react/useA
 // Vue 3
 export { useAppConfig as useAppConfigVue } from './vue/useAppConfig'
 export type { UseAppConfigReturn as UseAppConfigReturnVue } from './vue/useAppConfig'
+export { useLauncherConfig as useLauncherConfigVue } from './vue/useLauncherConfig'
+export type { UseLauncherConfigReturn as UseLauncherConfigReturnVue } from './vue/useLauncherConfig'
 
 // Vue 2
 export { appConfigMixin, getAppConfig as getAppConfigVue2, subscribeAppConfig } from './vue2/useAppConfig'

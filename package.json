@@ -86,8 +86,8 @@
       "import": "./dist/client/react/useAppConfig.js"
     },
     "./client/vue": {
-      "types": "./dist/client/vue/useAppConfig.d.ts",
-      "import": "./dist/client/vue/useAppConfig.js"
+      "types": "./dist/client/vue/index.d.ts",
+      "import": "./dist/client/vue/index.js"
     },
     "./client/vue2": {
       "types": "./dist/client/vue2/useAppConfig.d.ts",
@@ -188,6 +188,10 @@
     "@vitejs/plugin-vue": "^6.0.1",
     "@vitejs/plugin-vue2": "^2.3.3",
     "vite-plugin-solid": "^2.10.0"
+  },
+  "optionalDependencies": {
+    "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0"
   },
   "peerDependenciesMeta": {
     "@vitejs/plugin-legacy": {

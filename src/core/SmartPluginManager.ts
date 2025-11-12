@@ -529,27 +529,9 @@ export class SmartPluginManager {
       // 动态导入插件 - 从项目的 node_modules 导入
       let pluginModule: any
 
-      // Angular 和某些插件需要纯 ESM 导入，跳过 require 尝试
-      const forceESM = pluginKey === 'angular' || config.packageName.includes('@analogjs')
-
-      if (!forceESM) {
-        try {
-          // 方法1: 使用项目的 require 来解析模块（支持 CommonJS）
-          const moduleImport = await import('module')
-          const createRequire = (moduleImport as any).createRequire || (moduleImport as any).default?.createRequire
-          const projectRequire = createRequire(PathUtils.resolve(this.cwd, 'package.json'))
-
-          // 使用项目的 require 来导入模块
-          pluginModule = projectRequire(config.packageName)
-        } catch (requireError) {
-          // require 失败，继续尝试 ESM import
-          pluginModule = null
-        }
-      }
-
-      // 如果 require 失败或强制 ESM，使用动态 import
-      if (!pluginModule) {
-        // 方法2: 使用动态 import（支持 ESM only 包）
+      // 统一使用动态 import 加载插件，避免 ExperimentalWarning
+      try {
+        // 使用动态 import（支持 ESM 和 CommonJS）
         const { pathToFileURL } = await import('url')
 
         // 尝试从项目的 node_modules 构建路径
@@ -583,8 +565,13 @@ export class SmartPluginManager {
         // 将路径转换为 file:// URL（Windows 兼容）
         const moduleUrl = pathToFileURL(entryPoint).href
 
-        // 使用动态 import 加载 ESM 模块
+        // 使用动态 import 加载模块
         pluginModule = await import(moduleUrl)
+      } catch (importError) {
+        this.logger.warn(`加载插件失败: ${config.packageName}`, {
+          error: (importError as Error).message
+        })
+        pluginModule = null
       }
 
       // 处理不同的插件导出方式
