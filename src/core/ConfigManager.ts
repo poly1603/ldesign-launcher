@@ -1,6 +1,6 @@
 /**
  * 配置管理器
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
@@ -11,6 +11,8 @@ import { FileSystem } from '../utils/file-system'
 import { PathUtils } from '../utils/path-utils'
 import { environmentManager } from '../utils/env'
 import { SmartProxyProcessor } from '../utils/smart-proxy'
+import { deepMerge as mergeConfigs } from '../utils/config-merger'
+
 import type { ViteLauncherConfig, ProjectPreset, ProxyOptions } from '../types'
 import { DEFAULT_VITE_LAUNCHER_CONFIG } from '../constants'
 import { configPresets } from './ConfigPresets'
@@ -760,8 +762,8 @@ export class ConfigManager extends EventEmitter {
 
     return `/**
  * @ldesign/launcher 配置文件
- * 
-${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo ? ` * 预设插件: ${presetInfo.plugins.join(', ')}\n` : ''} * 
+ *
+${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo ? ` * 预设插件: ${presetInfo.plugins.join(', ')}\n` : ''} *
  * @see https://github.com/ldesign/launcher
  */\n\n`
   }
@@ -898,17 +900,52 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
   }
 
   private deepMerge(target: any, source: any): any {
-    const result = { ...target }
+    const normalizeAlias = (alias: any): any[] => {
+      if (!alias) return []
 
-    for (const key in source) {
-      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-        result[key] = this.deepMerge(target[key] || {}, source[key])
-      } else {
-        result[key] = source[key]
+      if (Array.isArray(alias)) return alias
+
+      if (typeof alias === 'object') {
+        return Object.entries(alias).map(([find, replacement]) => ({
+          find,
+          replacement
+        }))
       }
+
+      return []
     }
 
-    return result
+    return mergeConfigs(target || {}, source || {}, {
+      arrayMergeStrategy: 'replace',
+      customMergers: {
+        // 特殊处理 resolve 配置，确保 alias 始终在基础配置上追加
+        resolve: (targetResolve: any, sourceResolve: any) => {
+          if (!targetResolve && !sourceResolve) {
+            return {}
+          }
+
+          const normalizedTarget = targetResolve || {}
+          const normalizedSource = sourceResolve || {}
+
+          const mergedResolve: any = {
+            ...normalizedTarget,
+            ...normalizedSource
+          }
+
+          const baseAliases = normalizeAlias(normalizedTarget.alias)
+          const overrideAliases = normalizeAlias(normalizedSource.alias)
+
+          if (baseAliases.length || overrideAliases.length) {
+            mergedResolve.alias = [
+              ...baseAliases,
+              ...overrideAliases
+            ]
+          }
+
+          return mergedResolve
+        }
+      }
+    })
   }
 
   /**
