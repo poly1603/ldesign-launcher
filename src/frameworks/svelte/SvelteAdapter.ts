@@ -74,11 +74,7 @@ export class SvelteAdapter extends FrameworkAdapter {
         const sveltePlugin = await import('@sveltejs/vite-plugin-svelte')
         // svelte() function is the named export, not default
         const { svelte } = sveltePlugin as any
-        const plugin = svelte({
-          ...options?.options
-        })
-        // svelte() 可能返回单个插件或插件数组
-        return Array.isArray(plugin) ? plugin : [plugin]
+        return svelte(options?.options || {})
       } catch (error) {
         this.logger.error('加载 Svelte 插件失败', error)
         throw new Error('请安装 @sveltejs/vite-plugin-svelte: npm install -D @sveltejs/vite-plugin-svelte')

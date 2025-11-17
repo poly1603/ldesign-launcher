@@ -34,3 +34,11 @@ coverage
 *.tmp
 .cache
 .temp
+
+# Temporary report files (should be archived)
+*_REPORT.md
+*_SUMMARY.md
+*_GUIDE.md
+*_ANALYSIS.md
+SESSION_*.md
+REFACTORING_*.md

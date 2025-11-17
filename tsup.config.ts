@@ -4,6 +4,12 @@ import { cpus } from 'os'
 // 获取CPU核心数用于并行构建
 const numCPUs = cpus().length
 
+// 环境变量
+const isDev = process.env.NODE_ENV === 'development'
+const isProd = process.env.NODE_ENV === 'production'
+const isAnalyze = process.env.ANALYZE === 'true'
+const isCI = process.env.CI === 'true'
+
 export default defineConfig([
   // 客户端代码构建配置（浏览器环境）
   {
@@ -23,17 +29,24 @@ export default defineConfig([
     format: ['esm'], // 客户端只需要 ESM 格式
     dts: {
       only: false,
-      resolve: true
-    }, // 生成类型定义文件
+      resolve: true,
+      compilerOptions: {
+        composite: false,
+        incremental: false
+      }
+    },
     tsconfig: 'tsconfig.json',
     clean: false, // 不清理，因为有多个配置
     splitting: false, // 客户端代码不分割，避免引入 Node.js 模块
-    sourcemap: process.env.NODE_ENV === 'development',
-    minify: process.env.NODE_ENV === 'production', // 生产环境启用压缩
+    sourcemap: isDev,
+    minify: isProd,
     target: 'es2020', // 浏览器目标
     outDir: 'dist',
     platform: 'browser', // 明确指定为浏览器平台
-    treeshake: true,
+    treeshake: {
+      preset: 'recommended',
+      moduleSideEffects: false
+    },
     loader: {
       '.ts': 'ts',
       '.tsx': 'tsx'
@@ -71,18 +84,35 @@ export default defineConfig([
     format: ['cjs', 'esm'],
     dts: {
       only: false,
-      resolve: true
-    }, // 生成类型定义文件
+      resolve: true,
+      compilerOptions: {
+        composite: false,
+        incremental: false,
+        declaration: true,
+        declarationMap: isDev
+      }
+    },
     tsconfig: 'tsconfig.json',
     clean: true, // 第一个配置清理
     splitting: true,
-    sourcemap: process.env.NODE_ENV === 'development',
-    minify: process.env.NODE_ENV === 'production',
+    sourcemap: isDev,
+    minify: isProd ? {
+      compress: {
+        drop_console: false, // 保留console，方便调试
+        drop_debugger: true,
+        pure_funcs: ['console.debug', 'console.trace']
+      },
+      mangle: true
+    } : false,
     target: 'node16',
     outDir: 'dist',
-    platform: 'node', // 明确指定为 Node.js 平台
+    platform: 'node',
     shims: true,
-    treeshake: true,
+    treeshake: {
+      preset: 'recommended',
+      moduleSideEffects: 'no-external',
+      propertyReadSideEffects: false
+    },
     loader: {
       '.ts': 'ts',
       '.tsx': 'tsx'
@@ -185,31 +215,51 @@ export default defineConfig([
     ],
     // 优化bundle策略
     bundle: true,
-    metafile: process.env.ANALYZE === 'true', // 可选的构建分析
+    metafile: isAnalyze, // 可选的构建分析
     esbuildOptions(options) {
       options.conditions = ['node']
       options.platform = 'node'
       options.chunkNames = 'chunks/[name]-[hash]'
-      options.logLevel = 'error'
+      options.logLevel = isCI ? 'error' : 'warning'
       options.treeShaking = true
       options.keepNames = true
       options.legalComments = 'none'
-      // 使用更多工作线程提高构建速度
+      options.charset = 'utf8'
+      options.mainFields = ['module', 'main']
+      options.resolveExtensions = ['.ts', '.tsx', '.js', '.jsx', '.json']
+      
+      // 优化日志输出
       options.logOverride = {
-        'unsupported-dynamic-import': 'silent'
+        'unsupported-dynamic-import': 'silent',
+        'ignored-bare-import': 'silent'
       }
-      // 设置最大并行数
+      
+      // 环境变量注入
       options.define = {
-        'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production')
+        'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
+        '__VERSION__': JSON.stringify(require('./package.json').version)
       }
+      
+      // 性能优化
+      if (isProd) {
+        options.drop = ['debugger']
+        options.dropLabels = ['DEV']
+        options.pure = ['console.debug', 'console.trace']
+      }
+      
+      // 文件大小优化
+      options.mangleProps = undefined // 不混淆属性名，避免问题
+      options.mangleQuoted = false
+      options.reserveProps = undefined
     },
     // 增加并发数提高构建速度
     esbuildPlugins: [],
     // 减少控制台输出
-    silent: process.env.CI === 'true',
+    silent: isCI,
     // 优化构建性能
     skipNodeModulesBundle: true,
-    // 设置并发构建数
-    // concurrency 选项在tsup中不可用，使用esbuild的默认并发
+    // 性能优化选项
+    publicDir: false, // 不需要public目录
+    replaceNodeEnv: true, // 替换 process.env.NODE_ENV
   }
 ])

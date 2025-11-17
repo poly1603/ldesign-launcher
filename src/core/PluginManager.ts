@@ -1,11 +1,20 @@
 /**
  * 插件管理器（为后续 plugin 包预留）
  * 
+ * @deprecated 此类将在 v3.0.0 中移除
+ * @see {@link SmartPluginManager} 使用 SmartPluginManager 代替
+ * 
+ * 原因：
+ * - 通用插件管理功能在本项目中未被使用
+ * - SmartPluginManager 提供了更适合的自动检测功能
+ * - 减少维护成本（490+ 行代码闲置）
+ * 
  * 负责插件的注册、加载、卸载和管理
  * 为后续的 @ldesign/plugin 包预留扩展接口
  * 
  * @author LDesign Team
  * @since 1.0.0
+ * @deprecated 2.1.0
  */
 
 import { EventEmitter } from 'events'
@@ -51,6 +60,9 @@ export class PluginManager extends EventEmitter implements IPluginManager {
       level: 'info',
       colors: true
     })
+
+    // 弃用警告
+    this.logger.warn('⚠️  PluginManager 已弃用，将在 v3.0.0 移除。请使用 SmartPluginManager 代替。')
 
     this.logger.debug('插件管理器初始化完成')
   }

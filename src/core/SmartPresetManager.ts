@@ -1,10 +1,19 @@
 /**
  * 智能预设管理器
  * 
+ * @deprecated 此类将在 v3.0.0 中移除
+ * @see {@link ConfigPresets} 使用 ConfigPresets 或 ConfigManager.applyPreset() 代替
+ * 
+ * 原因：
+ * - 功能与 ConfigPresets 完全重叠
+ * - 未被任何核心模块使用（300+ 行代码闲置）
+ * - 减少维护成本
+ * 
  * 提供智能的项目配置预设，支持自动检测和配置生成
  * 
  * @author LDesign Team
  * @since 1.0.0
+ * @deprecated 2.1.0
  */
 
 import { Logger } from '../utils/logger'
@@ -45,6 +54,10 @@ export class SmartPresetManager {
 
   constructor(projectPath: string = process.cwd()) {
     this.logger = new Logger('SmartPresetManager')
+    
+    // 弃用警告
+    this.logger.warn('⚠️  SmartPresetManager 已弃用，将在 v3.0.0 移除。请使用 ConfigManager.applyPreset() 代替。')
+    
     this.projectPath = projectPath
     this.initializePresets()
   }

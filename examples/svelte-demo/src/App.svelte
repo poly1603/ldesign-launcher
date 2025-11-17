@@ -1,7 +1,8 @@
 <script lang="ts">
-  import Counter from './lib/Counter.svelte'
-  import HelloWorld from './lib/HelloWorld.svelte'
   import ConfigDisplay from './components/ConfigDisplay.svelte'
+  
+  let count = 0
+  const increment = () => count++
 </script>
 
 <div class="app">
@@ -14,8 +15,10 @@
     <!-- 配置信息展示 -->
     <ConfigDisplay />
 
-    <Counter />
-    <HelloWorld msg="欢迎使用 Svelte!" />
+    <div class="counter">
+      <h2>计数器示例</h2>
+      <button on:click={increment}>点击次数: {count}</button>
+    </div>
   </main>
 
   <footer class="footer">
@@ -60,6 +63,25 @@
     padding: 1rem;
     text-align: center;
     color: #666;
+  }
+
+  .counter {
+    margin: 2rem 0;
+    text-align: center;
+  }
+
+  .counter button {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    background: #ff3e00;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .counter button:hover {
+    background: #ff5722;
   }
 </style>
 

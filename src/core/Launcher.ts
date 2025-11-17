@@ -1,11 +1,15 @@
 /**
  * Launcher 核心类（重构版）
  * 
+ * @deprecated 此类将在 v3.0.0 中移除，请使用 ViteLauncher 代替
+ * @see {@link ViteLauncher} 获取完整功能和更好的向后兼容性
+ * 
  * 统一的项目启动器，支持多种构建引擎和前端框架
  * 委托给引擎适配器和框架适配器处理具体逻辑
  * 
  * @author LDesign Team
  * @since 2.0.0
+ * @deprecated 2.1.0
  */
 
 import { EventEmitter } from 'events'
@@ -91,6 +95,12 @@ export class Launcher extends EventEmitter implements IViteLauncher {
       timestamp: isDebug,
       compact: !isDebug
     })
+
+    // 弃用警告
+    if (!isSilent) {
+      this.logger.warn('⚠️  Launcher 类已弃用，将在 v3.0.0 移除。请使用 ViteLauncher 代替。')
+      this.logger.warn('详情请查看: MIGRATION.md')
+    }
 
     // 初始化配置管理器
     this.configManager = new ConfigManager({
