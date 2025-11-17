@@ -35,9 +35,15 @@ export {
   registerAllFrameworks
 } from './frameworks'
 
+// 导出新架构核心类（2.0 推荐）
+export { Launcher, LauncherOptions } from './core/Launcher'
+
 // 导出旧架构核心类（保持向后兼容）
 export { ViteLauncher } from './core/ViteLauncher'
 export { ConfigManager } from './core/ConfigManager'
+export { PluginOrchestrator } from './core/PluginOrchestrator'
+export { EngineManager } from './core/EngineManager'
+export { ServerManager } from './core/ServerManager'
 
 // 导出插件预设系统
 export { presetManager, definePreset } from './plugins/presets'
@@ -144,11 +150,12 @@ export const version = '2.0.0'
 export function createLauncher() {
   return {
     version,
+    Launcher: () => import('./core/Launcher').then(m => m.Launcher),
     ViteLauncher: () => import('./core/ViteLauncher').then(m => m.ViteLauncher),
     ConfigManager: () => import('./core/ConfigManager').then(m => m.ConfigManager),
     createCli: () => import('./cli').then(m => m.createCli)
   }
 }
 
-// 默认导出 ViteLauncher
-export { ViteLauncher as default } from './core/ViteLauncher'
+// 默认导出新 Launcher（推荐使用）
+export { Launcher as default } from './core/Launcher'
