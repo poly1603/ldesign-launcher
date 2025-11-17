@@ -1,173 +1,233 @@
 /**
  * 服务器管理器
- * 专注于开发服务器和预览服务器的生命周期管理
+ * 
+ * 负责开发服务器和预览服务器的生命周期管理
  * 
  * @author LDesign Team
- * @since 2.1.0
+ * @since 1.1.0
  */
 
 import type { ViteDevServer, PreviewServer } from 'vite'
-import type { ViteLauncherConfig } from '../types'
-import { Logger } from '../utils/logger'
-import { PathUtils } from '../utils/path-utils'
+import type { Logger } from '../utils/logger'
+import type { ViteLauncherConfig, ServerInfo } from '../types'
+import { getPreferredLocalIP } from '../utils/network'
+import qrcode from 'qrcode-terminal'
 
 export interface ServerManagerOptions {
-  cwd: string
   logger: Logger
-  environment?: string
+  cwd: string
 }
 
+/**
+ * 服务器管理器
+ * 
+ * 管理开发服务器和预览服务器的启动、停止、重启等操作
+ */
 export class ServerManager {
-  private devServer: ViteDevServer | null = null
-  private previewServer: PreviewServer | null = null
   private logger: Logger
   private cwd: string
-  private environment?: string
+  private devServer: ViteDevServer | null = null
+  private previewServer: PreviewServer | null = null
 
   constructor(options: ServerManagerOptions) {
-    this.cwd = options.cwd
     this.logger = options.logger
-    this.environment = options.environment
+    this.cwd = options.cwd
   }
 
   /**
    * 启动开发服务器
    */
-  async startDev(config: ViteLauncherConfig): Promise<ViteDevServer> {
-    try {
-      this.logger.info('正在启动开发服务器...')
+  async startDevServer(config: ViteLauncherConfig, viteModule: any): Promise<ViteDevServer> {
+    const { createServer } = viteModule
 
-      // 动态导入 Vite
-      const { importViteFromCwd } = await import('../utils/vite-resolver')
-      const viteMod = await importViteFromCwd(this.cwd)
-      const { createServer } = viteMod
+    this.logger.info('正在启动开发服务器...')
 
-      // 创建开发服务器
-      this.devServer = await createServer(config)
+    // 创建并启动服务器
+    this.devServer = await createServer(config)
+    await this.devServer.listen()
 
-      // 启动服务器监听
-      await this.devServer.listen()
+    this.logger.success('开发服务器启动成功')
 
-      // 打印 URLs
-      if (this.devServer && typeof (this.devServer as any).printUrls === 'function') {
-        (this.devServer as any).printUrls()
-      }
-
-      this.logger.debug('开发服务器启动成功')
-      return this.devServer
-    } catch (error) {
-      this.logger.error('开发服务器启动失败', { error: (error as Error).message })
-      throw error
-    }
+    return this.devServer
   }
 
   /**
    * 停止开发服务器
    */
-  async stopDev(): Promise<void> {
+  async stopDevServer(): Promise<void> {
     if (!this.devServer) {
       this.logger.warn('开发服务器未运行')
       return
     }
 
-    try {
-      this.logger.info('正在停止开发服务器...')
-      await this.devServer.close()
-      this.devServer = null
-      this.logger.success('开发服务器已停止')
-    } catch (error) {
-      this.logger.error('停止开发服务器失败', { error: (error as Error).message })
-      throw error
-    }
+    this.logger.info('正在停止开发服务器...')
+    await this.devServer.close()
+    this.devServer = null
+    this.logger.success('开发服务器已停止')
   }
 
   /**
    * 重启开发服务器
    */
-  async restartDev(config: ViteLauncherConfig): Promise<ViteDevServer> {
-    this.logger.info('正在重启开发服务器...')
-    await this.stopDev()
-    const server = await this.startDev(config)
-    this.logger.success('开发服务器重启完成')
-    return server
+  async restartDevServer(config: ViteLauncherConfig, viteModule: any): Promise<ViteDevServer> {
+    await this.stopDevServer()
+    return this.startDevServer(config, viteModule)
   }
 
   /**
    * 启动预览服务器
    */
-  async startPreview(config: ViteLauncherConfig): Promise<PreviewServer> {
-    try {
-      this.logger.info('正在启动预览服务器...')
+  async startPreviewServer(config: ViteLauncherConfig, viteModule: any): Promise<PreviewServer> {
+    const { preview } = viteModule
 
-      // 动态导入 Vite
-      const { importViteFromCwd } = await import('../utils/vite-resolver')
-      const viteMod = await importViteFromCwd(this.cwd)
-      const { preview } = viteMod
+    this.logger.info('正在启动预览服务器...')
 
-      // 创建预览服务器
-      this.previewServer = await preview(config)
+    // 创建并启动预览服务器
+    this.previewServer = await preview(config)
 
-      this.logger.success('预览服务器启动成功')
-      return this.previewServer
-    } catch (error) {
-      this.logger.error('预览服务器启动失败', { error: (error as Error).message })
-      throw error
-    }
+    this.logger.success('预览服务器启动成功')
+
+    return this.previewServer
   }
 
   /**
    * 停止预览服务器
    */
-  async stopPreview(): Promise<void> {
+  async stopPreviewServer(): Promise<void> {
     if (!this.previewServer) {
       this.logger.warn('预览服务器未运行')
       return
     }
 
-    try {
-      this.logger.info('正在停止预览服务器...')
-      await (this.previewServer.httpServer as any).close()
-      this.previewServer = null
-      this.logger.success('预览服务器已停止')
-    } catch (error) {
-      this.logger.error('停止预览服务器失败', { error: (error as Error).message })
-      throw error
+    this.logger.info('正在停止预览服务器...')
+    // PreviewServer 没有 close 方法，通过 httpServer 关闭
+    if (this.previewServer.httpServer) {
+      await new Promise<void>((resolve, reject) => {
+        this.previewServer!.httpServer.close((err) => {
+          if (err) reject(err)
+          else resolve()
+        })
+      })
     }
+    this.previewServer = null
+    this.logger.success('预览服务器已停止')
   }
 
   /**
-   * 获取开发服务器实例
+   * 获取当前开发服务器实例
    */
   getDevServer(): ViteDevServer | null {
     return this.devServer
   }
 
   /**
-   * 获取预览服务器实例
+   * 获取当前预览服务器实例
    */
   getPreviewServer(): PreviewServer | null {
     return this.previewServer
   }
 
   /**
-   * 检查开发服务器是否运行
+   * 获取服务器 URL
    */
-  isDevServerRunning(): boolean {
-    return this.devServer !== null
+  getServerUrl(server: ViteDevServer | PreviewServer): string {
+    if ('resolvedUrls' in server && server.resolvedUrls) {
+      return server.resolvedUrls.local[0] || ''
+    }
+    
+    // 预览服务器的 URL 获取
+    if ('httpServer' in server && server.httpServer) {
+      const address = server.httpServer.address()
+      if (address && typeof address === 'object') {
+        const host = address.address === '::' || address.address === '0.0.0.0' 
+          ? 'localhost' 
+          : address.address
+        return `http://${host}:${address.port}`
+      }
+    }
+
+    return ''
   }
 
   /**
-   * 检查预览服务器是否运行
+   * 获取服务器信息（简化版）
    */
-  isPreviewServerRunning(): boolean {
-    return this.previewServer !== null
+  getServerInfo(server: ViteDevServer | PreviewServer): { url: string; host: string; port: number; https: boolean } {
+    const url = this.getServerUrl(server)
+    const urlObj = new URL(url)
+
+    return {
+      url,
+      host: urlObj.hostname,
+      port: parseInt(urlObj.port),
+      https: urlObj.protocol === 'https:'
+    }
   }
 
   /**
-   * 销毁服务器管理器
+   * 打印服务器信息
    */
-  async destroy(): Promise<void> {
-    await this.stopDev()
-    await this.stopPreview()
+  printServerInfo(server: ViteDevServer | PreviewServer, type: 'dev' | 'preview'): void {
+    const info = this.getServerInfo(server)
+    const typeName = type === 'dev' ? '开发' : '预览'
+
+    this.logger.info(`\n🚀 ${typeName}服务器已启动`)
+    this.logger.info(`   本地访问: ${info.url}`)
+
+    // 获取局域网 IP
+    const localIP = getPreferredLocalIP()
+    if (localIP && localIP !== 'localhost' && localIP !== '127.0.0.1') {
+      const networkUrl = `http://${localIP}:${info.port}`
+      this.logger.info(`   局域网访问: ${networkUrl}`)
+      
+      // 生成二维码（只在非 CI 环境）
+      if (!process.env.CI) {
+        this.logger.info('\n   扫描二维码访问:')
+        try {
+          qrcode.generate(networkUrl, { small: true }, (qr) => {
+            // 将二维码每行缩进
+            const lines = qr.split('\n')
+            lines.forEach(line => {
+              if (line.trim()) {
+                this.logger.info(`   ${line}`)
+              }
+            })
+          })
+        } catch (error) {
+          // 忽略二维码生成错误
+        }
+      }
+    }
+
+    this.logger.info('')
+  }
+
+  /**
+   * 打印简化的服务器信息（用于重启）
+   */
+  printSimpleServerInfo(): void {
+    if (this.devServer) {
+      const info = this.getServerInfo(this.devServer)
+      this.logger.success(`✨ 服务器已重启: ${info.url}`)
+    } else if (this.previewServer) {
+      const info = this.getServerInfo(this.previewServer)
+      this.logger.success(`✨ 预览服务器已重启: ${info.url}`)
+    }
+  }
+
+  /**
+   * 查找可用端口
+   */
+  async findAvailablePort(desiredPort: number): Promise<number | null> {
+    const { findAvailablePort } = await import('../utils/server')
+    return findAvailablePort(desiredPort)
+  }
+
+  /**
+   * 清理所有服务器
+   */
+  async cleanup(): Promise<void> {
+    await this.stopDevServer()
+    await this.stopPreviewServer()
   }
 }

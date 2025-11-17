@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 智能代理处理器
  *
  * 提供专业的服务类型代理配置自动转换和智能处理功能
@@ -19,7 +19,7 @@ import type {
 /**
  * 智能代理处理器类
  */
-export class SmartProxyProcessor {
+export class ProxyProcessor {
   /**
    * 处理代理配置，将服务类型配置转换为 Vite 标准配置
    *

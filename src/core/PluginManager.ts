@@ -1,629 +1,630 @@
 /**
- * 插件管理器（为后续 plugin 包预留）
+ * 智能插件管理器
  * 
- * @deprecated 此类将在 v3.0.0 中移除
- * @see {@link SmartPluginManager} 使用 SmartPluginManager 代替
- * 
- * 原因：
- * - 通用插件管理功能在本项目中未被使用
- * - SmartPluginManager 提供了更适合的自动检测功能
- * - 减少维护成本（490+ 行代码闲置）
- * 
- * 负责插件的注册、加载、卸载和管理
- * 为后续的 @ldesign/plugin 包预留扩展接口
+ * 自动检测项目类型并加载对应的插件
  * 
  * @author LDesign Team
  * @since 1.0.0
- * @deprecated 2.1.0
  */
 
-import { EventEmitter } from 'events'
-import { Logger } from '../utils/logger'
-
-import type {
-  IPluginManager,
-  LauncherPlugin,
-  PluginInfo,
-  PluginRegistrationOptions,
-  AsyncResult,
-  ValidationResult
-} from '../types'
-import { PluginStatus } from '../types'
+import type { Plugin } from 'vite'
+import type { Logger } from '../utils/logger'
+import { FileSystem, PathUtils } from '../utils'
 
 /**
- * 插件管理器类
- * 
- * 提供插件的生命周期管理、依赖解析、状态监控等功能
- * 为后续的 plugin 包预留完整的扩展接口
+ * 项目类型枚举
  */
-export class PluginManager extends EventEmitter implements IPluginManager {
-  /** 日志记录器 */
+export enum ProjectType {
+  VUE3 = 'vue3',
+  VUE2 = 'vue2',
+  REACT = 'react',
+  PREACT = 'preact',
+  SVELTE = 'svelte',
+  SVELTEKIT = 'sveltekit',
+  SOLID = 'solid',
+  LIT = 'lit',
+  QWIK = 'qwik',
+  ANGULAR = 'angular',
+  VANILLA = 'vanilla'
+}
+
+/**
+ * 插件配置接口
+ */
+export interface PluginConfig {
+  /** 插件名称 */
+  name: string
+  /** 插件包名 */
+  packageName: string
+  /** 是否必需 */
+  required: boolean
+  /** 检测条件 */
+  detection: {
+    /** 依赖包名 */
+    dependencies?: string[]
+    /** 文件模式 */
+    filePatterns?: string[]
+    /** 配置文件 */
+    configFiles?: string[]
+  }
+  /** 插件选项 */
+  options?: Record<string, any>
+}
+
+/**
+ * 智能插件管理器类
+ */
+export class PluginManager {
   private logger: Logger
+  private cwd: string
+  private detectedType: ProjectType | null = null
+  private availablePlugins: Map<string, PluginConfig> = new Map()
 
-  /** 已注册的插件映射 */
-  private plugins: Map<string, PluginInfo> = new Map()
-
-  /** 插件依赖图 */
-  private dependencyGraph: Map<string, Set<string>> = new Map()
-
-  /** 插件加载顺序 */
-  private loadOrder: string[] = []
+  constructor(cwd: string, logger: Logger) {
+    this.cwd = cwd
+    this.logger = logger
+    this.initializePluginConfigs()
+  }
 
   /**
-   * 构造函数
+   * 初始化插件配置
    */
-  constructor() {
-    super()
-
-    // 初始化日志记录器
-    this.logger = new Logger('PluginManager', {
-      level: 'info',
-      colors: true
+  private initializePluginConfigs(): void {
+    // Vue 3 插件配置
+    this.availablePlugins.set('vue3', {
+      name: 'Vue 3',
+      packageName: '@vitejs/plugin-vue',
+      required: true,
+      detection: {
+        dependencies: ['vue'],
+        filePatterns: ['**/*.vue'],
+        configFiles: ['vue.config.js', 'vue.config.ts']
+      },
+      options: {}
     })
 
-    // 弃用警告
-    this.logger.warn('⚠️  PluginManager 已弃用，将在 v3.0.0 移除。请使用 SmartPluginManager 代替。')
+    // Vue 3 JSX 插件配置
+    this.availablePlugins.set('vue3-jsx', {
+      name: 'Vue 3 JSX',
+      packageName: '@vitejs/plugin-vue-jsx',
+      required: false,
+      detection: {
+        dependencies: ['vue'],
+        filePatterns: ['**/*.tsx', '**/*.jsx'],
+        configFiles: []
+      },
+      options: {
+        transformOn: true,
+        mergeProps: true
+      }
+    })
 
-    this.logger.debug('插件管理器初始化完成')
+    // Vue 2 插件配置
+    this.availablePlugins.set('vue2', {
+      name: 'Vue 2',
+      packageName: '@vitejs/plugin-vue2',
+      required: true,
+      detection: {
+        dependencies: ['vue@^2'],
+        filePatterns: ['**/*.vue'],
+        configFiles: ['vue.config.js', 'vue.config.ts']
+      },
+      options: {}
+    })
+
+    // React 插件配置
+    this.availablePlugins.set('react', {
+      name: 'React',
+      packageName: '@vitejs/plugin-react',
+      required: true,
+      detection: {
+        dependencies: ['react', 'react-dom'],
+        filePatterns: ['**/*.jsx', '**/*.tsx'],
+        configFiles: []
+      },
+      options: {}
+    })
+
+    // Preact 插件配置
+    this.availablePlugins.set('preact', {
+      name: 'Preact',
+      packageName: '@preact/preset-vite',
+      required: true,
+      detection: {
+        dependencies: ['preact'],
+        filePatterns: ['**/*.tsx', '**/*.jsx'],
+        configFiles: []
+      },
+      options: {}
+    })
+
+    // Svelte 插件配置
+    this.availablePlugins.set('svelte', {
+      name: 'Svelte',
+      packageName: '@sveltejs/vite-plugin-svelte',
+      required: true,
+      detection: {
+        dependencies: ['svelte'],
+        filePatterns: ['**/*.svelte'],
+        configFiles: ['svelte.config.js', 'svelte.config.ts']
+      },
+      options: {}
+    })
+
+    // Solid 插件配置
+    this.availablePlugins.set('solid', {
+      name: 'Solid',
+      packageName: 'vite-plugin-solid',
+      required: true,
+      detection: {
+        dependencies: ['solid-js'],
+        filePatterns: ['**/*.tsx', '**/*.jsx'],
+        configFiles: []
+      },
+      options: {}
+    })
+
+    // Lit 插件配置
+    this.availablePlugins.set('lit', {
+      name: 'Lit',
+      packageName: '@vitejs/plugin-lit',
+      required: false,
+      detection: {
+        dependencies: ['lit'],
+        filePatterns: ['**/*.ts', '**/*.js'],
+        configFiles: []
+      },
+      options: {}
+    })
+
+    // Qwik 插件配置
+    // 注意：Qwik 插件需要特殊处理，从 @builder.io/qwik/optimizer 导入
+    this.availablePlugins.set('qwik', {
+      name: 'Qwik',
+      packageName: '@builder.io/qwik/optimizer',
+      required: true,
+      detection: {
+        dependencies: ['@builder.io/qwik'],
+        filePatterns: ['**/*.tsx'],
+        configFiles: []
+      },
+      options: {
+        // Qwik 插件需要特殊的导入方式
+        importName: 'qwikVite'
+      }
+    })
+
+    // Angular 插件配置
+    // 注意：Angular 插件需要特殊处理，使用 default export
+    this.availablePlugins.set('angular', {
+      name: 'Angular',
+      packageName: '@analogjs/vite-plugin-angular',
+      required: true,
+      detection: {
+        dependencies: ['@angular/core'],
+        filePatterns: ['**/*.ts'],
+        configFiles: ['angular.json']
+      },
+      options: {
+        // Angular 插件配置 - 必须使用 tsconfig.app.json
+        tsconfig: './tsconfig.app.json'
+      }
+    })
   }
 
   /**
-   * 注册插件
-   * 
-   * @param plugin - 要注册的插件
-   * @param options - 注册选项
-   * @returns 注册结果
+   * 检测项目类型
    */
-  async register(plugin: LauncherPlugin, options: PluginRegistrationOptions = {}): Promise<AsyncResult> {
+  async detectProjectType(): Promise<ProjectType> {
+    if (this.detectedType) {
+      return this.detectedType
+    }
+
+    this.logger.debug('正在检测项目类型...')
+
     try {
-      // 验证插件
-      const validation = this.validatePlugin(plugin)
-      if (!validation.valid) {
-        return {
-          success: false,
-          error: `插件验证失败: ${validation.errors.join(', ')}`
+      // 读取 package.json
+      const packageJsonPath = PathUtils.resolve(this.cwd, 'package.json')
+      if (await FileSystem.exists(packageJsonPath)) {
+        const packageJson = JSON.parse(await FileSystem.readFile(packageJsonPath))
+        const dependencies = { ...packageJson.dependencies, ...packageJson.devDependencies }
+
+        // 检测 Vue 版本
+        if (dependencies.vue) {
+          const vueVersion = dependencies.vue
+          if (vueVersion.includes('^3') || vueVersion.includes('~3') || vueVersion.startsWith('3')) {
+            this.detectedType = ProjectType.VUE3
+            this.logger.info('检测到 Vue 3 项目')
+            return this.detectedType
+          } else if (vueVersion.includes('^2') || vueVersion.includes('~2') || vueVersion.startsWith('2')) {
+            this.detectedType = ProjectType.VUE2
+            this.logger.info('检测到 Vue 2 项目')
+            return this.detectedType
+          }
+        }
+
+        // 检测 Preact（必须在 React 之前检测）
+        if (dependencies.preact) {
+          this.detectedType = ProjectType.PREACT
+          this.logger.info('检测到 Preact 项目')
+          return this.detectedType
+        }
+
+        // 检测 React
+        if (dependencies.react && dependencies['react-dom']) {
+          this.detectedType = ProjectType.REACT
+          this.logger.info('检测到 React 项目')
+          return this.detectedType
+        }
+
+        // 检测 Svelte
+        if (dependencies.svelte) {
+          this.detectedType = ProjectType.SVELTE
+          this.logger.info('检测到 Svelte 项目')
+          return this.detectedType
         }
       }
 
-      const pluginName = plugin.name || 'unknown'
-
-      // 检查是否已存在
-      if (this.plugins.has(pluginName) && !options.override) {
-        return {
-          success: false,
-          error: `插件 "${pluginName}" 已存在`
-        }
+      // 如果无法从依赖检测，尝试从文件检测
+      const hasVueFiles = await this.hasFiles(['**/*.vue'])
+      if (hasVueFiles) {
+        // 默认假设是 Vue 3
+        this.detectedType = ProjectType.VUE3
+        this.logger.info('检测到 Vue 文件，假设为 Vue 3 项目')
+        return this.detectedType
       }
 
-      this.logger.info('正在注册插件', { name: pluginName })
-
-      // 创建插件信息
-      const pluginInfo: PluginInfo = {
-        plugin,
-        status: PluginStatus.UNLOADED,
-        loadTime: 0,
-        lastActivity: Date.now(),
-        stats: {
-          callCount: 0,
-          totalExecutionTime: 0,
-          averageExecutionTime: 0,
-          errorCount: 0,
-          lastExecutionTime: 0
-        }
+      const hasReactFiles = await this.hasFiles(['**/*.jsx', '**/*.tsx'])
+      if (hasReactFiles) {
+        this.detectedType = ProjectType.REACT
+        this.logger.info('检测到 React 文件')
+        return this.detectedType
       }
 
-      // 注册插件
-      this.plugins.set(pluginName, pluginInfo)
-
-      // 构建依赖图
-      this.buildDependencyGraph(plugin)
-
-      // 如果启用自动启用，则启用插件
-      if (options.autoEnable) {
-        const enableResult = await this.enable(pluginName)
-        if (!enableResult.success) {
-          // 如果启用失败，移除插件
-          this.plugins.delete(pluginName)
-          return enableResult
-        }
+      const hasSvelteFiles = await this.hasFiles(['**/*.svelte'])
+      if (hasSvelteFiles) {
+        this.detectedType = ProjectType.SVELTE
+        this.logger.info('检测到 Svelte 文件')
+        return this.detectedType
       }
 
-      // 触发注册事件
-      this.emit('registered', { plugin, timestamp: Date.now() })
-
-      this.logger.success('插件注册成功', { name: pluginName })
-
-      return {
-        success: true,
-        data: pluginInfo
-      }
+      // 默认为 vanilla 项目
+      this.detectedType = ProjectType.VANILLA
+      this.logger.info('未检测到特定框架，使用 Vanilla 配置')
+      return this.detectedType
 
     } catch (error) {
-      this.logger.error('插件注册失败', { error: (error as Error).message })
-      return {
-        success: false,
-        error: (error as Error).message
-      }
+      this.logger.warn('项目类型检测失败', { error: (error as Error).message })
+      this.detectedType = ProjectType.VANILLA
+      return this.detectedType
     }
   }
 
   /**
-   * 卸载插件
-   * 
-   * @param pluginName - 插件名称
-   * @returns 卸载结果
+   * 检查是否存在指定模式的文件
    */
-  async unregister(pluginName: string): Promise<AsyncResult> {
+  private async hasFiles(patterns: string[]): Promise<boolean> {
     try {
-      const pluginInfo = this.plugins.get(pluginName)
-      if (!pluginInfo) {
-        return {
-          success: false,
-          error: `插件 "${pluginName}" 不存在`
-        }
-      }
-
-      this.logger.info('正在卸载插件', { name: pluginName })
-
-      // 如果插件已启用，先禁用
-      if (pluginInfo.status === PluginStatus.ENABLED) {
-        const disableResult = await this.disable(pluginName)
-        if (!disableResult.success) {
-          return disableResult
-        }
-      }
-
-      // 执行插件销毁方法
-      if (pluginInfo.plugin.destroy) {
-        await pluginInfo.plugin.destroy()
-      }
-
-      // 从依赖图中移除
-      this.dependencyGraph.delete(pluginName)
-
-      // 移除插件
-      this.plugins.delete(pluginName)
-
-      // 重新计算加载顺序
-      this.calculateLoadOrder()
-
-      // 触发卸载事件
-      this.emit('unregistered', { pluginName, timestamp: Date.now() })
-
-      this.logger.success('插件卸载成功', { name: pluginName })
-
-      return { success: true }
-
-    } catch (error) {
-      this.logger.error('插件卸载失败', { error: (error as Error).message })
-      return {
-        success: false,
-        error: (error as Error).message
-      }
-    }
-  }
-
-  /**
-   * 启用插件
-   * 
-   * @param pluginName - 插件名称
-   * @param context - 插件上下文（可选）
-   * @returns 启用结果
-   */
-  async enable(pluginName: string, context?: any): Promise<AsyncResult> {
-    try {
-      const pluginInfo = this.plugins.get(pluginName)
-      if (!pluginInfo) {
-        return {
-          success: false,
-          error: `插件 "${pluginName}" 不存在`
-        }
-      }
-
-      if (pluginInfo.status === PluginStatus.ENABLED) {
-        return {
-          success: true,
-          data: '插件已启用'
-        }
-      }
-
-      this.logger.info('正在启用插件', { name: pluginName })
-
-      // 更新状态
-      pluginInfo.status = PluginStatus.LOADING
-
-      // 执行插件初始化（传入上下文）
-      if (pluginInfo.plugin.init) {
-        await pluginInfo.plugin.init(context)
-      }
-
-      // 更新状态和统计信息
-      pluginInfo.status = PluginStatus.ENABLED
-      pluginInfo.loadTime = Date.now()
-      pluginInfo.lastActivity = Date.now()
-
-      // 触发启用事件
-      this.emit('enabled', { plugin: pluginInfo.plugin, timestamp: Date.now() })
-
-      this.logger.success('插件启用成功', { name: pluginName })
-
-      return { success: true }
-
-    } catch (error) {
-      // 更新错误状态
-      const pluginInfo = this.plugins.get(pluginName)
-      if (pluginInfo) {
-        pluginInfo.status = PluginStatus.ERROR
-        pluginInfo.error = error as Error
-        pluginInfo.stats.errorCount++
-      }
-
-      this.logger.error('插件启用失败', { name: pluginName, error: (error as Error).message })
-
-      return {
-        success: false,
-        error: (error as Error).message
-      }
-    }
-  }
-
-  /**
-   * 禁用插件
-   * 
-   * @param pluginName - 插件名称
-   * @returns 禁用结果
-   */
-  async disable(pluginName: string): Promise<AsyncResult> {
-    try {
-      const pluginInfo = this.plugins.get(pluginName)
-      if (!pluginInfo) {
-        return {
-          success: false,
-          error: `插件 "${pluginName}" 不存在`
-        }
-      }
-
-      if (pluginInfo.status === PluginStatus.DISABLED) {
-        return {
-          success: true,
-          data: '插件已禁用'
-        }
-      }
-
-      this.logger.info('正在禁用插件', { name: pluginName })
-
-      // 执行插件销毁方法
-      if (pluginInfo.plugin.destroy) {
-        await pluginInfo.plugin.destroy()
-      }
-
-      // 更新状态
-      pluginInfo.status = PluginStatus.DISABLED
-      pluginInfo.lastActivity = Date.now()
-
-      // 触发禁用事件
-      this.emit('disabled', { plugin: pluginInfo.plugin, timestamp: Date.now() })
-
-      this.logger.success('插件禁用成功', { name: pluginName })
-
-      return { success: true }
-
-    } catch (error) {
-      this.logger.error('插件禁用失败', { name: pluginName, error: (error as Error).message })
-      return {
-        success: false,
-        error: (error as Error).message
-      }
-    }
-  }
-
-  /**
-   * 获取所有插件
-   * 
-   * @returns 插件列表
-   */
-  getPlugins(): LauncherPlugin[] {
-    return Array.from(this.plugins.values()).map(info => info.plugin)
-  }
-
-  /**
-   * 获取已启用的插件
-   * 
-   * @returns 已启用的插件列表
-   */
-  getEnabledPlugins(): LauncherPlugin[] {
-    return Array.from(this.plugins.values())
-      .filter(info => info.status === PluginStatus.ENABLED)
-      .map(info => info.plugin)
-  }
-
-  /**
-   * 获取插件信息
-   * 
-   * @param pluginName - 插件名称
-   * @returns 插件信息
-   */
-  getPluginInfo(pluginName: string): PluginInfo | null {
-    return this.plugins.get(pluginName) || null
-  }
-
-  /**
-   * 验证插件
-   * 
-   * @param plugin - 要验证的插件
-   * @returns 验证结果
-   */
-  validatePlugin(plugin: LauncherPlugin): ValidationResult {
-    const errors: string[] = []
-    const warnings: string[] = []
-
-    // 验证插件名称
-    if (!plugin.name || typeof plugin.name !== 'string') {
-      errors.push('插件必须有有效的名称')
-    }
-
-    // 验证插件元数据
-    if (plugin.meta) {
-      if (!plugin.meta.version) {
-        warnings.push('建议提供插件版本信息')
-      }
-
-      if (!plugin.meta.description) {
-        warnings.push('建议提供插件描述')
-      }
-    }
-
-    // 验证插件配置
-    if (plugin.config) {
-      if (plugin.config.priority && typeof plugin.config.priority !== 'number') {
-        errors.push('插件优先级必须是数字')
-      }
-    }
-
-    return {
-      valid: errors.length === 0,
-      errors,
-      warnings
-    }
-  }
-
-  /**
-   * 解析插件依赖
-   *
-   * @returns 解析结果
-   */
-  async resolveDependencies(): Promise<AsyncResult> {
-    try {
-      this.logger.info('正在解析插件依赖...')
-
-      // 检查循环依赖
-      const circularDeps = this.detectCircularDependencies()
-      if (circularDeps.length > 0) {
-        return {
-          success: false,
-          error: `检测到循环依赖: ${circularDeps.map(cycle => cycle.join(' -> ')).join(', ')}`
-        }
-      }
-
-      // 计算加载顺序
-      this.calculateLoadOrder()
-
-      this.logger.success('插件依赖解析完成', {
-        loadOrder: this.loadOrder
+      // 添加超时机制，避免长时间卡顿
+      const timeoutPromise = new Promise<boolean>((_, reject) => {
+        setTimeout(() => reject(new Error('文件检查超时')), 5000) // 5秒超时
       })
 
-      return {
-        success: true,
-        data: {
-          loadOrder: this.loadOrder,
-          dependencyGraph: Object.fromEntries(this.dependencyGraph)
-        }
-      }
+      const checkPromise = this.doFileCheck(patterns)
 
+      return await Promise.race([checkPromise, timeoutPromise])
     } catch (error) {
-      this.logger.error('插件依赖解析失败', { error: (error as Error).message })
-      return {
-        success: false,
-        error: (error as Error).message
-      }
+      this.logger.warn('文件检查失败', { error: (error as Error).message })
+      return false
     }
   }
 
   /**
-   * 清理插件缓存
+   * 执行实际的文件检查
    */
-  async clearCache(): Promise<void> {
+  private async doFileCheck(patterns: string[]): Promise<boolean> {
+    // 只检查当前项目的src目录，避免误检测packages目录中的其他项目文件
+    const dirsToCheck = [
+      PathUtils.resolve(this.cwd, 'src')
+    ]
+
+    for (const dir of dirsToCheck) {
+      if (await FileSystem.exists(dir)) {
+        const hasFilesInDir = await this.checkFilesInDirectory(dir, patterns)
+        if (hasFilesInDir) {
+          this.logger.debug(`在目录 ${dir} 中找到匹配文件`)
+          return true
+        }
+      }
+    }
+    return false
+  }
+
+  /**
+   * 递归检查目录中是否有匹配的文件
+   */
+  private async checkFilesInDirectory(dir: string, patterns: string[], depth: number = 0): Promise<boolean> {
     try {
-      this.logger.info('正在清理插件缓存...')
+      // 限制递归深度，避免性能问题
+      if (depth > 3) {
+        return false
+      }
 
-      // 重置所有插件统计信息
-      for (const pluginInfo of this.plugins.values()) {
-        pluginInfo.stats = {
-          callCount: 0,
-          totalExecutionTime: 0,
-          averageExecutionTime: 0,
-          errorCount: 0,
-          lastExecutionTime: 0
+      // 跳过常见的大型目录
+      const dirName = PathUtils.basename(dir)
+      if (['node_modules', '.git', 'dist', 'build', '.next', '.nuxt', 'coverage'].includes(dirName)) {
+        return false
+      }
+
+      const files = await FileSystem.readDir(dir)
+
+      for (const file of files) {
+        const filePath = PathUtils.resolve(dir, file)
+        const stat = await FileSystem.stat(filePath)
+
+        if (stat.isDirectory()) {
+          // 递归检查子目录（限制深度避免性能问题）
+          const hasFilesInSubdir = await this.checkFilesInDirectory(filePath, patterns, depth + 1)
+          if (hasFilesInSubdir) return true
+        } else {
+          // 检查文件是否匹配模式
+          for (const pattern of patterns) {
+            const extension = pattern.replace('**/*.', '.')
+            if (file.endsWith(extension)) {
+              return true
+            }
+          }
         }
       }
-
-      this.logger.success('插件缓存清理完成')
-
-    } catch (error) {
-      this.logger.error('清理插件缓存失败', { error: (error as Error).message })
-      throw error
+      return false
+    } catch {
+      return false
     }
   }
 
   /**
-   * 获取插件统计信息
-   *
-   * @returns 统计信息
+   * 检查是否安装了指定依赖
    */
-  getStats(): {
-    totalPlugins: number
-    enabledPlugins: number
-    disabledPlugins: number
-    errorPlugins: number
-    loadOrder: string[]
-  } {
-    const stats = {
-      totalPlugins: this.plugins.size,
-      enabledPlugins: 0,
-      disabledPlugins: 0,
-      errorPlugins: 0,
-      loadOrder: [...this.loadOrder]
-    }
-
-    for (const pluginInfo of this.plugins.values()) {
-      switch (pluginInfo.status) {
-        case PluginStatus.ENABLED:
-          stats.enabledPlugins++
-          break
-        case PluginStatus.DISABLED:
-          stats.disabledPlugins++
-          break
-        case PluginStatus.ERROR:
-          stats.errorPlugins++
-          break
-      }
-    }
-
-    return stats
-  }
-
-  /**
-   * 构建依赖图
-   *
-   * @param plugin - 插件
-   */
-  private buildDependencyGraph(plugin: LauncherPlugin): void {
-    const pluginName = plugin.name || 'unknown'
-
-    if (!this.dependencyGraph.has(pluginName)) {
-      this.dependencyGraph.set(pluginName, new Set())
-    }
-
-    // 如果插件有依赖信息，添加到依赖图
-    if (plugin.meta?.dependencies) {
-      const dependencies = this.dependencyGraph.get(pluginName)!
-      plugin.meta.dependencies.forEach(dep => dependencies.add(dep))
-    }
-  }
-
-  /**
-   * 检测循环依赖
-   *
-   * @returns 循环依赖列表
-   */
-  private detectCircularDependencies(): string[][] {
-    const visited = new Set<string>()
-    const recursionStack = new Set<string>()
-    const cycles: string[][] = []
-
-    const dfs = (node: string, path: string[]): void => {
-      if (recursionStack.has(node)) {
-        // 找到循环依赖
-        const cycleStart = path.indexOf(node)
-        cycles.push([...path.slice(cycleStart), node])
-        return
-      }
-
-      if (visited.has(node)) {
-        return
-      }
-
-      visited.add(node)
-      recursionStack.add(node)
-
-      const dependencies = this.dependencyGraph.get(node) || new Set()
-      for (const dep of dependencies) {
-        dfs(dep, [...path, node])
-      }
-
-      recursionStack.delete(node)
-    }
-
-    for (const node of this.dependencyGraph.keys()) {
-      if (!visited.has(node)) {
-        dfs(node, [])
-      }
-    }
-
-    return cycles
-  }
-
-  /**
-   * 计算加载顺序（拓扑排序）
-   */
-  private calculateLoadOrder(): void {
-    const inDegree = new Map<string, number>()
-    const queue: string[] = []
-    const result: string[] = []
-
-    // 初始化入度
-    for (const node of this.dependencyGraph.keys()) {
-      inDegree.set(node, 0)
-    }
-
-    // 计算入度
-    for (const dependencies of this.dependencyGraph.values()) {
-      for (const dep of dependencies) {
-        inDegree.set(dep, (inDegree.get(dep) || 0) + 1)
-      }
-    }
-
-    // 找到入度为 0 的节点
-    for (const [node, degree] of inDegree.entries()) {
-      if (degree === 0) {
-        queue.push(node)
-      }
-    }
-
-    // 拓扑排序
-    while (queue.length > 0) {
-      const node = queue.shift()!
-      result.push(node)
-
-      const dependencies = this.dependencyGraph.get(node) || new Set()
-      for (const dep of dependencies) {
-        const newDegree = (inDegree.get(dep) || 0) - 1
-        inDegree.set(dep, newDegree)
-
-        if (newDegree === 0) {
-          queue.push(dep)
-        }
-      }
-    }
-
-    this.loadOrder = result
-  }
-
-  /**
-   * 销毁插件管理器
-   */
-  async destroy(): Promise<void> {
+  private async hasDependency(packageName: string): Promise<boolean> {
     try {
-      this.logger.info('正在销毁插件管理器...')
-
-      // 禁用所有插件
-      for (const pluginName of this.plugins.keys()) {
-        await this.disable(pluginName)
+      const packageJsonPath = PathUtils.resolve(this.cwd, 'package.json')
+      if (!await FileSystem.exists(packageJsonPath)) {
+        return false
       }
 
-      // 清理所有数据
-      this.plugins.clear()
-      this.dependencyGraph.clear()
-      this.loadOrder = []
+      const packageJson = JSON.parse(await FileSystem.readFile(packageJsonPath, { encoding: 'utf-8' }))
+      const dependencies = packageJson.dependencies || {}
+      const devDependencies = packageJson.devDependencies || {}
 
-      // 移除所有事件监听器
-      this.removeAllListeners()
+      return !!(dependencies[packageName] || devDependencies[packageName])
+    } catch {
+      return false
+    }
+  }
 
-      this.logger.success('插件管理器已销毁')
+  /**
+   * 获取推荐的插件列表
+   * @param explicitType - 用户明确指定的框架类型（可选）
+   */
+  async getRecommendedPlugins(explicitType?: string): Promise<Plugin[]> {
+    // 如果用户明确指定了框架类型，则使用指定的类型，否则自动检测
+    let projectType: ProjectType
+    if (explicitType) {
+      this.logger.info('使用用户指定的框架类型', { type: explicitType })
+      // 映射字符串类型到ProjectType枚举
+      const typeMap: Record<string, ProjectType> = {
+        'vue': ProjectType.VUE3,
+        'vue2': ProjectType.VUE2,
+        'vue3': ProjectType.VUE3,
+        'react': ProjectType.REACT,
+        'svelte': ProjectType.SVELTE,
+        'solid': ProjectType.SOLID,
+        'preact': ProjectType.PREACT,
+        'lit': ProjectType.LIT,
+        'qwik': ProjectType.QWIK,
+        'angular': ProjectType.ANGULAR,
+        'vanilla': ProjectType.VANILLA
+      }
+      projectType = typeMap[explicitType] || (explicitType as ProjectType)
+      this.detectedType = projectType
+    } else {
+      projectType = await this.detectProjectType()
+    }
+
+    const plugins: Plugin[] = []
+
+    this.logger.info('PluginManager: 开始加载推荐插件...', { projectType })
+
+    try {
+      // 根据项目类型加载对应插件
+      switch (projectType) {
+        case ProjectType.VUE3:
+          const vuePlugins = await this.loadPlugin('vue3')
+          if (vuePlugins) plugins.push(...vuePlugins)
+
+          // 尝试加载 Vue JSX 插件（如果已安装依赖，则自动加载）
+          const hasJsxDep = await this.hasDependency('@vitejs/plugin-vue-jsx')
+          this.logger.debug('Vue JSX 插件检测', { hasJsxDep })
+          if (hasJsxDep) {
+            this.logger.info('检测到 Vue JSX 依赖，自动加载插件')
+            const vueJsxPlugins = await this.loadPlugin('vue3-jsx')
+            if (vueJsxPlugins) {
+              plugins.push(...vueJsxPlugins)
+              this.logger.info('Vue JSX 插件加载成功')
+            } else {
+              this.logger.warn('Vue JSX 插件加载失败')
+            }
+          } else {
+            this.logger.debug('未检测到 @vitejs/plugin-vue-jsx 依赖，跳过 Vue JSX 插件加载')
+          }
+          break
+        case ProjectType.VUE2:
+          const vue2Plugins = await this.loadPlugin('vue2')
+          if (vue2Plugins) plugins.push(...vue2Plugins)
+          break
+        case ProjectType.REACT:
+          const reactPlugins = await this.loadPlugin('react')
+          if (reactPlugins) plugins.push(...reactPlugins)
+          break
+        case ProjectType.PREACT:
+          const preactPlugins = await this.loadPlugin('preact')
+          if (preactPlugins) plugins.push(...preactPlugins)
+          break
+        case ProjectType.SVELTE:
+          const sveltePlugins = await this.loadPlugin('svelte')
+          if (sveltePlugins) plugins.push(...sveltePlugins)
+          break
+        case ProjectType.SOLID:
+          const solidPlugins = await this.loadPlugin('solid')
+          if (solidPlugins) plugins.push(...solidPlugins)
+          break
+        case ProjectType.LIT:
+          const litPlugins = await this.loadPlugin('lit')
+          if (litPlugins) plugins.push(...litPlugins)
+          break
+        case ProjectType.QWIK:
+          const qwikPlugins = await this.loadPlugin('qwik')
+          if (qwikPlugins) plugins.push(...qwikPlugins)
+          break
+        case ProjectType.ANGULAR:
+          // 使用简单的 Angular 插件替代 Analog (Analog 不兼容 Vite 7)
+          const { angularPlugin: angularPluginFn } = await import('../frameworks/angular/angular-plugin')
+          const angularPlugin = angularPluginFn({
+            tsconfig: './tsconfig.app.json',
+          })
+          plugins.push(angularPlugin)
+          this.logger.info('✅ Angular 插件加载成功')
+          break
+      }
+
+      if (plugins.length > 0) {
+        const pluginNames = plugins.map(p => p.name || 'unknown').join(', ')
+        this.logger.success(`智能插件加载完成: ${pluginNames}`)
+      }
+      return plugins
 
     } catch (error) {
-      this.logger.error('销毁插件管理器失败', { error: (error as Error).message })
-      throw error
+      this.logger.error('智能插件加载失败', { error: (error as Error).message })
+      return []
     }
+  }
+
+  /**
+   * 加载指定插件
+   * @returns 插件数组（某些框架插件会返回多个插件）
+   */
+  private async loadPlugin(pluginKey: string): Promise<Plugin[] | null> {
+    const config = this.availablePlugins.get(pluginKey)
+    if (!config) {
+      this.logger.warn(`PluginManager: 未知插件: ${pluginKey}`)
+      return null
+    }
+
+    this.logger.debug(`加载插件: ${pluginKey}`, {
+      name: config.name,
+      package: config.packageName
+    })
+
+    try {
+      // 动态导入插件 - 从项目的 node_modules 导入
+      let pluginModule: any
+
+      // 统一使用动态 import 加载插件，避免 ExperimentalWarning
+      try {
+        // 使用动态 import（支持 ESM 和 CommonJS）
+        const { pathToFileURL } = await import('url')
+
+        // 尝试从项目的 node_modules 构建路径
+        const modulePath = PathUtils.resolve(this.cwd, 'node_modules', config.packageName)
+
+        // 检查 package.json 的 exports 字段
+        const pkgJsonPath = PathUtils.resolve(modulePath, 'package.json')
+        const pkgJson = JSON.parse(await import('fs').then(fs => fs.promises.readFile(pkgJsonPath, 'utf-8')))
+
+        // 解析入口点
+        let entryPoint = modulePath
+        if (pkgJson.exports) {
+          if (typeof pkgJson.exports === 'string') {
+            entryPoint = PathUtils.resolve(modulePath, pkgJson.exports)
+          } else if (pkgJson.exports['.']) {
+            const dotExport = pkgJson.exports['.']
+            if (typeof dotExport === 'string') {
+              entryPoint = PathUtils.resolve(modulePath, dotExport)
+            } else if (dotExport.import) {
+              entryPoint = PathUtils.resolve(modulePath, dotExport.import.default || dotExport.import)
+            } else if (dotExport.default) {
+              entryPoint = PathUtils.resolve(modulePath, dotExport.default)
+            }
+          }
+        } else if (pkgJson.module) {
+          entryPoint = PathUtils.resolve(modulePath, pkgJson.module)
+        } else if (pkgJson.main) {
+          entryPoint = PathUtils.resolve(modulePath, pkgJson.main)
+        }
+
+        // 将路径转换为 file:// URL（Windows 兼容）
+        const moduleUrl = pathToFileURL(entryPoint).href
+
+        // 使用动态 import 加载模块
+        pluginModule = await import(moduleUrl)
+      } catch (importError) {
+        this.logger.warn(`加载插件失败: ${config.packageName}`, {
+          error: (importError as Error).message
+        })
+        pluginModule = null
+      }
+
+      // 处理不同的插件导出方式
+      let pluginFactory = pluginModule.default || pluginModule
+
+      // Svelte插件特殊处理：@sveltejs/vite-plugin-svelte 导出 { svelte }
+      if (pluginKey === 'svelte' && pluginModule.svelte && typeof pluginModule.svelte === 'function') {
+        pluginFactory = pluginModule.svelte
+      }
+
+      // Qwik插件特殊处理：@builder.io/qwik/optimizer 导出 { qwikVite }
+      if (pluginKey === 'qwik' && pluginModule.qwikVite && typeof pluginModule.qwikVite === 'function') {
+        pluginFactory = pluginModule.qwikVite
+      }
+
+      // Angular插件特殊处理：@analogjs/vite-plugin-angular 使用 default export
+      if (pluginKey === 'angular' && pluginModule.default && typeof pluginModule.default === 'function') {
+        pluginFactory = pluginModule.default
+      }
+
+      // 如果插件有命名导出（如其他插件可能使用的命名导出）
+      if (typeof pluginFactory !== 'function' && pluginModule.svelte) {
+        pluginFactory = pluginModule.svelte
+      }
+      if (typeof pluginFactory !== 'function' && pluginModule.vitePluginSvelte) {
+        pluginFactory = pluginModule.vitePluginSvelte
+      }
+
+      // 调用插件工厂函数
+      const plugin = typeof pluginFactory === 'function' ? pluginFactory(config.options) : pluginFactory
+
+      // 确保返回的是数组格式（Vite插件可能是数组）
+      const pluginArray = Array.isArray(plugin) ? plugin : [plugin]
+
+      this.logger.debug(`插件加载成功: ${config.name}`, { count: pluginArray.length })
+
+      // 返回所有插件（某些框架如 React 会返回多个插件）
+      return pluginArray.length > 0 ? pluginArray : null
+    } catch (error) {
+      // 显示插件加载失败的警告信息
+      this.logger.warn(`插件加载失败: ${config.name} (${config.packageName})`)
+      this.logger.warn(`错误详情: ${(error as Error).message}`)
+      if ((error as Error).stack) {
+        this.logger.debug(`错误堆栈: ${(error as Error).stack}`)
+      }
+      return null
+    }
+  }
+
+  /**
+   * 获取检测到的项目类型
+   */
+  getDetectedType(): ProjectType | null {
+    return this.detectedType
   }
 }

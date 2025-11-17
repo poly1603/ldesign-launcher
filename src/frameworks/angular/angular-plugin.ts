@@ -10,7 +10,7 @@
 
 import type { Plugin } from 'vite'
 
-export interface SimpleAngularPluginOptions {
+export interface AngularPluginOptions {
   /**
    * tsconfig 文件路径
    */
@@ -18,11 +18,11 @@ export interface SimpleAngularPluginOptions {
 }
 
 /**
- * 创建简单的 Angular Vite 插件
+ * 创建 Angular Vite 插件
  */
-export function simpleAngularPlugin(options: SimpleAngularPluginOptions = {}): Plugin {
+export function angularPlugin(options: AngularPluginOptions = {}): Plugin {
   return {
-    name: 'vite-plugin-simple-angular',
+    name: 'vite-plugin-angular',
 
     config() {
       return {
@@ -57,8 +57,8 @@ export function simpleAngularPlugin(options: SimpleAngularPluginOptions = {}): P
     },
 
     configResolved(config) {
-      console.log('[SimpleAngularPlugin] Angular 插件已加载')
-      console.log('[SimpleAngularPlugin] 装饰器支持已启用')
+      console.log('[AngularPlugin] Angular 插件已加载')
+      console.log('[AngularPlugin] 装饰器支持已启用')
     },
   }
 }

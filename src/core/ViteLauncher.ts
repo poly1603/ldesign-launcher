@@ -23,7 +23,7 @@ import { ErrorHandler } from '../utils/error-handler'
 import { FileSystem } from '../utils/file-system'
 import { PathUtils } from '../utils/path-utils'
 import { ConfigManager } from './ConfigManager'
-import { SmartPluginManager } from './SmartPluginManager'
+import { PluginManager } from './PluginManager'
 import { createConfigInjectionPlugin, getClientConfigUtils } from '../plugins/config-injection'
 import { environmentManager } from '../utils/env'
 import { createSSLManager, type SSLConfig } from '../utils/ssl'
@@ -115,8 +115,8 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
   /** 环境名称 */
   private environment?: string
 
-  /** 智能插件管理器（懒加载） */
-  private smartPluginManager?: SmartPluginManager
+  /** 插件管理器（懒加载） */
+  private pluginManager?: PluginManager
 
   /** 初始化状态 */
   private initialized: boolean = false
@@ -1528,17 +1528,17 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
     try {
       this.logger.info('开始智能插件检测...')
 
-      // 懒加载初始化 SmartPluginManager
-      if (!this.smartPluginManager) {
+      // 懒加载初始化 PluginManager
+      if (!this.pluginManager) {
         const isDebug = this.logger.getLevel() === 'debug'
         const isSilent = this.logger.getLevel() === 'silent'
-        const smartLogger = new Logger('SmartPluginManager', {
+        const pluginLogger = new Logger('PluginManager', {
           level: isSilent ? 'silent' : this.logger.getLevel(),
           colors: true,
           timestamp: isDebug,
           compact: !isDebug
         })
-        this.smartPluginManager = new SmartPluginManager(this.cwd, smartLogger)
+        this.pluginManager = new PluginManager(this.cwd, pluginLogger)
       }
 
       // 检查用户是否明确指定了框架类型
@@ -1548,7 +1548,7 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
         this.logger.info('检测到用户指定的框架类型', { type: explicitFrameworkType })
       }
       // 获取智能检测的插件
-      const smartPlugins = await this.smartPluginManager.getRecommendedPlugins(explicitFrameworkType)
+      const smartPlugins = await this.pluginManager.getRecommendedPlugins(explicitFrameworkType)
       this.logger.info('智能插件检测完成', { count: smartPlugins.length })
 
       if (smartPlugins.length > 0) {

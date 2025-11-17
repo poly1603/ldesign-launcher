@@ -8,8 +8,7 @@
  * @since 1.0.0
  */
 
-// 导出新架构核心类
-export { Launcher } from './core/Launcher'
+// 导出核心启动类
 export { bootstrap, isBootstrapped } from './core/bootstrap'
 
 // 导出引擎相关（避免与 types 冲突）
@@ -145,13 +144,11 @@ export const version = '2.0.0'
 export function createLauncher() {
   return {
     version,
-    Launcher: () => import('./core/Launcher').then(m => m.Launcher),
     ViteLauncher: () => import('./core/ViteLauncher').then(m => m.ViteLauncher),
     ConfigManager: () => import('./core/ConfigManager').then(m => m.ConfigManager),
-    PluginManager: () => import('./core/PluginManager').then(m => m.PluginManager),
     createCli: () => import('./cli').then(m => m.createCli)
   }
 }
 
-// 默认导出新的 Launcher
-export { Launcher as default } from './core/Launcher'
+// 默认导出 ViteLauncher
+export { ViteLauncher as default } from './core/ViteLauncher'

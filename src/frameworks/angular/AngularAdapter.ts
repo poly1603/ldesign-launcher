@@ -70,7 +70,7 @@ export class AngularAdapter extends FrameworkAdapter {
   }
 
   async getPlugins(engine: BuildEngine, _options?: FrameworkOptions): Promise<Plugin[]> {
-    // Angular 插件由 SmartPluginManager 统一加载
+    // Angular 插件由 PluginManager 统一加载
     // 这里返回空数组,避免重复加载
     return []
   }

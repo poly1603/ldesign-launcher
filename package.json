@@ -147,6 +147,7 @@
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
+    "benchmark": "tsx scripts/benchmark.ts",
     "clean": "rimraf dist"
   },
   "dependencies": {
@@ -174,6 +175,7 @@
     "eslint": "^9.18.0",
     "rimraf": "^5.0.5",
     "tsup": "^8.5.0",
+    "tsx": "^4.20.6",
     "typescript": "^5.7.3",
     "vitepress": "^1.6.4",
     "vitest": "^4.0.5"
