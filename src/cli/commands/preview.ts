@@ -175,6 +175,13 @@ export class PreviewCommand implements CliCommandDefinition {
         logger.raw(`📁 ${pc.gray('工作目录:')} ${context.cwd}`)
         logger.raw(`⚙️  ${pc.gray('模式:')} preview`)
         logger.raw('')
+
+        if (context.configFile) {
+          logger.info(`📋 配置来源: 指定文件 ${context.configFile}`)
+        }
+        else {
+          logger.info('📋 配置来源: 自动加载 (.ldesign/launcher.config.*)')
+        }
       }
 
       // 🎯 零配置特性：自动检测框架
@@ -334,7 +341,7 @@ export class PreviewCommand implements CliCommandDefinition {
       // 去除 ANSI 颜色后的长度计算辅助
       function stripAnsi(str: string) {
         // eslint-disable-next-line no-control-regex
-        const ansiRegex = /\x1B\[[0-?]*[ -/]*[@-~]/g
+        const ansiRegex = /\x1B\[[0-9;]*[a-z]/gi
         return str.replace(ansiRegex, '')
       }
 
@@ -552,7 +559,7 @@ export class PreviewCommand implements CliCommandDefinition {
  */
 async function showBuildInfo(outDir: string, logger: Logger): Promise<void> {
   try {
-    const stats = {
+    const stats: BuildOutputStats = {
       totalFiles: 0,
       totalSize: 0,
       jsFiles: 0,
@@ -582,8 +589,18 @@ async function showBuildInfo(outDir: string, logger: Logger): Promise<void> {
  *
  * @param dir - 目录路径
  * @param stats - 统计信息对象
+ * @param logger - 日志记录器
  */
-async function collectFileStats(dir: string, stats: any, logger: Logger): Promise<void> {
+interface BuildOutputStats {
+  totalFiles: number
+  totalSize: number
+  jsFiles: number
+  cssFiles: number
+  htmlFiles: number
+  assetFiles: number
+}
+
+async function collectFileStats(dir: string, stats: BuildOutputStats, logger: Logger): Promise<void> {
   try {
     const files = await FileSystem.readDir(dir)
 

@@ -524,7 +524,6 @@ export class EnvValidator {
         if (Number.isNaN(numValue)) {
           errors.push(`环境变量 ${rule.name} 应为数字`)
         }
-     }
         else {
           if (rule.min !== undefined && numValue < rule.min) {
             errors.push(`环境变量 ${rule.name} 应不小于 ${rule.min}`)

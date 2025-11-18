@@ -100,7 +100,6 @@ export class ConfigManager extends EventEmitter {
         try {
           // 临时抑制 CJS API deprecated 警告和相关警告
           const originalEmitWarning = process.emitWarning
-          // eslint-disable-next-line no-console
           const originalConsoleWarn = console.warn
 
           process.emitWarning = (warning: any, ...args: any[]) => {
@@ -118,7 +117,6 @@ export class ConfigManager extends EventEmitter {
             return originalEmitWarning.call(process, warning, ...args)
           }
 
-          // eslint-disable-next-line no-console
           console.warn = (...args: any[]) => {
             const message = args.join(' ')
             if (message.includes('deprecated')
@@ -131,7 +129,6 @@ export class ConfigManager extends EventEmitter {
               || message.includes('points to missing source files')) {
               return
             }
-            // eslint-disable-next-line no-console
             return originalConsoleWarn.apply(console, args)
           }
 

@@ -134,7 +134,6 @@ export class QwikAdapter extends FrameworkAdapter {
 
         // 尝试加载 Qwik City 插件
         try {
-          // @ts-ignore - 可选依赖，可能不存在
           const { qwikCity } = await import('@builder.io/qwik-city/vite')
           const cityPlugin = qwikCity()
           if (Array.isArray(cityPlugin)) {

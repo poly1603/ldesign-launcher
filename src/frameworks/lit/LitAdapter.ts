@@ -114,7 +114,7 @@ export class LitAdapter extends FrameworkAdapter {
     if (engine.name === 'vite') {
       // 可选：添加 lit-css 插件用于 CSS 导入
       try {
-        // @ts-ignore - 可选依赖，可能不存在
+        // @ts-expect-error - vite-plugin-lit-css 为可选依赖
         const { default: litCss } = await import('vite-plugin-lit-css')
         const cssPlugin = litCss()
         // 插件可能返回单个插件或插件数组

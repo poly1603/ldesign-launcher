@@ -24,7 +24,7 @@ export class ViteEngineFactory implements BuildEngineFactory {
   /**
    * 创建 Vite 引擎实例
    *
-   * @param options - 引擎选项
+   * @param _options - 引擎选项
    * @returns Vite 引擎实例
    */
   async create(_options?: BuildEngineOptions): Promise<BuildEngine> {

@@ -61,7 +61,7 @@ export function isValidUrl(url: string): boolean {
   }
 
   try {
-    new URL(url)
+    const _parsedUrl = new URL(url)
     return true
   }
   catch {
@@ -329,7 +329,7 @@ export function isValidPackageName(name: string): boolean {
   }
 
   // npm 包名规则
-  const npmNameRegex = /^(@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/
+  const npmNameRegex = /^(?:@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/
   return npmNameRegex.test(name)
 }
 

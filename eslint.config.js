@@ -26,8 +26,7 @@ export default antfu({
     'unicorn/no-null': 'off',
     'unicorn/prefer-top-level-await': 'off',
 
-    // TypeScript 规则优化
-    '@typescript-eslint/no-explicit-any': 'warn',
+    // TypeScript 规则优化（no-explicit-any 由 antfu 预设提供，这里不重复配置）
     '@typescript-eslint/no-unused-vars': ['error', {
       argsIgnorePattern: '^_',
       varsIgnorePattern: '^_',

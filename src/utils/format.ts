@@ -7,6 +7,15 @@
  * @since 1.0.0
  */
 
+/** JSON 值类型（用于格式化输出） */
+export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue }
+
+/** 表格行类型 */
+export type TableRow = Record<string, unknown>
+
+/** 命令行参数值类型 */
+export type CliArgValue = string | number | boolean | null | undefined
+
 /**
  * 格式化文件大小
  *
@@ -102,6 +111,10 @@ export function formatPercentage(value: number, decimals: number = 1): string {
  *
  * @param num - 数字
  * @param options - 格式化选项
+ * @param options.decimals - 小数位数（默认 0）
+ * @param options.separator - 千分位分隔符（默认 ','）
+ * @param options.prefix - 前缀字符串（例如货币符号）
+ * @param options.suffix - 后缀字符串（例如单位）
  * @returns 格式化后的数字
  */
 export function formatNumber(num: number, options: {
@@ -126,6 +139,9 @@ export function formatNumber(num: number, options: {
  *
  * @param url - URL 字符串
  * @param options - 格式化选项
+ * @param options.removeProtocol - 是否移除协议部分（http/https）
+ * @param options.removeWww - 是否移除开头的 www.
+ * @param options.removeTrailingSlash - 是否移除末尾斜线
  * @returns 格式化后的 URL
  */
 export function formatUrl(url: string, options: {
@@ -190,9 +206,12 @@ export function formatPath(path: string, maxLength: number = 50): string {
  *
  * @param obj - 对象
  * @param options - 格式化选项
+ * @param options.indent - 缩进空格数（默认 2）
+ * @param options.sortKeys - 是否按 key 排序输出
+ * @param options.removeQuotes - 是否移除属性名上的引号（仅对合法标识符生效）
  * @returns 格式化后的 JSON 字符串
  */
-export function formatJson(obj: any, options: {
+export function formatJson(obj: JsonValue, options: {
   indent?: number
   sortKeys?: boolean
   removeQuotes?: boolean
@@ -203,7 +222,17 @@ export function formatJson(obj: any, options: {
     removeQuotes = false,
   } = options
 
-  let json = JSON.stringify(obj, sortKeys ? Object.keys(obj).sort() : null, indent)
+  // 仅在对象类型（非数组）时启用 key 排序
+  const shouldSortKeys = sortKeys
+    && obj !== null
+    && typeof obj === 'object'
+    && !Array.isArray(obj)
+
+  const replacer = shouldSortKeys
+    ? Object.keys(obj as Record<string, unknown>).sort()
+    : null
+
+  let json = JSON.stringify(obj, replacer, indent)
 
   if (removeQuotes) {
     // 移除属性名的引号（仅适用于有效的标识符）
@@ -218,9 +247,12 @@ export function formatJson(obj: any, options: {
  *
  * @param data - 表格数据
  * @param options - 格式化选项
+ * @param options.headers - 列头名称数组，默认使用首行对象的 key
+ * @param options.align - 对齐方式（left/center/right），默认 left
+ * @param options.border - 是否绘制边框，默认 true
  * @returns 格式化后的表格字符串
  */
-export function formatTable(data: Array<Record<string, any>>, options: {
+export function formatTable<T extends TableRow>(data: T[], options: {
   headers?: string[]
   align?: 'left' | 'center' | 'right'
   border?: boolean
@@ -229,8 +261,10 @@ export function formatTable(data: Array<Record<string, any>>, options: {
     return ''
   }
 
+  const firstRow = data[0] as TableRow
+
   const {
-    headers = Object.keys(data[0]),
+    headers = Object.keys(firstRow),
     align = 'left',
     border = true,
   } = options
@@ -238,7 +272,12 @@ export function formatTable(data: Array<Record<string, any>>, options: {
   // 计算列宽
   const columnWidths = headers.map((header) => {
     const headerWidth = header.length
-    const dataWidth = Math.max(...data.map(row => String(row[header] || '').length))
+    const dataWidth = Math.max(
+      ...data.map((row) => {
+        const value = (row as TableRow)[header]
+        return String(value ?? '').length
+      }),
+    )
     return Math.max(headerWidth, dataWidth)
   })
 
@@ -273,7 +312,10 @@ export function formatTable(data: Array<Record<string, any>>, options: {
 
   // 数据行
   data.forEach((row) => {
-    const cells = headers.map(header => String(row[header] || ''))
+    const cells = headers.map((header) => {
+      const value = (row as TableRow)[header]
+      return String(value ?? '')
+    })
     lines.push(formatRow(cells, columnWidths))
   })
 
@@ -284,7 +326,7 @@ export function formatTable(data: Array<Record<string, any>>, options: {
  * 格式化代码
  *
  * @param code - 代码字符串
- * @param language - 语言类型
+ * @param _language - 语言类型
  * @returns 格式化后的代码
  */
 export function formatCode(code: string, _language: string = 'javascript'): string {
@@ -329,6 +371,9 @@ export function formatCode(code: string, _language: string = 'javascript'): stri
  *
  * @param error - 错误对象
  * @param options - 格式化选项
+ * @param options.includeStack - 是否包含堆栈信息
+ * @param options.maxStackLines - 堆栈最大行数（默认 10）
+ * @param options.includeTimestamp - 是否包含时间戳前缀
  * @returns 格式化后的错误信息
  */
 export function formatError(error: Error, options: {
@@ -363,7 +408,7 @@ export function formatError(error: Error, options: {
  * @param args - 参数对象
  * @returns 格式化后的参数字符串
  */
-export function formatCliArgs(args: Record<string, any>): string {
+export function formatCliArgs(args: Record<string, CliArgValue>): string {
   const parts: string[] = []
 
   for (const [key, value] of Object.entries(args)) {
@@ -371,7 +416,7 @@ export function formatCliArgs(args: Record<string, any>): string {
       parts.push(`--${key}`)
     }
     else if (value !== false && value !== undefined && value !== null) {
-      parts.push(`--${key} ${value}`)
+      parts.push(`--${key} ${String(value)}`)
     }
   }
 

@@ -255,7 +255,10 @@ export async function measureLatency(url: string, count: number = 3): Promise<{
  *
  * @param url - 文件 URL
  * @param options - 下载选项
- * @returns 文件内容
+ * @param options.timeout - 超时时间（毫秒），默认 30000
+ * @param options.maxSize - 最大文件大小（字节），默认 100MB
+ * @param options.onProgress - 下载进度回调，参数为已加载字节数与总大小
+ * @returns 文件内容（二进制缓冲区）
  */
 export async function downloadFile(url: string, options: {
   timeout?: number

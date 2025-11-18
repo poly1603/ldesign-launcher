@@ -7,6 +7,7 @@
  * @since 1.0.0
  */
 
+import type { OutputAsset, OutputChunk, RollupOutput } from 'rollup'
 import type { CliCommandDefinition, CliContext } from '../../types'
 import pc from 'picocolors'
 import { DEFAULT_BUILD_TARGET, DEFAULT_OUT_DIR } from '../../constants'
@@ -187,6 +188,13 @@ export class BuildCommand implements CliCommandDefinition {
         logger.raw(`📁 ${pc.gray('工作目录:')} ${context.cwd}`)
         logger.raw(`⚙️  ${pc.gray('模式:')} ${context.options.mode || 'production'}`)
         logger.raw('')
+
+        if (context.configFile) {
+          logger.info(`📋 配置来源: 指定文件 ${context.configFile}`)
+        }
+        else {
+          logger.info('📋 配置来源: 自动加载 (.ldesign/launcher.config.*)')
+        }
       }
 
       // 🎯 零配置特性：自动检测框架
@@ -459,7 +467,7 @@ async function getDirectorySize(dirPath: string): Promise<number> {
  * @param outDir - 输出目录
  * @param logger - 日志记录器
  */
-async function generateAnalysisReport(result: any, outDir: string, logger: Logger): Promise<void> {
+async function generateAnalysisReport(result: RollupOutput | null | undefined, outDir: string, logger: Logger): Promise<void> {
   try {
     // 这里可以集成构建分析工具，如 rollup-plugin-analyzer
     // 目前只是简单的文件统计
@@ -467,7 +475,7 @@ async function generateAnalysisReport(result: any, outDir: string, logger: Logge
     const reportPath = PathUtils.join(outDir, 'build-report.json')
     const report = {
       timestamp: new Date().toISOString(),
-      files: [] as Array<{ fileName: any, size: any, type: string }>,
+      files: [] as Array<{ fileName: string, size: number, type: string }>,
       summary: {
         totalFiles: 0,
         totalSize: 0,
@@ -479,10 +487,20 @@ async function generateAnalysisReport(result: any, outDir: string, logger: Logge
 
     // 分析输出文件
     if (result && 'output' in result && Array.isArray(result.output)) {
-      for (const file of result.output) {
+      for (const file of result.output as Array<OutputAsset | OutputChunk>) {
+        let size = 0
+
+        if ('code' in file && typeof file.code === 'string') {
+          size = file.code.length
+        }
+        else if ('source' in file) {
+          const src = file.source as string | Uint8Array
+          size = typeof src === 'string' ? src.length : src.byteLength
+        }
+
         const fileInfo = {
           fileName: file.fileName,
-          size: file.source ? file.source.length : 0,
+          size,
           type: getFileType(file.fileName),
         }
 

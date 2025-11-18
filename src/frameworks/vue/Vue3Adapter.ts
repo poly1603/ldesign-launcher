@@ -122,7 +122,6 @@ export class Vue3Adapter extends FrameworkAdapter {
         // 如果启用了 JSX，添加 JSX 插件
         if (options?.jsx) {
           try {
-            // @ts-ignore - 可选依赖，可能不存在
             const { default: vueJsx } = await import('@vitejs/plugin-vue-jsx')
             const jsxPlugin = vueJsx()
             if (Array.isArray(jsxPlugin)) {

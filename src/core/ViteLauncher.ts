@@ -1758,7 +1758,6 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
     try {
       // 优先使用 qrcode 库
       try {
-        // @ts-ignore - qrcode is an optional dependency
         const qrlib: any = await import('qrcode')
         const qrcode = qrlib?.default || qrlib
 

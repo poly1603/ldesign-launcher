@@ -340,7 +340,7 @@ export class ProxyProcessor {
    */
   private static isValidUrl(url: string): boolean {
     try {
-      new URL(url)
+      const _parsedUrl = new URL(url)
       return true
     }
     catch {

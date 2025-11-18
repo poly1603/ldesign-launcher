@@ -69,7 +69,9 @@ export function buildServerUrl(
  *
  * 优先使用 Vite 的 resolvedUrls，如果不存在则手动构建
  *
- * @param server - Vite 开发服务器或预览服务器实例
+ * @param server - Vite 开发服务器或预览服务器实例（其中的 resolvedUrls.local 会被优先使用）
+ * @param server.resolvedUrls - Vite 解析后的 URL 信息（可能包含 local 与 network 等字段）
+ * @param server.resolvedUrls.local - 本地访问 URL 列表
  * @param hostConfig - host 配置值
  * @param port - 端口号
  * @param https - 是否使用 HTTPS
@@ -111,7 +113,7 @@ export function getServerUrl(
  */
 export function isValidUrl(url: string): boolean {
   try {
-    new URL(url)
+    const _parsedUrl = new URL(url)
     return true
   }
   catch {
@@ -157,20 +159,24 @@ export function extractPortFromUrl(url: string): number {
  * ```
  */
 export async function isPortAvailable(port: number, host: string = '0.0.0.0'): Promise<boolean> {
-  return new Promise(async (resolve) => {
-    const net = await import('node:net')
-    const server = net.createServer()
+  return new Promise((resolve) => {
+    (async () => {
+      const net = await import('node:net')
+      const server = net.createServer()
 
-    server.once('error', () => {
+      server.once('error', () => {
+        resolve(false)
+      })
+
+      server.once('listening', () => {
+        server.close()
+        resolve(true)
+      })
+
+      server.listen(port, host)
+    })().catch(() => {
       resolve(false)
     })
-
-    server.once('listening', () => {
-      server.close()
-      resolve(true)
-    })
-
-    server.listen(port, host)
   })
 }
 

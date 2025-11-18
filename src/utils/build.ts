@@ -217,6 +217,9 @@ export async function cleanBuildDirectory(outDir: string, keepFiles: string[] = 
  * @param result - 构建结果
  * @param outDir - 输出目录
  * @param options - 报告选项
+ * @param options.fileName - 报告文件名（默认 build-report.json）
+ * @param options.includeSourceMap - 是否包含 source map 信息（预留，当前未使用）
+ * @param options.includeAssets - 是否包含静态资源详细信息（预留，当前未使用）
  */
 export async function generateBuildReport(
   result: RollupOutput,

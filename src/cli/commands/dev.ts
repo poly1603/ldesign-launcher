@@ -359,7 +359,7 @@ export class DevCommand implements CliCommandDefinition {
       // 去除 ANSI 颜色后的长度计算辅助
       function stripAnsi(str: string) {
         // eslint-disable-next-line no-control-regex
-        const ansiRegex = /\x1B\[[0-?]*[ -/]*[@-~]/g
+        const ansiRegex = /\x1B\[[0-9;]*[a-z]/gi
         return str.replace(ansiRegex, '')
       }
 
@@ -450,7 +450,6 @@ export class DevCommand implements CliCommandDefinition {
           let qrcodeNotInstalled = false
 
           try {
-            // @ts-ignore - qrcode is an optional dependency
             const qrlib: any = await import('qrcode')
             const qrcode = qrlib?.default || qrlib
 

@@ -162,7 +162,6 @@ export function getEnvironmentAppConfigFiles(environment?: string): string[] {
   return [...envAppConfigFiles, ...DEFAULT_APP_CONFIG_FILES]
 }
 
-
 /**
  * 默认的 Launcher 选项
  */

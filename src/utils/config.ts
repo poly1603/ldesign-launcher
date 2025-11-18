@@ -299,7 +299,7 @@ export function isTypeScriptConfig(configPath: string): boolean {
 /**
  * 获取配置文件的监听模式选项
  *
- * @param configPath - 配置文件路径
+ * @param _configPath - 配置文件路径（目前未使用，预留用于未来扩展）
  * @returns 监听选项
  */
 export function getConfigWatchOptions(_configPath: string) {

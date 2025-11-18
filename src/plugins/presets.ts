@@ -49,7 +49,6 @@ export function reactPreset(_options: PresetOptions = {}): Plugin[] {
 
   // React 插件
   try {
-    // @ts-ignore
     const react = require('@vitejs/plugin-react')
     plugins.push(react({
       fastRefresh: true,
@@ -96,7 +95,6 @@ export function vue2Preset(_options: PresetOptions = {}): Plugin[] {
   const plugins: Plugin[] = []
 
   try {
-    // @ts-ignore
     const vue2 = require('@vitejs/plugin-vue2')
     plugins.push(vue2())
   }
@@ -106,7 +104,6 @@ export function vue2Preset(_options: PresetOptions = {}): Plugin[] {
 
   // 兼容性处理
   try {
-    // @ts-ignore
     const legacy = require('@vitejs/plugin-legacy')
     plugins.push(legacy({
       targets: ['defaults', 'not IE 11'],
@@ -141,7 +138,6 @@ export function libraryPreset(_options: PresetOptions = {}): Plugin[] {
 
   // DTS 生成
   try {
-    // @ts-ignore
     const dts = require('vite-plugin-dts')
     plugins.push(dts({
       insertTypesEntry: true,
@@ -155,7 +151,6 @@ export function libraryPreset(_options: PresetOptions = {}): Plugin[] {
 
   // 外部化依赖
   try {
-    // @ts-ignore
     const { externalizeDeps } = require('vite-plugin-externalize-deps')
     plugins.push(externalizeDeps())
   }
@@ -198,7 +193,6 @@ export function pwaPreset(_options: PresetOptions = {}): Plugin[] {
   const plugins: Plugin[] = []
 
   try {
-    // @ts-ignore
     const { VitePWA } = require('vite-plugin-pwa')
     plugins.push(VitePWA({
       registerType: 'autoUpdate',

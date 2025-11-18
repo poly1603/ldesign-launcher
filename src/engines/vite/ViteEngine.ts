@@ -29,23 +29,20 @@ import { ViteConfigTransformer } from './ViteConfigTransformer'
  */
 export class ViteEngine extends BuildEngine {
   readonly name = 'vite' as const
-  readonly version: string
   readonly description = 'Vite 构建引擎 - 下一代前端构建工具'
 
   private devServerInstance: ViteDevServer | null = null
   private previewServerInstance: VitePreviewServer | null = null
 
+  // 内部可变版本字段，通过 getter 暴露为只读属性以满足抽象基类约束
+  private _version = '5.0.0'
+
+  get version(): string {
+    return this._version
+  }
+
   constructor() {
     super(new ViteConfigTransformer())
-
-    // 动态获取 Vite 版本
-    try {
-      // 这里会在运行时动态导入 vite 包
-      this.version = 'dynamic' // 占位，实际版本在 initialize 时获取
-    }
-    catch {
-      this.version = '5.0.0' // 默认版本
-    }
   }
 
   /**
@@ -57,10 +54,9 @@ export class ViteEngine extends BuildEngine {
     try {
       // 动态导入 Vite 以获取版本信息
       const vite = await import('vite')
-      // @ts-ignore - Vite 可能没有导出 version
-      const version = vite.version || '5.0.0'
-      // @ts-ignore - 设置版本
-      this.version = version
+      // Vite 可能不会在类型层面暴露 version 字段，这里做运行时探测
+      const version = (vite as { version?: string }).version || '5.0.0'
+      this._version = version
       this.logger.debug(`Vite 版本: ${version}`)
     }
     catch {
@@ -196,9 +192,10 @@ export class ViteEngine extends BuildEngine {
         https,
         raw: this.previewServerInstance,
         close: async () => {
-          // Vite 预览服务器可能没有 close 方法
-          // @ts-ignore
-          await this.previewServerInstance?.httpServer?.close()
+          // Vite 预览服务器的 httpServer 上并不总是带有标准的 close 类型签名
+          const httpServer = (this.previewServerInstance as any)?.httpServer
+          if (httpServer && typeof httpServer.close === 'function')
+            await httpServer.close()
           this.previewServerInstance = null
         },
         printUrls: () => {
@@ -256,8 +253,9 @@ export class ViteEngine extends BuildEngine {
     }
 
     if (this.previewServerInstance) {
-      // @ts-ignore
-      await this.previewServerInstance.httpServer?.close()
+      const httpServer = (this.previewServerInstance as any).httpServer
+      if (httpServer && typeof httpServer.close === 'function')
+        await httpServer.close()
       this.previewServerInstance = null
     }
   }

@@ -136,11 +136,11 @@ export class PathUtils {
   /**
    * 展开波浪号路径
    */
-  static expandTilde(path: string): string {
-    if (path.startsWith('~/') || path === '~') {
-      return join(homedir(), path.slice(2))
+  static expandTilde(pathStr: string): string {
+    if (pathStr.startsWith('~/') || pathStr === '~') {
+      return PathUtils.join(homedir(), pathStr.slice(2))
     }
-    return path
+    return pathStr
   }
 
   /**
@@ -153,9 +153,9 @@ export class PathUtils {
   /**
    * 检查路径是否在指定目录内
    */
-  static isInside(path: string, parent: string): boolean {
-    const rel = relative(parent, path)
-    return !rel.startsWith('..') && !isAbsolute(rel)
+  static isInside(pathStr: string, parent: string): boolean {
+    const rel = PathUtils.relative(parent, pathStr)
+    return !rel.startsWith('..') && !PathUtils.isAbsolute(rel)
   }
 
   /**
@@ -215,17 +215,17 @@ export class PathUtils {
   /**
    * 获取文件名（不含扩展名）
    */
-  static getNameWithoutExt(path: string): string {
-    const parsed = parse(path)
+  static getNameWithoutExt(pathStr: string): string {
+    const parsed = PathUtils.parse(pathStr)
     return parsed.name
   }
 
   /**
    * 更改文件扩展名
    */
-  static changeExt(path: string, newExt: string): string {
-    const parsed = parse(path)
-    return format({
+  static changeExt(pathStr: string, newExt: string): string {
+    const parsed = PathUtils.parse(pathStr)
+    return PathUtils.format({
       ...parsed,
       base: undefined,
       ext: newExt.startsWith('.') ? newExt : `.${newExt}`,
@@ -235,9 +235,9 @@ export class PathUtils {
   /**
    * 添加后缀到文件名
    */
-  static addSuffix(path: string, suffix: string): string {
-    const parsed = parse(path)
-    return format({
+  static addSuffix(pathStr: string, suffix: string): string {
+    const parsed = PathUtils.parse(pathStr)
+    return PathUtils.format({
       ...parsed,
       base: undefined,
       name: parsed.name + suffix,
@@ -256,33 +256,33 @@ export class PathUtils {
   /**
    * 检查是否为隐藏文件/目录
    */
-  static isHidden(path: string): boolean {
-    const name = basename(path)
+  static isHidden(pathStr: string): boolean {
+    const name = PathUtils.basename(pathStr)
     return name.startsWith('.')
   }
 
   /**
    * 获取相对于项目根目录的路径
    */
-  static getProjectRelative(path: string, projectRoot?: string): string {
+  static getProjectRelative(pathStr: string, projectRoot?: string): string {
     const root = projectRoot || this.findProjectRoot() || this.getCwd()
-    return relative(root, path)
+    return PathUtils.relative(root, pathStr)
   }
 
   /**
    * 查找项目根目录（包含 package.json 的目录）
    */
   static findProjectRoot(startPath?: string): string | null {
-    let currentPath = resolve(startPath || this.getCwd())
+    let currentPath = PathUtils.resolve(startPath || this.getCwd())
 
-    while (currentPath !== dirname(currentPath)) {
+    while (currentPath !== PathUtils.dirname(currentPath)) {
       try {
-        const packageJsonPath = join(currentPath, 'package.json')
+        const packageJsonPath = PathUtils.join(currentPath, 'package.json')
         require.resolve(packageJsonPath)
         return currentPath
       }
       catch {
-        currentPath = dirname(currentPath)
+        currentPath = PathUtils.dirname(currentPath)
       }
     }
 

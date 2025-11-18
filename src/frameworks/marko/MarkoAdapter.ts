@@ -7,7 +7,6 @@
  * @since 2.0.0
  */
 
-// @ts-ignore - @marko/vite is an optional peer dependency
 import type { Plugin } from 'vite'
 import type { ViteLauncherConfig } from '../../types/config'
 import type { BuildEngine } from '../../types/engine'
@@ -18,10 +17,6 @@ import type {
   FrameworkOptions,
 } from '../../types/framework'
 import { FrameworkAdapter } from '../base/FrameworkAdapter'
-
-declare module '@marko/vite' {
-  export default function marko(options?: any): any
-}
 
 /**
  * Marko 适配器实现

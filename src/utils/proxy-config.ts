@@ -201,10 +201,10 @@ export class ProxyConfigProcessor {
 
       // 验证目标地址格式
       try {
-        new URL(ruleObj.target)
+        const _parsedUrl = new URL(ruleObj.target)
       }
       catch {
-        errors.push(`代理规则 "${path}" 的目标地址格式无效: ${ruleObj.target}`)
+        errors.push(`代理规则 \"${path}\" 的目标地址格式无效: ${ruleObj.target}`)
       }
 
       // 检查常见配置问题

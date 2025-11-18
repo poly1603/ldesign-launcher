@@ -442,7 +442,7 @@ export class PluginManager {
 
     this.logger.info('PluginManager: 开始加载推荐插件...', { projectType })
 
-      try {
+    try {
       // 根据项目类型加载对应插件
       switch (projectType) {
         case ProjectType.VUE3: {
@@ -524,7 +524,9 @@ export class PluginManager {
       }
 
       if (plugins.length > 0) {
-        const pluginNames = plugins.map(p => p.name || 'unknown').join(', ')
+        const pluginNames = plugins
+          .map((p, index) => p.name || `plugin-${index + 1}`)
+          .join(', ')
         this.logger.success(`智能插件加载完成: ${pluginNames}`)
       }
       return plugins
@@ -552,58 +554,122 @@ export class PluginManager {
     })
 
     try {
-      // 动态导入插件 - 从项目的 node_modules 导入
+      // 动态导入插件 - 使用 Node 的模块解析机制，并以项目 package.json 为基准
       let pluginModule: any
 
-      // 统一使用动态 import 加载插件，避免 ExperimentalWarning
       try {
-        // 使用动态 import（支持 ESM 和 CommonJS）
-        const { pathToFileURL } = await import('node:url')
+        const [{ pathToFileURL }, { createRequire }] = await Promise.all([
+          import('node:url'),
+          import('node:module'),
+        ])
 
-        // 尝试从项目的 node_modules 构建路径
-        const modulePath = PathUtils.resolve(this.cwd, 'node_modules', config.packageName)
+        // 基于当前项目的 package.json 创建 require，确保在 pnpm workspace 下正确解析依赖
+        const projectPkgPath = PathUtils.resolve(this.cwd, 'package.json')
+        const projectRequire = createRequire(projectPkgPath)
 
-        // 检查 package.json 的 exports 字段
-        const pkgJsonPath = PathUtils.resolve(modulePath, 'package.json')
-        const pkgJson = JSON.parse(await import('node:fs').then(fs => fs.promises.readFile(pkgJsonPath, 'utf-8')))
+        let resolvedPath: string | null = null
 
-        // 解析入口点
-        let entryPoint = modulePath
-        if (pkgJson.exports) {
-          if (typeof pkgJson.exports === 'string') {
-            entryPoint = PathUtils.resolve(modulePath, pkgJson.exports)
+        try {
+          // 首选：使用 Node 的 CJS 解析逻辑（支持大多数插件）
+          resolvedPath = projectRequire.resolve(config.packageName)
+        }
+        catch (resolveError) {
+          const message = (resolveError as Error).message || ''
+
+          // 对仅提供 ESM exports 的插件（例如 @sveltejs/vite-plugin-svelte）做兼容处理
+          // 这些包在 CJS require.resolve 下会因为缺少 "exports" main 而报错
+          const shouldTryEsmFallback = config.packageName === '@sveltejs/vite-plugin-svelte'
+            || message.includes('exports')
+            || message.includes('ERR_PACKAGE')
+
+          if (shouldTryEsmFallback) {
+            // 直接读取项目 node_modules 下对应包的 package.json，并解析 exports 字段推导入口文件
+            const pkgDir = PathUtils.resolve(this.cwd, 'node_modules', config.packageName)
+            const pkgJsonPath = PathUtils.resolve(pkgDir, 'package.json')
+
+            if (await FileSystem.exists(pkgJsonPath)) {
+              try {
+                const raw = await FileSystem.readFile(pkgJsonPath, { encoding: 'utf-8' })
+                const pkgJson: any = JSON.parse(raw)
+                let entry: string | undefined
+
+                const exportsField = pkgJson.exports
+                if (typeof exportsField === 'string') {
+                  entry = exportsField
+                }
+                else if (exportsField && typeof exportsField === 'object') {
+                  // 优先使用 "." 子路径，其次 default / import
+                  const rootExport = exportsField['.'] || exportsField.default || exportsField.import
+
+                  if (typeof rootExport === 'string') {
+                    entry = rootExport
+                  }
+                  else if (rootExport && typeof rootExport === 'object') {
+                    // 常见形态：{ import: { default: './src/index.js', types: '...' } }
+                    const importExport = rootExport.import || rootExport.default || rootExport.module || rootExport.require
+
+                    if (typeof importExport === 'string') {
+                      entry = importExport
+                    }
+                    else if (importExport && typeof importExport === 'object') {
+                      entry = importExport.default
+                    }
+                  }
+                }
+
+                // 兜底使用 main 字段（如果存在）
+                if (!entry && typeof pkgJson.main === 'string')
+                  entry = pkgJson.main
+
+                if (!entry) {
+                  throw resolveError
+                }
+
+                resolvedPath = PathUtils.resolve(pkgDir, entry)
+                this.logger.debug('ESM 插件入口解析成功', {
+                  package: config.packageName,
+                  entry,
+                  resolvedPath,
+                })
+              }
+              catch {
+                // 回退到原始错误处理逻辑
+                throw resolveError
+              }
+            }
+            else {
+              throw resolveError
+            }
           }
-          else if (pkgJson.exports['.']) {
-            const dotExport = pkgJson.exports['.']
-            if (typeof dotExport === 'string') {
-              entryPoint = PathUtils.resolve(modulePath, dotExport)
-            }
-            else if (dotExport.import) {
-              entryPoint = PathUtils.resolve(modulePath, dotExport.import.default || dotExport.import)
-            }
-            else if (dotExport.default) {
-              entryPoint = PathUtils.resolve(modulePath, dotExport.default)
-            }
+          else {
+            throw resolveError
           }
         }
-        else if (pkgJson.module) {
-          entryPoint = PathUtils.resolve(modulePath, pkgJson.module)
-        }
-        else if (pkgJson.main) {
-          entryPoint = PathUtils.resolve(modulePath, pkgJson.main)
+
+        if (!resolvedPath) {
+          throw new Error(`无法解析插件入口: ${config.packageName}`)
         }
 
-        // 将路径转换为 file:// URL（Windows 兼容）
-        const moduleUrl = pathToFileURL(entryPoint).href
+        const moduleUrl = pathToFileURL(resolvedPath).href
 
-        // 使用动态 import 加载模块
+        // 使用动态 import 加载解析后的具体文件路径（支持 CJS / ESM）
         pluginModule = await import(moduleUrl)
       }
       catch (importError) {
-        this.logger.warn(`加载插件失败: ${config.packageName}`, {
-          error: (importError as Error).message,
-        })
+        const message = (importError as Error).message
+        this.logger.warn(`加载插件失败: ${config.packageName}`, { error: message })
         pluginModule = null
+      }
+
+      // 如果模块加载失败，根据是否必需决定行为，避免二次报错
+      if (!pluginModule) {
+        if (config.required) {
+          this.logger.warn(`插件模块未找到: ${config.name} (${config.packageName})`)
+        }
+        else {
+          this.logger.info(`可选插件未安装，已跳过: ${config.name} (${config.packageName})`)
+        }
+        return null
       }
 
       // 处理不同的插件导出方式
@@ -636,7 +702,13 @@ export class PluginManager {
       const plugin = typeof pluginFactory === 'function' ? pluginFactory(config.options) : pluginFactory
 
       // 确保返回的是数组格式（Vite插件可能是数组）
-      const pluginArray = Array.isArray(plugin) ? plugin : [plugin]
+      const pluginArray: Plugin[] = Array.isArray(plugin) ? plugin : [plugin]
+
+      // 为没有名称的插件填充友好的名称，便于日志输出
+      for (const p of pluginArray) {
+        if (!p.name)
+          p.name = config.name
+      }
 
       this.logger.debug(`插件加载成功: ${config.name}`, { count: pluginArray.length })
 

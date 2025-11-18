@@ -172,6 +172,10 @@ export class SSLManager {
    * 生成自签名证书
    *
    * @param options - 生成选项
+   * @param options.certPath - 证书文件输出路径
+   * @param options.keyPath - 私钥文件输出路径
+   * @param options.domains - 证书包含的域名列表
+   * @param options.days - 证书有效天数
    */
   private async generateSelfSignedCertificate(options: {
     certPath: string
@@ -229,7 +233,7 @@ export class SSLManager {
 
     try {
       // 使用Node.js的mkcert包
-      // @ts-ignore - mkcert 包没有类型定义
+      // @ts-expect-error - mkcert 包没有类型定义
       const mkcert = await import('mkcert')
 
       // 检查是否已有CA，如果没有则创建
