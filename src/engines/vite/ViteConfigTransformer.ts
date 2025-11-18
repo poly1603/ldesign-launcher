@@ -34,11 +34,11 @@ export class ViteConfigTransformer implements ConfigTransformer {
     // 提取 Vite 原生配置
     const {
       // 移除 Launcher 特有字段
-      launcher,
+      launcher: _launcher,
       proxy,
-      tools,
-      engine,
-      framework,
+      tools: _tools,
+      engine: _engine,
+      framework: _framework,
       // 保留所有 Vite 原生字段
       ...viteConfig
     } = config
@@ -46,20 +46,20 @@ export class ViteConfigTransformer implements ConfigTransformer {
     // 构建最终的 Vite 配置
     const transformedConfig: ViteUserConfig = {
       ...viteConfig,
-      
+
       // 如果有代理配置，确保正确传递
       server: {
         host: '0.0.0.0', // 默认监听所有接口
         ...viteConfig.server,
-        proxy: this.transformProxyConfig(proxy)
+        proxy: this.transformProxyConfig(proxy),
       },
-      
+
       // 预览服务器配置
       preview: {
         host: '0.0.0.0', // 默认监听所有接口
         strictPort: false, // 如果端口占用则尝试下一个
-        ...viteConfig.preview
-      }
+        ...viteConfig.preview,
+      },
     }
 
     this.logger.debug('配置转换完成')
@@ -68,7 +68,7 @@ export class ViteConfigTransformer implements ConfigTransformer {
 
   /**
    * 验证配置
-   * 
+   *
    * @param config - Vite UserConfig
    * @returns 是否有效
    */
@@ -85,7 +85,7 @@ export class ViteConfigTransformer implements ConfigTransformer {
 
   /**
    * 转换代理配置
-   * 
+   *
    * @param proxyConfig - Launcher 代理配置
    * @returns Vite 代理配置
    */
@@ -110,4 +110,3 @@ export class ViteConfigTransformer implements ConfigTransformer {
 export function createViteConfigTransformer(): ViteConfigTransformer {
   return new ViteConfigTransformer()
 }
-

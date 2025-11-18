@@ -8,20 +8,20 @@
  */
 
 // @ts-ignore - @marko/vite is an optional peer dependency
+import type { Plugin } from 'vite'
+import type { ViteLauncherConfig } from '../../types/config'
+import type { BuildEngine } from '../../types/engine'
+import type {
+  FrameworkDependencies,
+  FrameworkDetectionResult,
+  FrameworkFeatures,
+  FrameworkOptions,
+} from '../../types/framework'
+import { FrameworkAdapter } from '../base/FrameworkAdapter'
+
 declare module '@marko/vite' {
   export default function marko(options?: any): any
 }
-
-import type { Plugin } from 'vite'
-import type {
-  FrameworkDetectionResult,
-  FrameworkDependencies,
-  FrameworkFeatures,
-  FrameworkOptions
-} from '../../types/framework'
-import type { BuildEngine } from '../../types/engine'
-import type { ViteLauncherConfig } from '../../types/config'
-import { FrameworkAdapter } from '../base/FrameworkAdapter'
 
 /**
  * Marko 适配器实现
@@ -38,7 +38,7 @@ export class MarkoAdapter extends FrameworkAdapter {
     ssr: true,
     ssg: true,
     hmr: true,
-    fastRefresh: true
+    fastRefresh: true,
   }
 
   /**
@@ -48,7 +48,7 @@ export class MarkoAdapter extends FrameworkAdapter {
     const evidence: FrameworkDetectionResult['evidence'] = {
       dependencies: [],
       files: [],
-      configFiles: []
+      configFiles: [],
     }
 
     let confidence = 0
@@ -71,7 +71,7 @@ export class MarkoAdapter extends FrameworkAdapter {
       'src/index.marko',
       'src/pages/index.marko',
       'src/components/app.marko',
-      'src/app.marko'
+      'src/app.marko',
     ])
     if (markoFiles.length > 0) {
       evidence.files = markoFiles
@@ -93,7 +93,7 @@ export class MarkoAdapter extends FrameworkAdapter {
       'src/components',
       'src/pages',
       'src/layouts',
-      'marko.json'
+      'marko.json',
     ]
     const structureMatches = await this.checkProjectStructure(cwd, structurePatterns)
     if (structureMatches >= 2) {
@@ -104,7 +104,7 @@ export class MarkoAdapter extends FrameworkAdapter {
     const configFiles = await this.findFiles(cwd, [
       'vite.config.ts',
       'vite.config.js',
-      'marko.json'
+      'marko.json',
     ])
     if (configFiles.length > 0) {
       evidence.configFiles = configFiles
@@ -122,7 +122,7 @@ export class MarkoAdapter extends FrameworkAdapter {
     const detected = confidence >= 0.5
 
     this.logger.debug(
-      `Marko 检测结果: ${detected ? '✓' : '✗'} (置信度: ${(confidence * 100).toFixed(1)}%)`
+      `Marko 检测结果: ${detected ? '✓' : '✗'} (置信度: ${(confidence * 100).toFixed(1)}%)`,
     )
 
     return {
@@ -130,7 +130,7 @@ export class MarkoAdapter extends FrameworkAdapter {
       type: detected ? 'marko' : undefined,
       version: markoVersion ? this.parseVersion(markoVersion) : undefined,
       confidence,
-      evidence
+      evidence,
     }
   }
 
@@ -149,10 +149,12 @@ export class MarkoAdapter extends FrameworkAdapter {
         // marko() 可能返回单个插件或插件数组
         if (Array.isArray(plugin)) {
           plugins.push(...plugin)
-        } else {
+        }
+        else {
           plugins.push(plugin)
         }
-      } catch (error) {
+      }
+      catch (error) {
         this.logger.error('加载 Marko 插件失败', error)
         throw new Error('请安装 @marko/vite: npm install -D @marko/vite')
       }
@@ -164,11 +166,11 @@ export class MarkoAdapter extends FrameworkAdapter {
   /**
    * 获取 Marko 特定配置
    */
-  getConfig(options?: FrameworkOptions): Partial<ViteLauncherConfig> {
+  getConfig(_options?: FrameworkOptions): Partial<ViteLauncherConfig> {
     return {
       server: {
         port: 3000,
-        open: true
+        open: true,
       },
       build: {
         outDir: 'dist',
@@ -176,21 +178,21 @@ export class MarkoAdapter extends FrameworkAdapter {
         rollupOptions: {
           output: {
             manualChunks: {
-              marko: ['marko']
-            }
-          }
-        }
+              marko: ['marko'],
+            },
+          },
+        },
       },
       resolve: {
         alias: [
           { find: '@', replacement: '/src' },
-          { find: '~', replacement: '/src' }
+          { find: '~', replacement: '/src' },
         ],
-        extensions: ['.marko', '.js', '.ts', '.json']
+        extensions: ['.marko', '.js', '.ts', '.json'],
       },
       optimizeDeps: {
-        include: ['marko']
-      }
+        include: ['marko'],
+      },
     }
   }
 
@@ -203,12 +205,12 @@ export class MarkoAdapter extends FrameworkAdapter {
       devDependencies: [
         '@marko/vite',
         '@types/node',
-        'vite'
+        'vite',
       ],
       optionalDependencies: [
         '@marko/compiler',
-        '@marko/babel-utils'
-      ]
+        '@marko/babel-utils',
+      ],
     }
   }
 
@@ -219,7 +221,7 @@ export class MarkoAdapter extends FrameworkAdapter {
     return {
       dev: 'launcher dev',
       build: 'launcher build',
-      preview: 'launcher preview'
+      preview: 'launcher preview',
     }
   }
 
@@ -229,9 +231,7 @@ export class MarkoAdapter extends FrameworkAdapter {
   getEnvConfig(): Record<string, string> {
     return {
       VITE_APP_TITLE: 'Marko App',
-      VITE_APP_VERSION: '1.0.0'
+      VITE_APP_VERSION: '1.0.0',
     }
   }
 }
-
-

@@ -1,13 +1,13 @@
 /**
  * 默认配置常量
- * 
+ *
  * 定义 ViteLauncher 的默认配置值
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
 
-import type { ViteLauncherConfig, LauncherOptions } from '../types'
+import type { LauncherOptions, ViteLauncherConfig } from '../types'
 
 /**
  * 默认端口号
@@ -68,7 +68,7 @@ export const DEFAULT_CONFIG_FILES = [
   'vite.config.ts',
   'vite.config.mjs',
   'vite.config.js',
-  'vite.config.cjs'
+  'vite.config.cjs',
 ] as const
 
 /**
@@ -79,7 +79,7 @@ export const SUPPORTED_ENVIRONMENT_NAMES = [
   'production',
   'test',
   'staging',
-  'preview'
+  'preview',
 ] as const
 
 /**
@@ -114,11 +114,22 @@ export function getEnvironmentConfigFiles(environment?: string): readonly string
     `launcher.${environment}.config.js`,
     `launcher.${environment}.config.cjs`,
     // 基础配置文件作为回退
-    ...DEFAULT_CONFIG_FILES
+    ...DEFAULT_CONFIG_FILES,
   ] as const
 
   return envConfigFiles
 }
+
+/**
+ * 支持的配置文件扩展名
+ */
+export const SUPPORTED_CONFIG_EXTENSIONS = [
+  '.ts',
+  '.js',
+  '.mjs',
+  '.cjs',
+  '.json',
+] as const
 
 /**
  * 默认的应用配置文件名列表（用于注入 import.meta.env.appConfig）
@@ -128,7 +139,7 @@ export const DEFAULT_APP_CONFIG_FILES = [
   `${LDESIGN_DIR}/app.config.mjs`,
   `${LDESIGN_DIR}/app.config.js`,
   `${LDESIGN_DIR}/app.config.cjs`,
-  `${LDESIGN_DIR}/app.config.json`
+  `${LDESIGN_DIR}/app.config.json`,
 ] as const
 
 /**
@@ -144,23 +155,13 @@ export function getEnvironmentAppConfigFiles(environment?: string): string[] {
 
   // 环境特定的配置文件（优先级更高）
   const envAppConfigFiles = SUPPORTED_CONFIG_EXTENSIONS.map(ext =>
-    `${LDESIGN_DIR}/app.config.${environment}${ext}`
+    `${LDESIGN_DIR}/app.config.${environment}${ext}`,
   )
 
   // 返回环境特定配置文件 + 默认配置文件（作为回退）
   return [...envAppConfigFiles, ...DEFAULT_APP_CONFIG_FILES]
 }
 
-/**
- * 支持的配置文件扩展名
- */
-export const SUPPORTED_CONFIG_EXTENSIONS = [
-  '.ts',
-  '.js',
-  '.mjs',
-  '.cjs',
-  '.json'
-] as const
 
 /**
  * 默认的 Launcher 选项
@@ -171,7 +172,7 @@ export const DEFAULT_LAUNCHER_OPTIONS: Required<LauncherOptions> = {
   debug: false,
   autoRestart: false, // 默认关闭自动重启，避免不必要的文件监听
   environment: 'development',
-  listeners: {}
+  listeners: {},
 }
 
 /**
@@ -180,7 +181,7 @@ export const DEFAULT_LAUNCHER_OPTIONS: Required<LauncherOptions> = {
 export const DEFAULT_VITE_LAUNCHER_CONFIG: ViteLauncherConfig = {
   launcher: {
     autoRestart: false, // 默认关闭自动重启，避免不必要的文件监听
-    hooks: {}
+    hooks: {},
   },
   root: process.cwd(),
   mode: DEFAULT_MODE,
@@ -190,7 +191,7 @@ export const DEFAULT_VITE_LAUNCHER_CONFIG: ViteLauncherConfig = {
     host: DEFAULT_HOST,
     port: DEFAULT_PORT,
     open: false,
-    cors: true
+    cors: true,
   },
   build: {
     outDir: DEFAULT_OUT_DIR,
@@ -198,14 +199,14 @@ export const DEFAULT_VITE_LAUNCHER_CONFIG: ViteLauncherConfig = {
     minify: true,
     emptyOutDir: true,
     target: DEFAULT_BUILD_TARGET,
-    reportCompressedSize: true
+    reportCompressedSize: true,
   },
   preview: {
     host: DEFAULT_HOST,
     port: 4173,
     open: false,
-    cors: true
-  }
+    cors: true,
+  },
 }
 
 /**
@@ -237,7 +238,7 @@ export const SUPPORTED_EXTENSIONS = [
   '.stylus',
   '.json',
   '.html',
-  '.htm'
+  '.htm',
 ] as const
 
 /**
@@ -253,7 +254,7 @@ export const SUPPORTED_IMAGE_FORMATS = [
   '.avif',
   '.ico',
   '.bmp',
-  '.tiff'
+  '.tiff',
 ] as const
 
 /**
@@ -264,7 +265,7 @@ export const SUPPORTED_FONT_FORMATS = [
   '.woff2',
   '.eot',
   '.ttf',
-  '.otf'
+  '.otf',
 ] as const
 
 /**
@@ -304,7 +305,7 @@ export const SUPPORTED_PACKAGE_MANAGERS = [
   'npm',
   'yarn',
   'pnpm',
-  'bun'
+  'bun',
 ] as const
 
 /**
@@ -358,7 +359,7 @@ export const DEFAULT_CPU_WARNING_THRESHOLD = 80
 export const SUPPORTED_COMPRESSION_ALGORITHMS = [
   'gzip',
   'deflate',
-  'br'
+  'br',
 ] as const
 
 /**
@@ -385,7 +386,7 @@ export const HTTP_STATUS = {
   METHOD_NOT_ALLOWED: 405,
   INTERNAL_SERVER_ERROR: 500,
   BAD_GATEWAY: 502,
-  SERVICE_UNAVAILABLE: 503
+  SERVICE_UNAVAILABLE: 503,
 } as const
 
 /**
@@ -404,7 +405,7 @@ export const MIME_TYPES = {
   WOFF: 'font/woff',
   WOFF2: 'font/woff2',
   TTF: 'font/ttf',
-  EOT: 'application/vnd.ms-fontobject'
+  EOT: 'application/vnd.ms-fontobject',
 } as const
 
 /**
@@ -412,17 +413,18 @@ export const MIME_TYPES = {
  */
 export const REGEX_PATTERNS = {
   /** 匹配版本号 */
-  VERSION: /^\d+\.\d+\.\d+(?:-[a-zA-Z0-9-]+)?$/,
+  VERSION: /^\d+\.\d+\.\d+(?:-[a-z0-9-]+)?$/i,
   /** 匹配端口号 */
   PORT: /^([1-9]\d{0,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])$/,
   /** 匹配 IP 地址 */
-  IP: /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/,
+  IP: /^(?:(?:25[0-5]|2[0-4]\d|[01]?\d{1,2})\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d{1,2})$/,
   /** 匹配域名 */
-  DOMAIN: /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/,
+  DOMAIN: /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/i,
   /** 匹配 URL */
-  URL: /^https?:\/\/[^\s/$.?#].[^\s]*$/,
+  URL: /^https?:\/\/[^\s/$.?#].\S*$/,
   /** 匹配文件路径 */
-  FILE_PATH: /^[^<>:"|?*\x00-\x1f]+$/,
+  // eslint-disable-next-line no-control-regex
+  FILE_PATH: /^[^<>:"|?*\x00-\x1F]+$/,
   /** 匹配环境变量名 */
-  ENV_VAR: /^[A-Z_][A-Z0-9_]*$/
+  ENV_VAR: /^[A-Z_][A-Z0-9_]*$/,
 } as const

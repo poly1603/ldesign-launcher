@@ -1,8 +1,8 @@
 /**
  * 事件常量定义
- * 
+ *
  * 定义系统中使用的事件名称和事件相关常量
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
@@ -30,7 +30,7 @@ export const LAUNCHER_EVENTS = {
   /** 内存使用事件 */
   MEMORY_USAGE: 'launcher:memory:usage',
   /** CPU 使用事件 */
-  CPU_USAGE: 'launcher:cpu:usage'
+  CPU_USAGE: 'launcher:cpu:usage',
 } as const
 
 /**
@@ -60,7 +60,7 @@ export const SERVER_EVENTS = {
   /** 代理事件 */
   PROXY: 'server:proxy',
   /** SSL 事件 */
-  SSL: 'server:ssl'
+  SSL: 'server:ssl',
 } as const
 
 /**
@@ -92,7 +92,7 @@ export const BUILD_EVENTS = {
   /** 构建完成事件 */
   COMPLETE: 'build:complete',
   /** 构建取消事件 */
-  CANCEL: 'build:cancel'
+  CANCEL: 'build:cancel',
 } as const
 
 /**
@@ -122,7 +122,7 @@ export const PLUGIN_EVENTS = {
   /** 插件配置变更事件 */
   CONFIG_CHANGE: 'plugin:config:change',
   /** 插件依赖解析事件 */
-  DEPENDENCY_RESOLVE: 'plugin:dependency:resolve'
+  DEPENDENCY_RESOLVE: 'plugin:dependency:resolve',
 } as const
 
 /**
@@ -148,7 +148,7 @@ export const CONFIG_EVENTS = {
   /** 配置热重载事件 */
   HOT_RELOAD: 'config:hot:reload',
   /** 配置缓存事件 */
-  CACHE: 'config:cache'
+  CACHE: 'config:cache',
 } as const
 
 /**
@@ -178,7 +178,7 @@ export const FILE_EVENTS = {
   /** 文件权限变更事件 */
   PERMISSION_CHANGE: 'file:permission:change',
   /** 文件大小变更事件 */
-  SIZE_CHANGE: 'file:size:change'
+  SIZE_CHANGE: 'file:size:change',
 } as const
 
 /**
@@ -208,7 +208,7 @@ export const CACHE_EVENTS = {
   /** 缓存序列化事件 */
   SERIALIZE: 'cache:serialize',
   /** 缓存反序列化事件 */
-  DESERIALIZE: 'cache:deserialize'
+  DESERIALIZE: 'cache:deserialize',
 } as const
 
 /**
@@ -238,7 +238,7 @@ export const CLI_EVENTS = {
   /** 选项解析事件 */
   OPTION_PARSE: 'cli:option:parse',
   /** 参数验证事件 */
-  ARGUMENT_VALIDATE: 'cli:argument:validate'
+  ARGUMENT_VALIDATE: 'cli:argument:validate',
 } as const
 
 /**
@@ -268,7 +268,7 @@ export const NETWORK_EVENTS = {
   /** 代理事件 */
   PROXY: 'network:proxy',
   /** SSL 握手事件 */
-  SSL_HANDSHAKE: 'network:ssl:handshake'
+  SSL_HANDSHAKE: 'network:ssl:handshake',
 } as const
 
 /**
@@ -298,7 +298,7 @@ export const PERFORMANCE_EVENTS = {
   /** 垃圾回收事件 */
   GARBAGE_COLLECTION: 'performance:gc',
   /** 事件循环延迟事件 */
-  EVENT_LOOP_DELAY: 'performance:event:loop:delay'
+  EVENT_LOOP_DELAY: 'performance:event:loop:delay',
 } as const
 
 /**
@@ -328,7 +328,7 @@ export const HMR_EVENTS = {
   /** 客户端断开事件 */
   CLIENT_DISCONNECT: 'hmr:client:disconnect',
   /** 更新可用事件 */
-  UPDATE_AVAILABLE: 'hmr:update:available'
+  UPDATE_AVAILABLE: 'hmr:update:available',
 } as const
 
 /**
@@ -342,7 +342,7 @@ export enum EventPriority {
   /** 高优先级 */
   HIGH = 2,
   /** 紧急优先级 */
-  URGENT = 3
+  URGENT = 3,
 }
 
 /**
@@ -356,7 +356,7 @@ export enum EventPropagation {
   /** 向下传播 */
   CAPTURE = 'capture',
   /** 双向传播 */
-  BOTH = 'both'
+  BOTH = 'both',
 }
 
 /**
@@ -370,5 +370,5 @@ export enum EventHandlingMode {
   /** 延迟处理 */
   DEFERRED = 'deferred',
   /** 批量处理 */
-  BATCH = 'batch'
+  BATCH = 'batch',
 }

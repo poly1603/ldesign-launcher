@@ -1,16 +1,16 @@
 /**
  * ViteLauncher 核心类型定义
- * 
+ *
  * 定义 ViteLauncher 类的接口和相关类型
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
 
-import type { ViteDevServer, PreviewServer, Plugin } from 'vite'
 import type { RollupOutput, RollupWatcher } from 'rollup'
+import type { Plugin, PreviewServer, ViteDevServer } from 'vite'
+import type { ErrorHandler, EventListener, ValidationResult } from './common'
 import type { ViteLauncherConfig } from './config'
-import type { ValidationResult, EventListener, ErrorHandler } from './common'
 
 /**
  * ViteLauncher 核心接口
@@ -18,36 +18,36 @@ import type { ValidationResult, EventListener, ErrorHandler } from './common'
  */
 export interface IViteLauncher {
   // 开发服务器管理
-  startDev(config?: ViteLauncherConfig): Promise<ViteDevServer>
-  stopDev(): Promise<void>
-  restartDev(): Promise<void>
+  startDev: (config?: ViteLauncherConfig) => Promise<ViteDevServer>
+  stopDev: () => Promise<void>
+  restartDev: () => Promise<void>
 
   // 生产构建
-  build(config?: ViteLauncherConfig): Promise<RollupOutput>
-  buildWatch(config?: ViteLauncherConfig): Promise<RollupWatcher>
+  build: (config?: ViteLauncherConfig) => Promise<RollupOutput>
+  buildWatch: (config?: ViteLauncherConfig) => Promise<RollupWatcher>
 
   // 预览服务
-  preview(config?: ViteLauncherConfig): Promise<PreviewServer>
+  preview: (config?: ViteLauncherConfig) => Promise<PreviewServer>
 
   // 配置管理
-  mergeConfig(base: ViteLauncherConfig, override: ViteLauncherConfig): ViteLauncherConfig
-  validateConfig(config: ViteLauncherConfig): ValidationResult
-  loadConfig(configPath?: string): Promise<ViteLauncherConfig>
+  mergeConfig: (base: ViteLauncherConfig, override: ViteLauncherConfig) => ViteLauncherConfig
+  validateConfig: (config: ViteLauncherConfig) => ValidationResult
+  loadConfig: (configPath?: string) => Promise<ViteLauncherConfig>
 
   // 插件系统（为后续 plugin 包预留接口）
-  addPlugin(plugin: Plugin): void
-  removePlugin(pluginName: string): void
-  getPlugins(): Plugin[]
+  addPlugin: (plugin: Plugin) => void
+  removePlugin: (pluginName: string) => void
+  getPlugins: () => Plugin[]
 
   // 生命周期钩子
-  onReady(callback: () => void): void
-  onError(callback: ErrorHandler): void
-  onClose(callback: () => void): void
+  onReady: (callback: () => void) => void
+  onError: (callback: ErrorHandler) => void
+  onClose: (callback: () => void) => void
 
   // 状态管理
-  getStatus(): LauncherStatus
-  isRunning(): boolean
-  getConfig(): ViteLauncherConfig
+  getStatus: () => LauncherStatus
+  isRunning: () => boolean
+  getConfig: () => ViteLauncherConfig
 }
 
 /**
@@ -70,7 +70,7 @@ export enum LauncherStatus {
   /** 已停止 */
   STOPPED = 'stopped',
   /** 错误状态 */
-  ERROR = 'error'
+  ERROR = 'error',
 }
 
 /**
@@ -93,7 +93,7 @@ export enum LauncherEvent {
   /** 警告事件 */
   WARNING = 'warning',
   /** 日志事件 */
-  LOG = 'log'
+  LOG = 'log',
 }
 
 /**

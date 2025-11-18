@@ -1,23 +1,27 @@
 /**
  * 服务器工具函数
- * 
+ *
  * 提供服务器相关的实用工具函数
- * 
+ *
  * @author LDesign Team
  * @since 2.0.0
  */
 
+import { Logger } from './logger'
+
+const serverLogger = new Logger('Server')
+
 /**
  * 解析服务器 host 配置值
- * 
+ *
  * 将 Vite 的 host 配置值转换为可用于 URL 的字符串
  * - `true` 或 `0.0.0.0` → `localhost` （服务器监听所有接口，但URL使用localhost）
  * - 字符串值 → 直接返回
  * - 其他值 → 返回默认值 `localhost`
- * 
+ *
  * @param hostConfig - Vite 的 host 配置值
  * @returns 解析后的 host 字符串
- * 
+ *
  * @example
  * ```ts
  * resolveServerHost(true) // 'localhost'
@@ -29,21 +33,23 @@
 export function resolveServerHost(hostConfig: string | boolean | undefined): string {
   if (hostConfig === true || hostConfig === '0.0.0.0') {
     return 'localhost'
-  } else if (typeof hostConfig === 'string') {
+  }
+  else if (typeof hostConfig === 'string') {
     return hostConfig
-  } else {
+  }
+  else {
     return 'localhost'
   }
 }
 
 /**
  * 构建服务器 URL
- * 
+ *
  * @param protocol - 协议 (http 或 https)
  * @param host - 主机地址
  * @param port - 端口号
  * @returns 完整的服务器 URL
- * 
+ *
  * @example
  * ```ts
  * buildServerUrl('http', 'localhost', 3000) // 'http://localhost:3000'
@@ -53,22 +59,22 @@ export function resolveServerHost(hostConfig: string | boolean | undefined): str
 export function buildServerUrl(
   protocol: 'http' | 'https',
   host: string,
-  port: number
+  port: number,
 ): string {
   return `${protocol}://${host}:${port}`
 }
 
 /**
  * 获取服务器 URL
- * 
+ *
  * 优先使用 Vite 的 resolvedUrls，如果不存在则手动构建
- * 
+ *
  * @param server - Vite 开发服务器或预览服务器实例
  * @param hostConfig - host 配置值
  * @param port - 端口号
  * @param https - 是否使用 HTTPS
  * @returns 服务器 URL
- * 
+ *
  * @example
  * ```ts
  * getServerUrl(devServer, true, 3000, false) // 'http://localhost:3000'
@@ -78,7 +84,7 @@ export function getServerUrl(
   server: { resolvedUrls?: { local?: string[] } },
   hostConfig: string | boolean | undefined,
   port: number,
-  https: boolean
+  https: boolean,
 ): string {
   // 优先使用 Vite 的 resolvedUrls
   if (server.resolvedUrls?.local?.[0]) {
@@ -93,10 +99,10 @@ export function getServerUrl(
 
 /**
  * 验证 URL 是否有效
- * 
+ *
  * @param url - 要验证的 URL
  * @returns 是否有效
- * 
+ *
  * @example
  * ```ts
  * isValidUrl('http://localhost:3000') // true
@@ -107,17 +113,18 @@ export function isValidUrl(url: string): boolean {
   try {
     new URL(url)
     return true
-  } catch {
+  }
+  catch {
     return false
   }
 }
 
 /**
  * 从 URL 中提取端口号
- * 
+ *
  * @param url - URL 字符串
  * @returns 端口号，如果未指定则返回默认端口 (http: 80, https: 443)
- * 
+ *
  * @example
  * ```ts
  * extractPortFromUrl('http://localhost:3000') // 3000
@@ -128,21 +135,22 @@ export function extractPortFromUrl(url: string): number {
   try {
     const parsed = new URL(url)
     if (parsed.port) {
-      return parseInt(parsed.port, 10)
+      return Number.parseInt(parsed.port, 10)
     }
     return parsed.protocol === 'https:' ? 443 : 80
-  } catch {
+  }
+  catch {
     return 80
   }
 }
 
 /**
  * 检查端口是否可用
- * 
+ *
  * @param port - 端口号
  * @param host - 主机地址
  * @returns 端口是否可用
- * 
+ *
  * @example
  * ```ts
  * await isPortAvailable(3000) // true 或 false
@@ -150,7 +158,7 @@ export function extractPortFromUrl(url: string): number {
  */
 export async function isPortAvailable(port: number, host: string = '0.0.0.0'): Promise<boolean> {
   return new Promise(async (resolve) => {
-    const net = await import('net')
+    const net = await import('node:net')
     const server = net.createServer()
 
     server.once('error', () => {
@@ -168,12 +176,12 @@ export async function isPortAvailable(port: number, host: string = '0.0.0.0'): P
 
 /**
  * 查找可用端口
- * 
+ *
  * @param startPort - 起始端口号
  * @param host - 主机地址
  * @param maxAttempts - 最大尝试次数
  * @returns 可用的端口号，如果未找到则返回 null
- * 
+ *
  * @example
  * ```ts
  * await findAvailablePort(3000) // 3000, 3001, 3002, ...
@@ -182,7 +190,7 @@ export async function isPortAvailable(port: number, host: string = '0.0.0.0'): P
 export async function findAvailablePort(
   startPort: number = 3000,
   host: string = '0.0.0.0',
-  maxAttempts: number = 100
+  maxAttempts: number = 100,
 ): Promise<number | null> {
   for (let port = startPort; port < startPort + maxAttempts; port++) {
     if (await isPortAvailable(port, host)) {
@@ -194,18 +202,18 @@ export async function findAvailablePort(
 
 /**
  * 获取网络 URL 列表
- * 
+ *
  * @param protocol - 协议
  * @param port - 端口号
  * @returns 网络 URL 列表
- * 
+ *
  * @example
  * ```ts
  * getNetworkUrls('http', 3000) // ['http://192.168.1.100:3000', ...]
  * ```
  */
 export async function getNetworkUrls(protocol: 'http' | 'https', port: number): Promise<string[]> {
-  const os = await import('os')
+  const os = await import('node:os')
   const interfaces = os.networkInterfaces()
   const urls: string[] = []
 
@@ -223,11 +231,11 @@ export async function getNetworkUrls(protocol: 'http' | 'https', port: number): 
 
 /**
  * 等待服务器就绪
- * 
+ *
  * @param url - 服务器 URL
  * @param timeout - 超时时间（毫秒）
  * @returns 服务器是否就绪
- * 
+ *
  * @example
  * ```ts
  * await waitForServer('http://localhost:3000', 5000) // true 或 false
@@ -242,7 +250,8 @@ export async function waitForServer(url: string, timeout: number = 30000): Promi
       if (response.ok) {
         return true
       }
-    } catch {
+    }
+    catch {
       // 忽略错误，继续尝试
     }
 
@@ -255,10 +264,10 @@ export async function waitForServer(url: string, timeout: number = 30000): Promi
 
 /**
  * 获取服务器状态
- * 
+ *
  * @param url - 服务器 URL
  * @returns 服务器状态信息
- * 
+ *
  * @example
  * ```ts
  * await getServerStatus('http://localhost:3000') // { online: true, statusCode: 200, ... }
@@ -278,21 +287,22 @@ export async function getServerStatus(url: string): Promise<{
     return {
       online: true,
       statusCode: response.status,
-      responseTime
+      responseTime,
     }
-  } catch {
+  }
+  catch {
     return {
-      online: false
+      online: false,
     }
   }
 }
 
 /**
  * 打开浏览器
- * 
+ *
  * @param url - 要打开的 URL
  * @returns 是否成功打开
- * 
+ *
  * @example
  * ```ts
  * await openBrowser('http://localhost:3000')
@@ -303,19 +313,20 @@ export async function openBrowser(url: string): Promise<boolean> {
     const open = await import('open')
     await open.default(url)
     return true
-  } catch {
+  }
+  catch {
     return false
   }
 }
 
 /**
  * 获取服务器摘要信息
- * 
+ *
  * @param url - 服务器 URL
  * @param port - 端口号
  * @param host - 主机地址
  * @returns 服务器摘要信息
- * 
+ *
  * @example
  * ```ts
  * getServerSummary('http://localhost:3000', 3000, 'localhost')
@@ -334,16 +345,16 @@ export async function getServerSummary(url: string, port: number, host: string):
     url,
     port,
     host,
-    networkUrls
+    networkUrls,
   }
 }
 
 /**
  * 解析 host 配置
- * 
+ *
  * @param host - host 配置值
  * @returns 解析后的 host 字符串
- * 
+ *
  * @example
  * ```ts
  * parseHost(true) // '0.0.0.0'
@@ -353,49 +364,51 @@ export async function getServerSummary(url: string, port: number, host: string):
 export function parseHost(host: string | boolean | undefined): string {
   if (host === true) {
     return '0.0.0.0'
-  } else if (typeof host === 'string') {
+  }
+  else if (typeof host === 'string') {
     return host
-  } else {
+  }
+  else {
     return 'localhost'
   }
 }
 
 /**
  * 记录服务器信息到控制台
- * 
+ *
  * @param url - 服务器 URL
  * @param port - 端口号
  * @param host - 主机地址
- * 
+ *
  * @example
  * ```ts
  * logServerInfo('http://localhost:3000', 3000, 'localhost')
  * ```
  */
 export async function logServerInfo(url: string, port: number, host: string): Promise<void> {
-  console.log(`\n  服务器已启动:`)
-  console.log(`  - 本地: ${url}`)
-  console.log(`  - 端口: ${port}`)
-  console.log(`  - 主机: ${host}`)
+  serverLogger.raw('\n  服务器已启动:')
+  serverLogger.raw(`  - 本地: ${url}`)
+  serverLogger.raw(`  - 端口: ${port}`)
+  serverLogger.raw(`  - 主机: ${host}`)
 
   const networkUrls = await getNetworkUrls(url.startsWith('https') ? 'https' : 'http', port)
   if (networkUrls.length > 0) {
-    console.log(`  - 网络: ${networkUrls[0]}`)
+    serverLogger.raw(`  - 网络: ${networkUrls[0]}`)
   }
-  console.log()
+  serverLogger.raw('')
 }
 
 /**
  * 获取网络接口信息
- * 
+ *
  * @returns 网络接口信息
- * 
+ *
  * @example
  * ```ts
  * getNetworkInterfaces() // { eth0: [...], wlan0: [...], ... }
  * ```
  */
 export async function getNetworkInterfaces(): Promise<Record<string, any[]>> {
-  const os = await import('os')
+  const os = await import('node:os')
   return os.networkInterfaces()
 }

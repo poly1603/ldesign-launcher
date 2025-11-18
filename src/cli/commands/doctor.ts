@@ -1,17 +1,17 @@
 /**
  * 诊断命令
  * 检查项目环境、配置、依赖等
- * 
+ *
  * @author LDesign Team
  * @since 2.1.0
  */
 
-import { Logger } from '../../utils/logger'
-import { ConfigManager } from '../../core/ConfigManager'
-import { execSync } from 'child_process'
-import { existsSync } from 'fs'
-import { join } from 'path'
+import { execSync } from 'node:child_process'
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
 import picocolors from 'picocolors'
+import { ConfigManager } from '../../core/ConfigManager'
+import { Logger } from '../../utils/logger'
 
 interface DiagnosticResult {
   category: string
@@ -33,7 +33,8 @@ async function checkCommand(command: string): Promise<boolean> {
   try {
     execSync(`${command} --version`, { stdio: 'ignore' })
     return true
-  } catch {
+  }
+  catch {
     return false
   }
 }
@@ -46,13 +47,13 @@ async function checkEnvironment(): Promise<DiagnosticResult> {
 
   // 检查 Node.js 版本
   const nodeVersion = process.version
-  const nodeMajorVersion = parseInt(nodeVersion.slice(1).split('.')[0])
+  const nodeMajorVersion = Number.parseInt(nodeVersion.slice(1).split('.')[0])
 
   items.push({
     name: 'Node.js 版本',
     status: nodeMajorVersion >= 16 ? 'success' : 'error',
     message: `${nodeVersion} ${nodeMajorVersion >= 16 ? '✓' : '✗ 需要 >= 16.0.0'}`,
-    suggestion: nodeMajorVersion < 16 ? '请升级 Node.js 到 16.0.0 或更高版本' : undefined
+    suggestion: nodeMajorVersion < 16 ? '请升级 Node.js 到 16.0.0 或更高版本' : undefined,
   })
 
   // 检查包管理器
@@ -64,19 +65,19 @@ async function checkEnvironment(): Promise<DiagnosticResult> {
     name: 'pnpm',
     status: hasPnpm ? 'success' : 'warning',
     message: hasPnpm ? '已安装 ✓' : '未安装',
-    suggestion: !hasPnpm ? '推荐安装 pnpm: npm install -g pnpm' : undefined
+    suggestion: !hasPnpm ? '推荐安装 pnpm: npm install -g pnpm' : undefined,
   })
 
   items.push({
     name: 'npm',
     status: hasNpm ? 'success' : 'error',
-    message: hasNpm ? '已安装 ✓' : '未安装 ✗'
+    message: hasNpm ? '已安装 ✓' : '未安装 ✗',
   })
 
   items.push({
     name: 'yarn',
     status: hasYarn ? 'success' : 'warning',
-    message: hasYarn ? '已安装 ✓' : '未安装'
+    message: hasYarn ? '已安装 ✓' : '未安装',
   })
 
   // 检查 Git
@@ -85,13 +86,13 @@ async function checkEnvironment(): Promise<DiagnosticResult> {
     name: 'Git',
     status: hasGit ? 'success' : 'warning',
     message: hasGit ? '已安装 ✓' : '未安装',
-    suggestion: !hasGit ? '建议安装 Git 以便版本控制' : undefined
+    suggestion: !hasGit ? '建议安装 Git 以便版本控制' : undefined,
   })
 
   return {
     category: '环境检查',
     items,
-    hasIssues: items.some(item => item.status === 'error')
+    hasIssues: items.some(item => item.status === 'error'),
   }
 }
 
@@ -108,7 +109,7 @@ async function checkConfig(cwd: string): Promise<DiagnosticResult> {
     '.ldesign/launcher.config.ts',
     '.ldesign/launcher.config.js',
     'launcher.config.ts',
-    'launcher.config.js'
+    'launcher.config.js',
   ]
 
   let configFileExists = false
@@ -127,7 +128,7 @@ async function checkConfig(cwd: string): Promise<DiagnosticResult> {
     name: '配置文件',
     status: configFileExists ? 'success' : 'warning',
     message: configFileExists ? `找到 ${configFilePath} ✓` : '未找到配置文件',
-    suggestion: !configFileExists ? '运行 "launcher config init" 创建配置文件' : undefined
+    suggestion: !configFileExists ? '运行 "launcher config init" 创建配置文件' : undefined,
   })
 
   // 如果配置文件存在，验证配置
@@ -140,7 +141,7 @@ async function checkConfig(cwd: string): Promise<DiagnosticResult> {
         name: '配置验证',
         status: validation.valid ? 'success' : 'error',
         message: validation.valid ? '配置有效 ✓' : `配置无效 ✗ (${validation.errors.length} 个错误)`,
-        suggestion: !validation.valid ? validation.errors.join(', ') : undefined
+        suggestion: !validation.valid ? validation.errors.join(', ') : undefined,
       })
 
       if (validation.warnings.length > 0) {
@@ -148,15 +149,16 @@ async function checkConfig(cwd: string): Promise<DiagnosticResult> {
           name: '配置警告',
           status: 'warning',
           message: `${validation.warnings.length} 个警告`,
-          suggestion: validation.warnings.join(', ')
+          suggestion: validation.warnings.join(', '),
         })
       }
-    } catch (error) {
+    }
+    catch (error) {
       items.push({
         name: '配置加载',
         status: 'error',
         message: '配置加载失败 ✗',
-        suggestion: (error as Error).message
+        suggestion: (error as Error).message,
       })
     }
   }
@@ -164,7 +166,7 @@ async function checkConfig(cwd: string): Promise<DiagnosticResult> {
   return {
     category: '配置检查',
     items,
-    hasIssues: items.some(item => item.status === 'error')
+    hasIssues: items.some(item => item.status === 'error'),
   }
 }
 
@@ -180,20 +182,20 @@ async function checkDependencies(cwd: string): Promise<DiagnosticResult> {
       name: 'package.json',
       status: 'error',
       message: '未找到 package.json ✗',
-      suggestion: '运行 "npm init" 创建 package.json'
+      suggestion: '运行 "npm init" 创建 package.json',
     })
 
     return {
       category: '依赖检查',
       items,
-      hasIssues: true
+      hasIssues: true,
     }
   }
 
   items.push({
     name: 'package.json',
     status: 'success',
-    message: '找到 package.json ✓'
+    message: '找到 package.json ✓',
   })
 
   // 检查 node_modules
@@ -202,7 +204,7 @@ async function checkDependencies(cwd: string): Promise<DiagnosticResult> {
     name: 'node_modules',
     status: nodeModulesExists ? 'success' : 'warning',
     message: nodeModulesExists ? '依赖已安装 ✓' : '依赖未安装',
-    suggestion: !nodeModulesExists ? '运行 "pnpm install" 或 "npm install" 安装依赖' : undefined
+    suggestion: !nodeModulesExists ? '运行 "pnpm install" 或 "npm install" 安装依赖' : undefined,
   })
 
   // 检查 @ldesign/launcher
@@ -211,13 +213,13 @@ async function checkDependencies(cwd: string): Promise<DiagnosticResult> {
     name: '@ldesign/launcher',
     status: launcherInstalled ? 'success' : 'error',
     message: launcherInstalled ? '已安装 ✓' : '未安装 ✗',
-    suggestion: !launcherInstalled ? '运行 "pnpm add -D @ldesign/launcher"' : undefined
+    suggestion: !launcherInstalled ? '运行 "pnpm add -D @ldesign/launcher"' : undefined,
   })
 
   return {
     category: '依赖检查',
     items,
-    hasIssues: items.some(item => item.status === 'error')
+    hasIssues: items.some(item => item.status === 'error'),
   }
 }
 
@@ -236,33 +238,35 @@ async function checkPorts(): Promise<DiagnosticResult> {
     items.push({
       name: `端口 ${port}`,
       status: available ? 'success' : 'warning',
-      message: available ? '可用 ✓' : '已被占用'
+      message: available ? '可用 ✓' : '已被占用',
     })
   }
 
   return {
     category: '端口检查',
     items,
-    hasIssues: false // 端口被占用不算严重问题
+    hasIssues: false, // 端口被占用不算严重问题
   }
 }
 
 /**
  * 打印诊断结果
  */
-function printDiagnosticResult(result: DiagnosticResult): void {
-  console.log(`\n${picocolors.bold(result.category)}`)
-  console.log('─'.repeat(50))
+function printDiagnosticResult(result: DiagnosticResult, logger: Logger): void {
+  logger.raw(`\n${picocolors.bold(result.category)}`)
+  logger.raw('─'.repeat(50))
 
   for (const item of result.items) {
-    const icon = item.status === 'success' ? picocolors.green('✓') :
-      item.status === 'warning' ? picocolors.yellow('⚠') :
-        picocolors.red('✗')
+    const icon = item.status === 'success'
+      ? picocolors.green('✓')
+      : item.status === 'warning'
+        ? picocolors.yellow('⚠')
+        : picocolors.red('✗')
 
-    console.log(`  ${icon} ${item.name}: ${item.message}`)
+    logger.raw(`  ${icon} ${item.name}: ${item.message}`)
 
     if (item.suggestion) {
-      console.log(`    ${picocolors.gray('→ ' + item.suggestion)}`)
+      logger.raw(`    ${picocolors.gray(`→ ${item.suggestion}`)}`)
     }
   }
 }
@@ -271,7 +275,12 @@ function printDiagnosticResult(result: DiagnosticResult): void {
  * 诊断命令
  */
 export async function doctorCommand(cwd: string = process.cwd()): Promise<void> {
-  console.log(picocolors.bold('\n🔍 @ldesign/launcher 诊断工具\n'))
+  const logger = new Logger('doctor', {
+    level: 'info',
+    colors: true,
+  })
+
+  logger.raw(picocolors.bold('\n🔍 @ldesign/launcher 诊断工具\\n'))
 
   const results: DiagnosticResult[] = []
 
@@ -283,23 +292,24 @@ export async function doctorCommand(cwd: string = process.cwd()): Promise<void> 
 
   // 打印结果
   for (const result of results) {
-    printDiagnosticResult(result)
+    printDiagnosticResult(result, logger)
   }
 
   // 总结
   const hasErrors = results.some(r => r.hasIssues)
   const totalIssues = results.reduce((acc, r) =>
-    acc + r.items.filter(i => i.status === 'error' || i.status === 'warning').length, 0
-  )
+    acc + r.items.filter(i => i.status === 'error' || i.status === 'warning').length, 0)
 
-  console.log('\n' + '─'.repeat(50))
+  logger.raw(`\n${'─'.repeat(50)}`)
 
   if (hasErrors) {
-    console.log(picocolors.red(`\n✗ 发现 ${totalIssues} 个问题，请根据上述建议进行修复\n`))
+    logger.raw(picocolors.red(`\n✗ 发现 ${totalIssues} 个问题，请根据上述建议进行修复\n`))
     process.exit(1)
-  } else if (totalIssues > 0) {
-    console.log(picocolors.yellow(`\n⚠ 发现 ${totalIssues} 个警告，建议优化\n`))
-  } else {
-    console.log(picocolors.green('\n✓ 一切正常！\n'))
+  }
+  else if (totalIssues > 0) {
+    logger.raw(picocolors.yellow(`\n⚠ 发现 ${totalIssues} 个警告，建议优化\n`))
+  }
+  else {
+    logger.raw(picocolors.green('\n✓ 一切正常！\n'))
   }
 }

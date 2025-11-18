@@ -1,21 +1,21 @@
 /**
  * React 框架适配器
- * 
+ *
  * 提供 React 项目的自动检测、插件配置和构建支持
- * 
+ *
  * @author LDesign Team
  * @since 2.0.0
  */
 
 import type { Plugin } from 'vite'
-import type {
-  FrameworkDetectionResult,
-  FrameworkDependencies,
-  FrameworkFeatures,
-  FrameworkOptions
-} from '../../types/framework'
-import type { BuildEngine } from '../../types/engine'
 import type { ViteLauncherConfig } from '../../types/config'
+import type { BuildEngine } from '../../types/engine'
+import type {
+  FrameworkDependencies,
+  FrameworkDetectionResult,
+  FrameworkFeatures,
+  FrameworkOptions,
+} from '../../types/framework'
 import { FrameworkAdapter } from '../base/FrameworkAdapter'
 
 /**
@@ -33,7 +33,7 @@ export class ReactAdapter extends FrameworkAdapter {
     ssr: true,
     ssg: true,
     hmr: true,
-    fastRefresh: true
+    fastRefresh: true,
   }
 
   /**
@@ -43,7 +43,7 @@ export class ReactAdapter extends FrameworkAdapter {
     const evidence: FrameworkDetectionResult['evidence'] = {
       dependencies: [],
       files: [],
-      configFiles: []
+      configFiles: [],
     }
 
     let confidence = 0
@@ -65,7 +65,8 @@ export class ReactAdapter extends FrameworkAdapter {
     if (await this.hasDependency(cwd, '@vitejs/plugin-react')) {
       evidence.dependencies!.push('@vitejs/plugin-react')
       confidence += 0.15
-    } else if (await this.hasDependency(cwd, '@vitejs/plugin-react-swc')) {
+    }
+    else if (await this.hasDependency(cwd, '@vitejs/plugin-react-swc')) {
       evidence.dependencies!.push('@vitejs/plugin-react-swc')
       confidence += 0.15
     }
@@ -77,7 +78,7 @@ export class ReactAdapter extends FrameworkAdapter {
       'src/main.tsx',
       'src/main.jsx',
       'src/index.tsx',
-      'src/index.jsx'
+      'src/index.jsx',
     ])
     if (reactFiles.length > 0) {
       evidence.files = reactFiles
@@ -100,7 +101,7 @@ export class ReactAdapter extends FrameworkAdapter {
       'src/hooks',
       'src/contexts',
       'src/pages',
-      'public'
+      'public',
     ]
     const structureMatches = await this.checkProjectStructure(cwd, structurePatterns)
     if (structureMatches >= 2) {
@@ -111,7 +112,7 @@ export class ReactAdapter extends FrameworkAdapter {
     const configFiles = await this.findFiles(cwd, [
       'vite.config.ts',
       'vite.config.js',
-      'tsconfig.json'
+      'tsconfig.json',
     ])
     if (configFiles.length > 0) {
       evidence.configFiles = configFiles
@@ -123,7 +124,7 @@ export class ReactAdapter extends FrameworkAdapter {
       const hasReactJsx = await this.fileContainsPattern(
         cwd,
         'tsconfig.json',
-        /"jsx":\s*"react(-jsx|-jsxdev)?"/
+        /"jsx":\s*"react(-jsx|-jsxdev)?"/,
       )
       if (hasReactJsx) {
         confidence += 0.05
@@ -136,7 +137,7 @@ export class ReactAdapter extends FrameworkAdapter {
     const detected = confidence >= 0.5
 
     this.logger.debug(
-      `React 检测结果: ${detected ? '✓' : '✗'} (置信度: ${(confidence * 100).toFixed(1)}%)`
+      `React 检测结果: ${detected ? '✓' : '✗'} (置信度: ${(confidence * 100).toFixed(1)}%)`,
     )
 
     return {
@@ -144,7 +145,7 @@ export class ReactAdapter extends FrameworkAdapter {
       type: detected ? 'react' : undefined,
       version: reactVersion ? this.parseVersion(reactVersion) : undefined,
       confidence,
-      evidence
+      evidence,
     }
   }
 
@@ -162,11 +163,13 @@ export class ReactAdapter extends FrameworkAdapter {
         const plugin = react(options?.options)
         // react() 可能返回单个插件或插件数组
         if (Array.isArray(plugin)) {
-          plugins.push(...plugin)
-        } else {
-          plugins.push(plugin)
+          plugins.push(...(plugin as any as Plugin[]))
         }
-      } catch (error) {
+        else {
+          plugins.push(plugin as any as Plugin)
+        }
+      }
+      catch (error) {
         this.logger.error('加载 React 插件失败', error)
         throw new Error('请安装 @vitejs/plugin-react: npm install -D @vitejs/plugin-react')
       }
@@ -178,11 +181,11 @@ export class ReactAdapter extends FrameworkAdapter {
   /**
    * 获取 React 特定配置
    */
-  getConfig(options?: FrameworkOptions): Partial<ViteLauncherConfig> {
+  getConfig(_options?: FrameworkOptions): Partial<ViteLauncherConfig> {
     return {
       server: {
         port: 3000,
-        open: true
+        open: true,
       },
       build: {
         outDir: 'dist',
@@ -190,26 +193,26 @@ export class ReactAdapter extends FrameworkAdapter {
         rollupOptions: {
           output: {
             manualChunks: {
-              react: ['react', 'react-dom'],
+              'react': ['react', 'react-dom'],
               'react-router': ['react-router-dom'],
-              'react-vendor': ['axios', 'dayjs']
-            }
-          }
-        }
+              'react-vendor': ['axios', 'dayjs'],
+            },
+          },
+        },
       },
       resolve: {
         alias: [
           { find: '@', replacement: '/src' },
-          { find: '~', replacement: '/src' }
+          { find: '~', replacement: '/src' },
         ],
-        extensions: ['.js', '.ts', '.jsx', '.tsx', '.json']
+        extensions: ['.js', '.ts', '.jsx', '.tsx', '.json'],
       },
       optimizeDeps: {
-        include: ['react', 'react-dom', 'react-router-dom']
+        include: ['react', 'react-dom', 'react-router-dom'],
       },
       esbuild: {
-        jsxDev: process.env.NODE_ENV === 'development'
-      }
+        jsxDev: process.env.NODE_ENV === 'development',
+      },
     }
   }
 
@@ -223,12 +226,12 @@ export class ReactAdapter extends FrameworkAdapter {
         '@vitejs/plugin-react',
         '@types/react',
         '@types/react-dom',
-        'vite'
+        'vite',
       ],
       optionalDependencies: [
         'react-router-dom',
-        '@tanstack/react-query'
-      ]
+        '@tanstack/react-query',
+      ],
     }
   }
 
@@ -237,10 +240,10 @@ export class ReactAdapter extends FrameworkAdapter {
    */
   getScripts(): Record<string, string> {
     return {
-      dev: 'launcher dev',
-      build: 'launcher build',
-      preview: 'launcher preview',
-      'type-check': 'tsc --noEmit'
+      'dev': 'launcher dev',
+      'build': 'launcher build',
+      'preview': 'launcher preview',
+      'type-check': 'tsc --noEmit',
     }
   }
 
@@ -250,8 +253,7 @@ export class ReactAdapter extends FrameworkAdapter {
   getEnvConfig(): Record<string, string> {
     return {
       VITE_APP_TITLE: 'React App',
-      VITE_APP_VERSION: '1.0.0'
+      VITE_APP_VERSION: '1.0.0',
     }
   }
 }
-

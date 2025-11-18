@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 智能代理处理器
  *
  * 提供专业的服务类型代理配置自动转换和智能处理功能
@@ -9,17 +9,14 @@
 
 import type {
   ProxyOptions,
-  ApiProxyConfig,
-  AssetsProxyConfig,
-  WebSocketProxyConfig,
-  UploadProxyConfig,
-  CustomProxyRule
 } from '../types/config'
+import { Logger } from './logger'
 
 /**
  * 智能代理处理器类
  */
 export class ProxyProcessor {
+  private static logger = new Logger('ProxyProcessor')
   /**
    * 处理代理配置，将服务类型配置转换为 Vite 标准配置
    *
@@ -29,7 +26,7 @@ export class ProxyProcessor {
    */
   static processProxyConfig(
     proxyConfig: ProxyOptions | Record<string, any>,
-    environment: string = 'development'
+    environment: string = 'development',
   ): Record<string, any> {
     // 如果是简单的 Record 对象，直接返回
     if (!proxyConfig || typeof proxyConfig !== 'object') {
@@ -78,7 +75,18 @@ export class ProxyProcessor {
    * 提取标准 Vite 配置
    */
   private static extractStandardConfig(config: any): Record<string, any> {
-    const { api, assets, websocket, upload, custom, global, rules, middleware, logging, ...standardConfig } = config
+    const {
+      api: _api,
+      assets: _assets,
+      websocket: _websocket,
+      upload: _upload,
+      custom: _custom,
+      global: _global,
+      rules: _rules,
+      middleware: _middleware,
+      logging: _logging,
+      ...standardConfig
+    } = config
     return standardConfig
   }
 
@@ -91,7 +99,7 @@ export class ProxyProcessor {
    */
   private static convertServiceConfig(
     config: ProxyOptions,
-    environment: string
+    environment: string,
   ): Record<string, any> {
     const result: Record<string, any> = {}
     const globalConfig = config.global
@@ -102,7 +110,7 @@ export class ProxyProcessor {
     const createProxyHandler = (serviceName: string, customHeaders: Record<string, string> = {}) => {
       return (proxy: any) => {
         proxy.on('error', (err: Error) => {
-          console.error(`🔴 [${environment.toUpperCase()}] ${serviceName} 代理错误:`, err.message)
+          ProxyProcessor.logger.error(`🔴 [${environment.toUpperCase()}] ${serviceName} 代理错误: ${err.message}`)
         })
 
         proxy.on('proxyReq', (proxyReq: any, req: any) => {
@@ -123,13 +131,13 @@ export class ProxyProcessor {
           })
 
           if (isVerbose) {
-            console.log(`🔄 [${environment.toUpperCase()}] ${serviceName}:`, req.method, req.url)
+            ProxyProcessor.logger.debug(`🔄 [${environment.toUpperCase()}] ${serviceName}: ${req.method} ${req.url}`)
           }
         })
 
         if (isVerbose) {
           proxy.on('proxyRes', (proxyRes: any, req: any) => {
-            console.log(`✅ [${environment.toUpperCase()}] ${serviceName}:`, req.url, '->', proxyRes.statusCode)
+            ProxyProcessor.logger.debug(`✅ [${environment.toUpperCase()}] ${serviceName}: ${req.url} -> ${proxyRes.statusCode}`)
           })
         }
       }
@@ -148,8 +156,8 @@ export class ProxyProcessor {
         configure: createProxyHandler('API', {
           'X-API-Service': 'ldesign',
           'X-Request-Source': 'web-app',
-          ...headers
-        })
+          ...headers,
+        }),
       }
 
       // 添加认证配置
@@ -174,8 +182,8 @@ export class ProxyProcessor {
           'Cache-Control': cache?.maxAge
             ? `public, max-age=${cache.maxAge}`
             : (environment === 'production' ? 'public, max-age=31536000' : 'public, max-age=300'),
-          ...(cache?.etag ? { 'ETag': 'true' } : {})
-        })
+          ...(cache?.etag ? { ETag: 'true' } : {}),
+        }),
       }
     }
 
@@ -194,16 +202,16 @@ export class ProxyProcessor {
         configure: (proxy: any) => {
           if (isVerbose) {
             proxy.on('open', () => {
-              console.log(`🔌 [${environment.toUpperCase()}] WebSocket 连接已建立`)
+              ProxyProcessor.logger.info(`🔌 [${environment.toUpperCase()}] WebSocket 连接已建立`)
             })
             proxy.on('close', () => {
-              console.log(`🔌 [${environment.toUpperCase()}] WebSocket 连接已关闭`)
+              ProxyProcessor.logger.info(`🔌 [${environment.toUpperCase()}] WebSocket 连接已关闭`)
             })
           }
           proxy.on('error', (err: Error) => {
-            console.error(`🔴 [${environment.toUpperCase()}] WebSocket 代理错误:`, err.message)
+            ProxyProcessor.logger.error(`🔴 [${environment.toUpperCase()}] WebSocket 代理错误: ${err.message}`)
           })
-        }
+        },
       }
     }
 
@@ -218,8 +226,8 @@ export class ProxyProcessor {
         timeout: timeout || globalConfig?.timeout || 30000,
         configure: createProxyHandler('Upload', {
           'X-Upload-Service': environment,
-          'X-Max-File-Size': maxFileSize || (environment === 'production' ? '50MB' : '100MB')
-        })
+          'X-Max-File-Size': maxFileSize || (environment === 'production' ? '50MB' : '100MB'),
+        }),
       }
     }
 
@@ -236,8 +244,8 @@ export class ProxyProcessor {
           ...options,
           configure: createProxyHandler(`Custom-${index + 1}`, {
             'X-Custom-Service': 'true',
-            ...(options.headers || {})
-          })
+            ...(options.headers || {}),
+          }),
         }
       })
     }
@@ -251,7 +259,7 @@ export class ProxyProcessor {
    * @param config 代理配置
    * @returns 验证结果
    */
-  static validateProxyConfig(config: any): { valid: boolean; errors: string[]; warnings: string[] } {
+  static validateProxyConfig(config: any): { valid: boolean, errors: string[], warnings: string[] } {
     const errors: string[] = []
     const warnings: string[] = []
 
@@ -263,7 +271,8 @@ export class ProxyProcessor {
     if (config.api) {
       if (!config.api.target) {
         errors.push('API 代理配置缺少 target 字段')
-      } else if (!this.isValidUrl(config.api.target)) {
+      }
+      else if (!this.isValidUrl(config.api.target)) {
         errors.push(`API 代理 target 不是有效的 URL: ${config.api.target}`)
       }
     }
@@ -272,7 +281,8 @@ export class ProxyProcessor {
     if (config.assets) {
       if (!config.assets.target) {
         errors.push('静态资源代理配置缺少 target 字段')
-      } else if (!this.isValidUrl(config.assets.target)) {
+      }
+      else if (!this.isValidUrl(config.assets.target)) {
         errors.push(`静态资源代理 target 不是有效的 URL: ${config.assets.target}`)
       }
     }
@@ -281,9 +291,11 @@ export class ProxyProcessor {
     if (config.websocket) {
       if (!config.websocket.target) {
         errors.push('WebSocket 代理配置缺少 target 字段')
-      } else if (!this.isValidUrl(config.websocket.target)) {
+      }
+      else if (!this.isValidUrl(config.websocket.target)) {
         errors.push(`WebSocket 代理 target 不是有效的 URL: ${config.websocket.target}`)
-      } else if (config.websocket.target.startsWith('http://')) {
+      }
+      else if (config.websocket.target.startsWith('http://')) {
         warnings.push('WebSocket 代理使用 HTTP 协议，将自动转换为 WS 协议')
       }
     }
@@ -292,7 +304,8 @@ export class ProxyProcessor {
     if (config.upload) {
       if (!config.upload.target) {
         errors.push('上传服务代理配置缺少 target 字段')
-      } else if (!this.isValidUrl(config.upload.target)) {
+      }
+      else if (!this.isValidUrl(config.upload.target)) {
         errors.push(`上传服务代理 target 不是有效的 URL: ${config.upload.target}`)
       }
     }
@@ -305,7 +318,8 @@ export class ProxyProcessor {
         }
         if (!rule.target) {
           errors.push(`自定义代理规则 ${index + 1} 缺少 target 字段`)
-        } else if (!this.isValidUrl(rule.target)) {
+        }
+        else if (!this.isValidUrl(rule.target)) {
           errors.push(`自定义代理规则 ${index + 1} target 不是有效的 URL: ${rule.target}`)
         }
       })
@@ -314,13 +328,13 @@ export class ProxyProcessor {
     return {
       valid: errors.length === 0,
       errors,
-      warnings
+      warnings,
     }
   }
 
   /**
    * 检查是否为有效的 URL
-   * 
+   *
    * @param url URL 字符串
    * @returns 是否有效
    */
@@ -328,7 +342,8 @@ export class ProxyProcessor {
     try {
       new URL(url)
       return true
-    } catch {
+    }
+    catch {
       return false
     }
   }

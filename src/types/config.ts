@@ -1,15 +1,15 @@
 /**
  * 配置相关类型定义
- * 
+ *
  * 定义 ViteLauncher 的配置接口和相关类型
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
 
-import type { UserConfig, Plugin } from 'vite'
-import type { LogLevel, Mode, LifecycleHook, ValidationResult, FilePath, Host, Port } from './common'
+import type { Plugin, UserConfig } from 'vite'
 import type { AliasEntry } from '../utils/aliases'
+import type { FilePath, Host, LifecycleHook, LogLevel, Mode, Port, ValidationResult } from './common'
 
 /**
  * ViteLauncher 扩展配置接口
@@ -402,46 +402,46 @@ export interface EnvironmentConfig {
  * 项目预设类型
  * 定义支持的项目类型预设
  */
-export type ProjectPreset =
-  | 'vue2'
-  | 'vue3'
-  | 'vue3-ts'
-  | 'react'
-  | 'react-ts'
-  | 'ldesign'
-  | 'svelte'
-  | 'svelte-ts'
-  | 'angular'
-  | 'angular-ts'
-  | 'solid'
-  | 'solid-ts'
-  | 'lit'
-  | 'lit-ts'
-  | 'preact'
-  | 'preact-ts'
-  | 'qwik'
-  | 'astro'
-  | 'vanilla'
-  | 'vanilla-ts'
-  | 'nuxt'
-  | 'next'
-  | 'sveltekit'
-  | 'electron'
-  | 'tauri'
-  | 'mobile-vue'
-  | 'mobile-react'
-  | 'desktop-vue'
-  | 'desktop-react'
-  | 'micro-frontend'
-  | 'monorepo'
-  | 'library'
-  | 'component-library'
-  | 'chrome-extension'
-  | 'vscode-extension'
-  | 'node-cli'
-  | 'express-api'
-  | 'fastify-api'
-  | 'custom'
+export type ProjectPreset
+  = | 'vue2'
+    | 'vue3'
+    | 'vue3-ts'
+    | 'react'
+    | 'react-ts'
+    | 'ldesign'
+    | 'svelte'
+    | 'svelte-ts'
+    | 'angular'
+    | 'angular-ts'
+    | 'solid'
+    | 'solid-ts'
+    | 'lit'
+    | 'lit-ts'
+    | 'preact'
+    | 'preact-ts'
+    | 'qwik'
+    | 'astro'
+    | 'vanilla'
+    | 'vanilla-ts'
+    | 'nuxt'
+    | 'next'
+    | 'sveltekit'
+    | 'electron'
+    | 'tauri'
+    | 'mobile-vue'
+    | 'mobile-react'
+    | 'desktop-vue'
+    | 'desktop-react'
+    | 'micro-frontend'
+    | 'monorepo'
+    | 'library'
+    | 'component-library'
+    | 'chrome-extension'
+    | 'vscode-extension'
+    | 'node-cli'
+    | 'express-api'
+    | 'fastify-api'
+    | 'custom'
 
 /**
  * SSR 配置选项接口

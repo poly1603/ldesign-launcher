@@ -7,4 +7,3 @@ export type { UseAppConfigReturn } from './useAppConfig'
 
 export { useLauncherConfig } from './useLauncherConfig'
 export type { UseLauncherConfigReturn } from './useLauncherConfig'
-

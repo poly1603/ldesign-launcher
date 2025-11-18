@@ -1,19 +1,19 @@
 /**
  * 构建相关工具函数
- * 
+ *
  * 提供构建过程的辅助工具函数
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
 
+import type { RollupOutput } from 'rollup'
 import { FileSystem } from './file-system'
 import { PathUtils } from './path-utils'
-import type { RollupOutput } from 'rollup'
 
 /**
  * 分析构建结果
- * 
+ *
  * @param result - 构建结果
  * @returns 构建分析信息
  */
@@ -41,7 +41,7 @@ export function analyzeBuildResult(result: RollupOutput): {
       size: number
       type: string
       isEntry: boolean
-    }>
+    }>,
   }
 
   if (!result.output || !Array.isArray(result.output)) {
@@ -75,7 +75,7 @@ export function analyzeBuildResult(result: RollupOutput): {
       fileName: chunk.fileName,
       size,
       type: fileType,
-      isEntry
+      isEntry,
     })
   }
 
@@ -84,7 +84,7 @@ export function analyzeBuildResult(result: RollupOutput): {
 
 /**
  * 获取文件类型
- * 
+ *
  * @param fileName - 文件名
  * @returns 文件类型
  */
@@ -93,28 +93,34 @@ export function getFileType(fileName: string): string {
 
   if (['.js', '.mjs', '.cjs'].includes(ext)) {
     return 'js'
-  } else if (ext === '.css') {
+  }
+  else if (ext === '.css') {
     return 'css'
-  } else if (['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.avif'].includes(ext)) {
+  }
+  else if (['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.avif'].includes(ext)) {
     return 'image'
-  } else if (['.woff', '.woff2', '.ttf', '.eot', '.otf'].includes(ext)) {
+  }
+  else if (['.woff', '.woff2', '.ttf', '.eot', '.otf'].includes(ext)) {
     return 'font'
-  } else if (['.html', '.htm'].includes(ext)) {
+  }
+  else if (['.html', '.htm'].includes(ext)) {
     return 'html'
-  } else {
+  }
+  else {
     return 'asset'
   }
 }
 
 /**
  * 格式化文件大小
- * 
+ *
  * @param bytes - 字节数
  * @param decimals - 小数位数
  * @returns 格式化后的大小
  */
 export function formatFileSize(bytes: number, decimals: number = 2): string {
-  if (bytes === 0) return '0 B'
+  if (bytes === 0)
+    return '0 B'
 
   const k = 1024
   const dm = decimals < 0 ? 0 : decimals
@@ -122,24 +128,25 @@ export function formatFileSize(bytes: number, decimals: number = 2): string {
 
   const i = Math.floor(Math.log(bytes) / Math.log(k))
 
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i]
+  return `${Number.parseFloat((bytes / k ** i).toFixed(dm))} ${sizes[i]}`
 }
 
 /**
  * 计算压缩比
- * 
+ *
  * @param originalSize - 原始大小
  * @param compressedSize - 压缩后大小
  * @returns 压缩比（百分比）
  */
 export function calculateCompressionRatio(originalSize: number, compressedSize: number): number {
-  if (originalSize === 0) return 0
+  if (originalSize === 0)
+    return 0
   return Math.round(((originalSize - compressedSize) / originalSize) * 100)
 }
 
 /**
  * 获取目录大小
- * 
+ *
  * @param dirPath - 目录路径
  * @returns 目录大小（字节）
  */
@@ -163,20 +170,22 @@ export async function getDirectorySize(dirPath: string): Promise<number> {
 
       if (fileStats.isDirectory()) {
         totalSize += await getDirectorySize(filePath)
-      } else {
+      }
+      else {
         totalSize += fileStats.size
       }
     }
 
     return totalSize
-  } catch (error) {
+  }
+  catch {
     return 0
   }
 }
 
 /**
  * 清理构建目录
- * 
+ *
  * @param outDir - 输出目录
  * @param keepFiles - 要保留的文件列表
  */
@@ -196,14 +205,15 @@ export async function cleanBuildDirectory(outDir: string, keepFiles: string[] = 
       const filePath = PathUtils.join(outDir, file)
       await FileSystem.remove(filePath)
     }
-  } catch (error) {
+  }
+  catch (error) {
     throw new Error(`清理构建目录失败: ${(error as Error).message}`)
   }
 }
 
 /**
  * 生成构建报告
- * 
+ *
  * @param result - 构建结果
  * @param outDir - 输出目录
  * @param options - 报告选项
@@ -215,7 +225,7 @@ export async function generateBuildReport(
     fileName?: string
     includeSourceMap?: boolean
     includeAssets?: boolean
-  } = {}
+  } = {},
 ): Promise<void> {
   try {
     const analysis = analyzeBuildResult(result)
@@ -230,35 +240,36 @@ export async function generateBuildReport(
         totalSizeFormatted: formatFileSize(analysis.totalSize),
         jsFiles: analysis.jsFiles,
         cssFiles: analysis.cssFiles,
-        assetFiles: analysis.assetFiles
+        assetFiles: analysis.assetFiles,
       },
       files: analysis.chunks.map(chunk => ({
         fileName: chunk.fileName,
         size: chunk.size,
         sizeFormatted: formatFileSize(chunk.size),
         type: chunk.type,
-        isEntry: chunk.isEntry
+        isEntry: chunk.isEntry,
       })),
       breakdown: {
         byType: getFileTypeBreakdown(analysis.chunks),
-        bySize: getSizeBreakdown(analysis.chunks)
-      }
+        bySize: getSizeBreakdown(analysis.chunks),
+      },
     }
 
     await FileSystem.writeFile(reportPath, JSON.stringify(report, null, 2))
-  } catch (error) {
+  }
+  catch (error) {
     throw new Error(`生成构建报告失败: ${(error as Error).message}`)
   }
 }
 
 /**
  * 获取文件类型分布
- * 
+ *
  * @param chunks - 文件块列表
  * @returns 类型分布
  */
-function getFileTypeBreakdown(chunks: Array<{ type: string; size: number }>) {
-  const breakdown: Record<string, { count: number; size: number }> = {}
+function getFileTypeBreakdown(chunks: Array<{ type: string, size: number }>) {
+  const breakdown: Record<string, { count: number, size: number }> = {}
 
   for (const chunk of chunks) {
     if (!breakdown[chunk.type]) {
@@ -279,30 +290,30 @@ function getFileTypeBreakdown(chunks: Array<{ type: string; size: number }>) {
 
 /**
  * 获取大小分布
- * 
+ *
  * @param chunks - 文件块列表
  * @returns 大小分布
  */
-function getSizeBreakdown(chunks: Array<{ fileName: string; size: number }>) {
+function getSizeBreakdown(chunks: Array<{ fileName: string, size: number }>) {
   const sorted = [...chunks].sort((a, b) => b.size - a.size)
 
   return {
     largest: sorted.slice(0, 10).map(chunk => ({
       fileName: chunk.fileName,
       size: chunk.size,
-      sizeFormatted: formatFileSize(chunk.size)
+      sizeFormatted: formatFileSize(chunk.size),
     })),
     smallest: sorted.slice(-10).reverse().map(chunk => ({
       fileName: chunk.fileName,
       size: chunk.size,
-      sizeFormatted: formatFileSize(chunk.size)
-    }))
+      sizeFormatted: formatFileSize(chunk.size),
+    })),
   }
 }
 
 /**
  * 验证构建输出
- * 
+ *
  * @param outDir - 输出目录
  * @returns 验证结果
  */
@@ -336,7 +347,7 @@ export async function validateBuildOutput(outDir: string): Promise<{
     }
 
     // 检查是否有 JavaScript 文件
-    const jsFiles = dirFiles.filter((file: string) => /\.(js|mjs|cjs)$/.test(file))
+    const jsFiles = dirFiles.filter((file: string) => /\.(?:js|mjs|cjs)$/.test(file))
     if (jsFiles.length === 0) {
       warnings.push('未找到 JavaScript 文件')
     }
@@ -355,10 +366,10 @@ export async function validateBuildOutput(outDir: string): Promise<{
       valid: errors.length === 0,
       errors,
       warnings,
-      files
+      files,
     }
-
-  } catch (error) {
+  }
+  catch (error) {
     errors.push(`验证构建输出失败: ${(error as Error).message}`)
     return { valid: false, errors, warnings, files }
   }
@@ -366,7 +377,7 @@ export async function validateBuildOutput(outDir: string): Promise<{
 
 /**
  * 比较构建结果
- * 
+ *
  * @param current - 当前构建结果
  * @param previous - 之前的构建结果
  * @returns 比较结果
@@ -401,19 +412,21 @@ export function compareBuildResults(current: RollupOutput, previous: RollupOutpu
       fileDiffs.push({
         fileName,
         sizeDiff: currentSize,
-        status: 'added'
+        status: 'added',
       })
-    } else if (currentSize !== previousSize) {
+    }
+    else if (currentSize !== previousSize) {
       fileDiffs.push({
         fileName,
         sizeDiff: currentSize - previousSize,
-        status: 'modified'
+        status: 'modified',
       })
-    } else {
+    }
+    else {
       fileDiffs.push({
         fileName,
         sizeDiff: 0,
-        status: 'unchanged'
+        status: 'unchanged',
       })
     }
   }
@@ -424,13 +437,13 @@ export function compareBuildResults(current: RollupOutput, previous: RollupOutpu
       fileDiffs.push({
         fileName,
         sizeDiff: -previousSize,
-        status: 'removed'
+        status: 'removed',
       })
     }
   }
 
   return {
     totalSizeDiff,
-    fileDiffs
+    fileDiffs,
   }
 }

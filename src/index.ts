@@ -8,64 +8,59 @@
  * @since 1.0.0
  */
 
-// 导出核心启动类
-export { bootstrap, isBootstrapped } from './core/bootstrap'
-
-// 导出引擎相关（避免与 types 冲突）
-export { BuildEngine } from './engines/base/BuildEngine'
-export { ViteEngine, ViteConfigTransformer, createViteEngineFactory } from './engines/vite'
-export { VITE_ENGINE_METADATA, registerAllEngines } from './engines'
-
-// 导出注册表
-export * from './registry'
-
-// 导出框架相关（避免与 types 冲突）
-export { FrameworkAdapter } from './frameworks/base/FrameworkAdapter'
-export { FrameworkDetector, createFrameworkDetector } from './frameworks/base/FrameworkDetector'
-export {
-  VUE2_FRAMEWORK_METADATA,
-  VUE3_FRAMEWORK_METADATA,
-  REACT_FRAMEWORK_METADATA,
-  SVELTE_FRAMEWORK_METADATA,
-  SOLID_FRAMEWORK_METADATA,
-  PREACT_FRAMEWORK_METADATA,
-  QWIK_FRAMEWORK_METADATA,
-  LIT_FRAMEWORK_METADATA,
-  MARKO_FRAMEWORK_METADATA,
-  registerAllFrameworks
-} from './frameworks'
-
-// 导出新架构核心类（2.0 推荐）
-export { Launcher, LauncherOptions } from './core/Launcher'
-
-// 导出旧架构核心类（保持向后兼容）
-export { ViteLauncher } from './core/ViteLauncher'
-export { ConfigManager } from './core/ConfigManager'
-export { PluginOrchestrator } from './core/PluginOrchestrator'
-export { EngineManager } from './core/EngineManager'
-export { ServerManager } from './core/ServerManager'
-
-// 导出插件预设系统
-export { presetManager, definePreset } from './plugins/presets'
-export type { PresetType, PresetOptions } from './plugins/presets'
-export * from './plugins/presets'
-
-// 导出开发工具插件
-export * from './plugins'
-
-// 导出别名相关类型定义和工具函数
-export type { AliasEntry, BuildStage } from './utils/aliases'
-export {
-  createAlias,
-  createBasicAliases,
-  createDevAlias,
-  createBuildAlias,
-  createUniversalAlias
-} from './utils/aliases'
+// 导出常量
+export * from './constants'
 
 // 导出别名管理器
 export { AliasManager, createAliasManager } from './core/AliasManager'
 export type { BuildStage as AliasStage } from './core/AliasManager'
+// 导出核心启动类
+export { bootstrap, isBootstrapped } from './core/bootstrap'
+
+export { ConfigManager } from './core/ConfigManager'
+
+export { EngineManager } from './core/EngineManager'
+// 导出新架构核心类（2.0 推荐）
+export { Launcher, LauncherOptions } from './core/Launcher'
+// 默认导出新 Launcher（推荐使用）
+export { Launcher as default } from './core/Launcher'
+
+export { PluginOrchestrator } from './core/PluginOrchestrator'
+
+export { ServerManager } from './core/ServerManager'
+// 导出旧架构核心类（保持向后兼容）
+export { ViteLauncher } from './core/ViteLauncher'
+export { registerAllEngines, VITE_ENGINE_METADATA } from './engines'
+// 导出引擎相关（避免与 types 冲突）
+export { BuildEngine } from './engines/base/BuildEngine'
+export { createViteEngineFactory, ViteConfigTransformer, ViteEngine } from './engines/vite'
+
+export {
+  LIT_FRAMEWORK_METADATA,
+  MARKO_FRAMEWORK_METADATA,
+  PREACT_FRAMEWORK_METADATA,
+  QWIK_FRAMEWORK_METADATA,
+  REACT_FRAMEWORK_METADATA,
+  registerAllFrameworks,
+  SOLID_FRAMEWORK_METADATA,
+  SVELTE_FRAMEWORK_METADATA,
+  VUE2_FRAMEWORK_METADATA,
+  VUE3_FRAMEWORK_METADATA,
+} from './frameworks'
+// 导出框架相关（避免与 types 冲突）
+export { FrameworkAdapter } from './frameworks/base/FrameworkAdapter'
+export { createFrameworkDetector, FrameworkDetector } from './frameworks/base/FrameworkDetector'
+
+// 导出开发工具插件
+export * from './plugins'
+
+// 导出插件预设系统
+export { definePreset, presetManager } from './plugins/presets'
+export type { PresetOptions, PresetType } from './plugins/presets'
+
+export * from './plugins/presets'
+// 导出注册表
+export * from './registry'
 
 // 导出类型定义（避免与实现类冲突）
 export type * from './types'
@@ -73,74 +68,77 @@ export type * from './types'
 // 导出UI配置相关函数
 export {
   getConfigFields,
-  getFieldByPath,
   getDefaultConfig,
-  validateConfigValue,
-  getEnvironmentConfig,
   getDefaultEnvironment,
+  getEnvironmentConfig,
   getEnvironmentConfigPath,
+  getFieldByPath,
   getNestedValue,
+  LAUNCHER_CONFIG_FIELDS,
   setNestedValue,
   SUPPORTED_ENVIRONMENTS,
-  LAUNCHER_CONFIG_FIELDS
+  validateConfigValue,
 } from './types/ui-config'
 
-// 导出常量
-export * from './constants'
+// 导出别名相关类型定义和工具函数
+export type { AliasEntry, BuildStage } from './utils/aliases'
 
-// 导出工具函数 - 只导出特定的工具，避免冲突
-export { Logger } from './utils/logger'
-export { ErrorHandler, LauncherError } from './utils/error-handler'
-export { FileSystem } from './utils/file-system'
-export { PathUtils } from './utils/path-utils'
+export {
+  createAlias,
+  createBasicAliases,
+  createBuildAlias,
+  createDevAlias,
+  createUniversalAlias,
+} from './utils/aliases'
+export {
+  analyzeBuildResult,
+  generateBuildReport,
+} from './utils/build'
+// 配置和构建工具 - 避免重复导出
+export {
+  createPathResolver,
+  loadConfigFile,
+  mergeConfigs,
+  validateConfig,
+} from './utils/config'
+// 导出配置定义函数
+export { defineConfig } from './utils/config'
 export {
   EnvironmentManager,
   environmentManager,
-  loadEnv,
+  generateDefines,
   getClientEnv,
-  generateDefines
+  loadEnv,
 } from './utils/env'
 
-// 配置和构建工具 - 避免重复导出
-export {
-  loadConfigFile,
-  validateConfig,
-  mergeConfigs,
-  createPathResolver
-} from './utils/config'
+export { ErrorHandler, LauncherError } from './utils/error-handler'
+
+export { FileSystem } from './utils/file-system'
 
 export {
-  analyzeBuildResult,
-  generateBuildReport
-} from './utils/build'
+  formatDuration,
+} from './utils/format'
+
+// 导出工具函数 - 只导出特定的工具，避免冲突
+export { Logger } from './utils/logger'
+
+export { PathUtils } from './utils/path-utils'
 
 export {
-  getServerUrl
-} from './utils/server'
+  PerformanceMonitor,
+} from './utils/performance'
 
 export {
-  validatePlugin
+  validatePlugin,
 } from './utils/plugin'
 
 export {
-  validateObjectSchema,
-  batchValidate
-} from './utils/validation'
-
-export {
-  formatDuration
-} from './utils/format'
-
-export {
-  isValidUrl
+  getServerUrl,
 } from './utils/server'
 
 export {
-  PerformanceMonitor
-} from './utils/performance'
-
-// 导出配置定义函数
-export { defineConfig } from './utils/config'
+  isValidUrl,
+} from './utils/server'
 
 // 导出版本信息
 export const version = '2.0.0'
@@ -153,9 +151,11 @@ export function createLauncher() {
     Launcher: () => import('./core/Launcher').then(m => m.Launcher),
     ViteLauncher: () => import('./core/ViteLauncher').then(m => m.ViteLauncher),
     ConfigManager: () => import('./core/ConfigManager').then(m => m.ConfigManager),
-    createCli: () => import('./cli').then(m => m.createCli)
+    createCli: () => import('./cli').then(m => m.createCli),
   }
 }
 
-// 默认导出新 Launcher（推荐使用）
-export { Launcher as default } from './core/Launcher'
+export {
+  batchValidate,
+  validateObjectSchema,
+} from './utils/validation'

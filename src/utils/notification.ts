@@ -1,8 +1,8 @@
 /**
  * 系统通知工具类
- * 
+ *
  * 提供跨平台的系统通知功能，支持声音和自动消失
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
@@ -40,7 +40,7 @@ export class NotificationManager {
 
   /**
    * 发送系统通知
-   * 
+   *
    * @param options - 通知选项
    */
   async notify(options: NotificationOptions): Promise<void> {
@@ -62,22 +62,23 @@ export class NotificationManager {
         icon: finalOptions.icon,
         sound: finalOptions.sound,
         timeout: finalOptions.timeout || 3000, // 默认3秒后消失
-        wait: false // 不等待用户交互
+        wait: false, // 不等待用户交互
       })
 
       this.logger.debug('系统通知已发送', {
         title: finalOptions.title,
         message: finalOptions.message,
-        type: finalOptions.type
+        type: finalOptions.type,
       })
-    } catch (error) {
+    }
+    catch (error) {
       this.logger.warn('发送系统通知失败', { error: (error as Error).message })
     }
   }
 
   /**
    * 发送配置文件变更通知
-   * 
+   *
    * @param configType - 配置类型 ('launcher' | 'app')
    * @param filePath - 配置文件路径
    * @param environment - 环境名称
@@ -85,7 +86,7 @@ export class NotificationManager {
   async notifyConfigChange(
     configType: 'launcher' | 'app',
     filePath: string,
-    environment?: string
+    environment?: string,
   ): Promise<void> {
     const fileName = filePath.split(/[/\\]/).pop() || filePath
     const envText = environment ? ` (${environment})` : ''
@@ -95,7 +96,7 @@ export class NotificationManager {
       message: `${fileName}${envText} 配置文件已重新加载`,
       type: 'info',
       sound: true,
-      timeout: 3000
+      timeout: 3000,
     })
   }
 
@@ -108,7 +109,7 @@ export class NotificationManager {
       message,
       type: 'success',
       sound: true,
-      timeout: 3000
+      timeout: 3000,
     })
   }
 
@@ -121,7 +122,7 @@ export class NotificationManager {
       message,
       type: 'error',
       sound: true,
-      timeout: 5000 // 错误通知显示更久
+      timeout: 5000, // 错误通知显示更久
     })
   }
 
@@ -134,7 +135,7 @@ export class NotificationManager {
       message,
       type: 'warning',
       sound: true,
-      timeout: 4000
+      timeout: 4000,
     })
   }
 
@@ -147,7 +148,7 @@ export class NotificationManager {
       message,
       type: 'info',
       sound: false, // 信息通知默认不播放声音
-      timeout: 3000
+      timeout: 3000,
     })
   }
 
@@ -186,14 +187,14 @@ export class NotificationManager {
       icon: options.icon || this.getDefaultIcon(type),
       sound: options.sound !== false, // 默认启用声音
       timeout: options.timeout || 3000,
-      type
+      type,
     }
   }
 
   /**
    * 根据通知类型获取默认图标
    */
-  private getDefaultIcon(type: NotificationOptions['type']): string {
+  private getDefaultIcon(_type: NotificationOptions['type']): string {
     // 这里可以根据不同平台返回不同的图标路径
     // 暂时返回空字符串，使用系统默认图标
     return ''

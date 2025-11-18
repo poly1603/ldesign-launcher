@@ -1,26 +1,26 @@
 /**
  * Vite 构建引擎实现
- * 
+ *
  * 封装 Vite 的核心功能，提供统一的引擎接口
- * 
+ *
  * @author LDesign Team
  * @since 2.0.0
  */
 
+import type { RollupOutput, RollupWatcher } from 'rollup'
 import type {
   ViteDevServer,
   PreviewServer as VitePreviewServer,
-  UserConfig as ViteUserConfig
+  UserConfig as ViteUserConfig,
 } from 'vite'
-import type { RollupOutput, RollupWatcher } from 'rollup'
-import type {
-  DevServer,
-  PreviewServer,
-  EngineBuildResult,
-  BuildAsset,
-  EngineBuildStats
-} from '../../types/engine'
 import type { ViteLauncherConfig } from '../../types/config'
+import type {
+  BuildAsset,
+  DevServer,
+  EngineBuildResult,
+  EngineBuildStats,
+  PreviewServer,
+} from '../../types/engine'
 import { BuildEngine } from '../base/BuildEngine'
 import { ViteConfigTransformer } from './ViteConfigTransformer'
 
@@ -42,7 +42,8 @@ export class ViteEngine extends BuildEngine {
     try {
       // 这里会在运行时动态导入 vite 包
       this.version = 'dynamic' // 占位，实际版本在 initialize 时获取
-    } catch {
+    }
+    catch {
       this.version = '5.0.0' // 默认版本
     }
   }
@@ -61,7 +62,8 @@ export class ViteEngine extends BuildEngine {
       // @ts-ignore - 设置版本
       this.version = version
       this.logger.debug(`Vite 版本: ${version}`)
-    } catch (error) {
+    }
+    catch {
       this.logger.warn('无法获取 Vite 版本信息')
     }
   }
@@ -114,13 +116,13 @@ export class ViteEngine extends BuildEngine {
         },
         printUrls: () => {
           this.devServerInstance?.printUrls()
-        }
+        },
       }
 
       this.logger.success(`开发服务器已启动: ${devServer.url}`)
       return devServer
-
-    } catch (error) {
+    }
+    catch (error) {
       this.logger.error('启动开发服务器失败', error)
       throw error
     }
@@ -152,8 +154,8 @@ export class ViteEngine extends BuildEngine {
 
       this.logger.success(`构建完成，耗时 ${duration}ms`)
       return buildResult
-
-    } catch (error) {
+    }
+    catch (error) {
       this.logger.error('构建失败', error)
       throw error
     }
@@ -201,13 +203,13 @@ export class ViteEngine extends BuildEngine {
         },
         printUrls: () => {
           this.previewServerInstance?.printUrls()
-        }
+        },
       }
 
       this.logger.success(`预览服务器已启动: ${previewServer.url}`)
       return previewServer
-
-    } catch (error) {
+    }
+    catch (error) {
       this.logger.error('启动预览服务器失败', error)
       throw error
     }
@@ -235,8 +237,8 @@ export class ViteEngine extends BuildEngine {
 
       this.logger.success('监听模式构建已启动')
       return watcher
-
-    } catch (error) {
+    }
+    catch (error) {
       this.logger.error('启动监听模式构建失败', error)
       throw error
     }
@@ -266,7 +268,7 @@ export class ViteEngine extends BuildEngine {
   private processBuildOutput(
     output: RollupOutput | RollupOutput[],
     config: ViteUserConfig,
-    duration: number
+    duration: number,
   ): EngineBuildResult {
     const outputs = Array.isArray(output) ? output : [output]
     const outDir = config.build?.outDir || 'dist'
@@ -282,7 +284,7 @@ export class ViteEngine extends BuildEngine {
             size: 'code' in chunk ? chunk.code.length : 0,
             type: this.getAssetType(chunk.fileName),
             isEntry: 'isEntry' in chunk ? chunk.isEntry : false,
-            isDynamicEntry: 'isDynamicEntry' in chunk ? chunk.isDynamicEntry : false
+            isDynamicEntry: 'isDynamicEntry' in chunk ? chunk.isDynamicEntry : false,
           }
           allAssets.push(asset)
         }
@@ -299,7 +301,7 @@ export class ViteEngine extends BuildEngine {
       duration,
       assets: allAssets,
       stats,
-      raw: outputs[0]
+      raw: outputs[0],
     }
   }
 
@@ -307,10 +309,14 @@ export class ViteEngine extends BuildEngine {
    * 获取资源类型
    */
   private getAssetType(fileName: string): BuildAsset['type'] {
-    if (fileName.endsWith('.js') || fileName.endsWith('.mjs')) return 'js'
-    if (fileName.endsWith('.css')) return 'css'
-    if (fileName.endsWith('.html')) return 'html'
-    if (fileName.match(/\.(png|jpg|jpeg|gif|svg|webp|ico)$/)) return 'asset'
+    if (fileName.endsWith('.js') || fileName.endsWith('.mjs'))
+      return 'js'
+    if (fileName.endsWith('.css'))
+      return 'css'
+    if (fileName.endsWith('.html'))
+      return 'html'
+    if (fileName.match(/\.(png|jpg|jpeg|gif|svg|webp|ico)$/))
+      return 'asset'
     return 'other'
   }
 
@@ -341,8 +347,7 @@ export class ViteEngine extends BuildEngine {
       totalSize: jsSize + cssSize + assetSize,
       jsSize,
       cssSize,
-      assetSize
+      assetSize,
     }
   }
 }
-

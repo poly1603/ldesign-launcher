@@ -6,22 +6,21 @@
  */
 
 // 导出基类
-export * from './base'
-
-// 导出各框架适配器
-export * from './vue'
-export * from './react'
-export * from './svelte'
-export * from './solid'
-export * from './preact'
-export * from './qwik'
-export * from './lit'
-export * from './marko'
-export * from './angular'
-
-
 // 导出框架元数据
 import type { FrameworkMetadata } from '../types/framework'
+
+export * from './angular'
+
+export * from './base'
+export * from './lit'
+export * from './marko'
+export * from './preact'
+export * from './qwik'
+export * from './react'
+export * from './solid'
+export * from './svelte'
+// 导出各框架适配器
+export * from './vue'
 
 /**
  * Vue 2 框架元数据
@@ -41,11 +40,11 @@ export const VUE2_FRAMEWORK_METADATA: FrameworkMetadata = {
     ssr: true,
     ssg: true,
     hmr: true,
-    fastRefresh: false
+    fastRefresh: false,
   },
   defaultPort: 3000,
   fileExtensions: ['.vue', '.js', '.ts', '.jsx', '.tsx'],
-  configFiles: ['vite.config.ts', 'vite.config.js', 'vue.config.js']
+  configFiles: ['vite.config.ts', 'vite.config.js', 'vue.config.js'],
 }
 
 /**
@@ -66,11 +65,11 @@ export const VUE3_FRAMEWORK_METADATA: FrameworkMetadata = {
     ssr: true,
     ssg: true,
     hmr: true,
-    fastRefresh: true
+    fastRefresh: true,
   },
   defaultPort: 3000,
   fileExtensions: ['.vue', '.js', '.ts', '.jsx', '.tsx'],
-  configFiles: ['vite.config.ts', 'vite.config.js', 'vue.config.js']
+  configFiles: ['vite.config.ts', 'vite.config.js', 'vue.config.js'],
 }
 
 /**
@@ -92,11 +91,11 @@ export const REACT_FRAMEWORK_METADATA: FrameworkMetadata = {
     ssr: true,
     ssg: true,
     hmr: true,
-    fastRefresh: true
+    fastRefresh: true,
   },
   defaultPort: 3000,
   fileExtensions: ['.js', '.ts', '.jsx', '.tsx'],
-  configFiles: ['vite.config.ts', 'vite.config.js', 'tsconfig.json']
+  configFiles: ['vite.config.ts', 'vite.config.js', 'tsconfig.json'],
 }
 
 /**
@@ -116,11 +115,11 @@ export const SVELTE_FRAMEWORK_METADATA: FrameworkMetadata = {
     ssr: true,
     ssg: true,
     hmr: true,
-    fastRefresh: true
+    fastRefresh: true,
   },
   defaultPort: 5173,
   fileExtensions: ['.svelte', '.js', '.ts'],
-  configFiles: ['vite.config.ts', 'svelte.config.js']
+  configFiles: ['vite.config.ts', 'svelte.config.js'],
 }
 
 /**
@@ -142,11 +141,11 @@ export const SOLID_FRAMEWORK_METADATA: FrameworkMetadata = {
     ssr: true,
     ssg: true,
     hmr: true,
-    fastRefresh: true
+    fastRefresh: true,
   },
   defaultPort: 3000,
   fileExtensions: ['.tsx', '.jsx', '.ts', '.js'],
-  configFiles: ['vite.config.ts', 'vite.config.js']
+  configFiles: ['vite.config.ts', 'vite.config.js'],
 }
 
 /**
@@ -168,11 +167,11 @@ export const PREACT_FRAMEWORK_METADATA: FrameworkMetadata = {
     ssr: true,
     ssg: true,
     hmr: true,
-    fastRefresh: true
+    fastRefresh: true,
   },
   defaultPort: 3000,
   fileExtensions: ['.tsx', '.jsx', '.ts', '.js'],
-  configFiles: ['vite.config.ts', 'vite.config.js', 'preact.config.js']
+  configFiles: ['vite.config.ts', 'vite.config.js', 'preact.config.js'],
 }
 
 /**
@@ -194,11 +193,11 @@ export const QWIK_FRAMEWORK_METADATA: FrameworkMetadata = {
     ssr: true,
     ssg: true,
     hmr: true,
-    fastRefresh: true
+    fastRefresh: true,
   },
   defaultPort: 5173,
   fileExtensions: ['.tsx', '.jsx', '.ts', '.js'],
-  configFiles: ['vite.config.ts', 'vite.config.js']
+  configFiles: ['vite.config.ts', 'vite.config.js'],
 }
 
 /**
@@ -220,11 +219,11 @@ export const LIT_FRAMEWORK_METADATA: FrameworkMetadata = {
     ssr: true,
     ssg: true,
     hmr: true,
-    fastRefresh: false
+    fastRefresh: false,
   },
   defaultPort: 3000,
   fileExtensions: ['.ts', '.js'],
-  configFiles: ['vite.config.ts', 'vite.config.js', 'web-dev-server.config.js']
+  configFiles: ['vite.config.ts', 'vite.config.js', 'web-dev-server.config.js'],
 }
 
 /**
@@ -250,7 +249,7 @@ export const ANGULAR_FRAMEWORK_METADATA: FrameworkMetadata = {
   },
   defaultPort: 3000,
   fileExtensions: ['.ts', '.js', '.html', '.css'],
-  configFiles: ['vite.config.ts', 'tsconfig.json']
+  configFiles: ['vite.config.ts', 'tsconfig.json'],
 }
 
 /**
@@ -272,11 +271,11 @@ export const MARKO_FRAMEWORK_METADATA: FrameworkMetadata = {
     ssr: true,
     ssg: true,
     hmr: true,
-    fastRefresh: true
+    fastRefresh: true,
   },
   defaultPort: 3000,
   fileExtensions: ['.marko', '.js', '.ts'],
-  configFiles: ['vite.config.ts', 'vite.config.js', 'marko.json']
+  configFiles: ['vite.config.ts', 'vite.config.js', 'marko.json'],
 }
 
 /**
@@ -294,7 +293,6 @@ export async function registerAllFrameworks(): Promise<void> {
   const { markoAdapterFactory } = await import('./marko')
   const { angularAdapterFactory } = await import('./angular')
 
-
   // 注册所有框架（优先级：数字越大优先级越高）
   registerFramework('vue2', vue2AdapterFactory, VUE2_FRAMEWORK_METADATA, 9)
   registerFramework('vue3', vue3AdapterFactory, VUE3_FRAMEWORK_METADATA, 10)
@@ -308,4 +306,3 @@ export async function registerAllFrameworks(): Promise<void> {
   registerFramework('lit', litAdapterFactory, LIT_FRAMEWORK_METADATA, 7)
   registerFramework('marko', markoAdapterFactory, MARKO_FRAMEWORK_METADATA, 7)
 }
-

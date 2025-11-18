@@ -1,8 +1,8 @@
 /**
  * 通用类型定义
- * 
+ *
  * 定义在整个 launcher 包中使用的通用类型和接口
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */

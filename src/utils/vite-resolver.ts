@@ -1,16 +1,19 @@
-import { readFile } from 'fs/promises'
-import { pathToFileURL } from 'url'
-import { resolve as resolvePath, join } from 'path'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { Logger } from '../utils/logger'
 
 const log = new Logger('ViteResolver', { compact: true })
 
 function normalizeViteModule(mod: any): any {
   try {
-    if (mod && typeof mod === 'object' && typeof mod.createServer === 'function') return mod
-    if (mod && typeof mod === 'object' && mod.default && typeof mod.default.createServer === 'function') return mod.default
+    if (mod && typeof mod === 'object' && typeof mod.createServer === 'function')
+      return mod
+    if (mod && typeof mod === 'object' && mod.default && typeof mod.default.createServer === 'function')
+      return mod.default
     return mod
-  } catch {
+  }
+  catch {
     return mod
   }
 }
@@ -25,9 +28,9 @@ async function resolveViteFromProject(cwd: string): Promise<string | null> {
     const packageJson = JSON.parse(await readFile(packageJsonPath, 'utf-8'))
 
     // 检查是否有 vite 依赖
-    const hasVite = packageJson.dependencies?.vite ||
-      packageJson.devDependencies?.vite ||
-      packageJson.peerDependencies?.vite
+    const hasVite = packageJson.dependencies?.vite
+      || packageJson.devDependencies?.vite
+      || packageJson.peerDependencies?.vite
 
     if (!hasVite) {
       return null
@@ -36,7 +39,8 @@ async function resolveViteFromProject(cwd: string): Promise<string | null> {
     // 构建 vite 模块路径
     const vitePath = join(cwd, 'node_modules', 'vite', 'dist', 'node', 'index.js')
     return vitePath
-  } catch {
+  }
+  catch {
     return null
   }
 }
@@ -55,7 +59,8 @@ export async function importViteFromCwd(cwd: string): Promise<any> {
       const mod = await import(viteUrl)
       return normalizeViteModule(mod)
     }
-  } catch (e) {
+  }
+  catch (e) {
     log.debug('Resolve vite from app cwd failed', { error: (e as Error).message })
   }
 
@@ -64,9 +69,9 @@ export async function importViteFromCwd(cwd: string): Promise<any> {
     log.debug('Using fallback vite from launcher dependencies')
     const mod = await import('vite')
     return normalizeViteModule(mod)
-  } catch (e) {
+  }
+  catch (e) {
     log.error('Failed to import vite', { error: (e as Error).message })
     throw e
   }
 }
-

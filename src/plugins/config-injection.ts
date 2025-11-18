@@ -1,17 +1,17 @@
 /**
  * 配置注入插件
- * 
+ *
  * 将 launcher 配置注入到 import.meta.env 中，支持热更新
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
 
 import type { Plugin } from 'vite'
 import type { ViteLauncherConfig } from '../types'
+import { existsSync, readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { Logger } from '../utils/logger'
-import { readFileSync, existsSync } from 'fs'
-import { resolve } from 'path'
 
 /**
  * 配置注入插件选项
@@ -27,7 +27,7 @@ export interface ConfigInjectionOptions {
 
 /**
  * 创建配置注入插件
- * 
+ *
  * @param options 插件选项
  * @returns Vite 插件
  */
@@ -36,14 +36,18 @@ export function createConfigInjectionPlugin(options: ConfigInjectionOptions): Pl
   const logger = new Logger('ConfigInjection')
 
   // 创建安全的配置对象，避免循环引用
-  const createSafeConfig = (cfg: ViteLauncherConfig, packageInfo?: { name?: string; version?: string }) => {
+  const createSafeConfig = (cfg: ViteLauncherConfig, packageInfo?: { name?: string, version?: string }) => {
     // 辅助函数：移除函数和循环引用，提高深度限制
     const sanitizeValue = (value: any, depth = 0, seen = new WeakSet()): any => {
       // 提高深度限制从 10 到 20
-      if (depth > 20) return '[深度超限]'
-      if (value === null || value === undefined) return value
-      if (typeof value === 'function') return '[Function]'
-      if (typeof value === 'symbol') return '[Symbol]'
+      if (depth > 20)
+        return '[深度超限]'
+      if (value === null || value === undefined)
+        return value
+      if (typeof value === 'function')
+        return '[Function]'
+      if (typeof value === 'symbol')
+        return '[Symbol]'
 
       if (Array.isArray(value)) {
         return value.map(item => sanitizeValue(item, depth + 1, seen))
@@ -72,7 +76,7 @@ export function createConfigInjectionPlugin(options: ConfigInjectionOptions): Pl
       // 基本信息
       name: packageInfo?.name || 'LDesign App',
       version: packageInfo?.version || '1.0.0',
-      environment: environment,
+      environment,
 
       // 完整的配置（移除函数和循环引用）
       server: sanitizeValue(cfg.server),
@@ -89,22 +93,23 @@ export function createConfigInjectionPlugin(options: ConfigInjectionOptions): Pl
       proxy: cfg.proxy ? sanitizeValue(cfg.proxy) : undefined,
 
       // 插件数量（不暴露插件实例）
-      pluginsCount: Array.isArray(cfg.plugins) ? cfg.plugins.length : 0
+      pluginsCount: Array.isArray(cfg.plugins) ? cfg.plugins.length : 0,
     }
   }
 
   // 读取 package.json 信息
-  let packageInfo: { name?: string; version?: string } = {}
+  let packageInfo: { name?: string, version?: string } = {}
   try {
     const packageJsonPath = resolve(process.cwd(), 'package.json')
     if (existsSync(packageJsonPath)) {
       const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'))
       packageInfo = {
         name: packageJson.name,
-        version: packageJson.version
+        version: packageJson.version,
       }
     }
-  } catch (error) {
+  }
+  catch (error) {
     logger.warn('读取 package.json 失败', { error: (error as Error).message })
   }
 
@@ -145,23 +150,24 @@ export function createConfigInjectionPlugin(options: ConfigInjectionOptions): Pl
               server: {
                 port: server.config.server?.port,
                 host: server.config.server?.host,
-                https: !!server.config.server?.https
+                https: !!server.config.server?.https,
               },
               api: {
                 version: '1.0.0',
                 endpoints: {
                   config: '/__ldesign_config',
-                  clientUtils: '/__ldesign_client_utils.js'
-                }
-              }
+                  clientUtils: '/__ldesign_client_utils.js',
+                },
+              },
             }
 
             res.end(JSON.stringify(configInfo, null, 2))
-          } catch (error) {
+          }
+          catch (error) {
             res.statusCode = 500
             res.end(JSON.stringify({
               error: 'Configuration serialization failed',
-              message: error instanceof Error ? error.message : String(error)
+              message: error instanceof Error ? error.message : String(error),
             }))
           }
           return
@@ -193,23 +199,24 @@ export function createConfigInjectionPlugin(options: ConfigInjectionOptions): Pl
               preview: {
                 port: server.config.preview?.port,
                 host: server.config.preview?.host,
-                https: !!server.config.preview?.https
+                https: !!server.config.preview?.https,
               },
               api: {
                 version: '1.0.0',
                 endpoints: {
                   config: '/__ldesign_config',
-                  clientUtils: '/__ldesign_client_utils.js'
-                }
-              }
+                  clientUtils: '/__ldesign_client_utils.js',
+                },
+              },
             }
 
             res.end(JSON.stringify(configInfo, null, 2))
-          } catch (error) {
+          }
+          catch (error) {
             res.statusCode = 500
             res.end(JSON.stringify({
               error: 'Configuration serialization failed',
-              message: error instanceof Error ? error.message : String(error)
+              message: error instanceof Error ? error.message : String(error),
             }))
           }
           return
@@ -228,22 +235,22 @@ export function createConfigInjectionPlugin(options: ConfigInjectionOptions): Pl
 
     handleHotUpdate(ctx) {
       // 检查是否是 launcher 配置文件
-      const isLauncherConfig = ctx.file.includes('launcher.') &&
-        (ctx.file.endsWith('.config.ts') || ctx.file.endsWith('.config.js'))
+      const isLauncherConfig = ctx.file.includes('launcher.')
+        && (ctx.file.endsWith('.config.ts') || ctx.file.endsWith('.config.js'))
 
       if (isLauncherConfig) {
         // 不在这里处理 launcher 配置变更，让 ConfigManager 处理
         // 这样可以确保使用新配置重启
         return []
       }
-    }
+    },
   }
 }
 
 /**
  * 获取配置信息的客户端工具函数
  */
-export const getClientConfigUtils = () => {
+export function getClientConfigUtils() {
   return `
 // LDesign Launcher 配置工具函数
 (function() {
@@ -278,7 +285,10 @@ export const getClientConfigUtils = () => {
         cachedConfig = data
         return data
       } catch (error) {
-        console.warn('无法获取完整配置信息:', error)
+        const env = cachedConfig?.environment || 'development'
+        if (env !== 'production') {
+          console.warn('无法获取完整配置信息:', error)
+        }
         return { config: {}, environment: 'development', timestamp: Date.now() }
       }
     },
@@ -289,21 +299,26 @@ export const getClientConfigUtils = () => {
       const env = this.getEnvironment()
       const timestamp = new Date(this.getTimestamp())
 
-      console.group('🚀 LDesign Launcher 配置信息')
-      console.log('环境:', env)
-      console.log('启动时间:', timestamp.toLocaleString())
-      console.log('配置:', fullConfig.config)
-      if (fullConfig.server) {
-        console.log('服务器:', fullConfig.server)
+      if (env !== 'production') {
+        console.group('🚀 LDesign Launcher 配置信息')
+        console.log('环境:', env)
+        console.log('启动时间:', timestamp.toLocaleString())
+        console.log('配置:', fullConfig.config)
+        if (fullConfig.server) {
+          console.log('服务器:', fullConfig.server)
+        }
+        console.groupEnd()
       }
-      console.groupEnd()
     }
   }
 
   // 初始化配置
   window.__LDESIGN_LAUNCHER__.getFullConfig().then(() => {
-    console.log(\`🌍 当前环境: \${window.__LDESIGN_LAUNCHER__.getEnvironment()}\`)
-    console.log('💡 使用 window.__LDESIGN_LAUNCHER__.logConfig() 查看完整配置')
+    const env = window.__LDESIGN_LAUNCHER__.getEnvironment()
+    if (env !== 'production') {
+      console.log('🌍 当前环境: ' + env)
+      console.log('💡 使用 window.__LDESIGN_LAUNCHER__.logConfig() 查看完整配置')
+    }
   }).catch(console.error)
 })();
 `

@@ -1,20 +1,20 @@
 /**
  * 配置处理工具函数
- * 
+ *
  * 提供配置文件的加载、验证、合并等工具函数
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
 
+import type { ValidationResult, ViteLauncherConfig } from '../types'
+import { DEFAULT_CONFIG_FILES, SUPPORTED_CONFIG_EXTENSIONS } from '../constants'
 import { FileSystem } from './file-system'
 import { PathUtils } from './path-utils'
-import type { ViteLauncherConfig, ValidationResult } from '../types'
-import { DEFAULT_CONFIG_FILES, SUPPORTED_CONFIG_EXTENSIONS } from '../constants'
 
 /**
  * 查找配置文件
- * 
+ *
  * @param cwd - 工作目录
  * @param configFile - 指定的配置文件路径（可选）
  * @returns 找到的配置文件路径
@@ -45,7 +45,7 @@ export async function findConfigFile(cwd: string, configFile?: string): Promise<
 
 /**
  * 加载配置文件
- * 
+ *
  * @param configPath - 配置文件路径
  * @returns 加载的配置对象
  */
@@ -68,7 +68,8 @@ export async function loadConfigFile(configPath: string): Promise<ViteLauncherCo
       // JSON 配置文件
       const content = await FileSystem.readFile(configPath, { encoding: 'utf-8' })
       config = JSON.parse(content)
-    } else {
+    }
+    else {
       // JavaScript/TypeScript 配置文件
       // 使用动态导入加载模块
       const absolutePath = PathUtils.resolve(configPath)
@@ -81,15 +82,15 @@ export async function loadConfigFile(configPath: string): Promise<ViteLauncherCo
     }
 
     return config
-
-  } catch (error) {
+  }
+  catch (error) {
     throw new Error(`加载配置文件失败: ${(error as Error).message}`)
   }
 }
 
 /**
  * 保存配置文件
- * 
+ *
  * @param configPath - 配置文件路径
  * @param config - 配置对象
  */
@@ -101,13 +102,14 @@ export async function saveConfigFile(configPath: string, config: ViteLauncherCon
       // JSON 格式
       const content = JSON.stringify(config, null, 2)
       await FileSystem.writeFile(configPath, content, { encoding: 'utf-8' })
-    } else {
+    }
+    else {
       // JavaScript/TypeScript 格式
       const content = generateConfigFileContent(config, ext === '.ts')
       await FileSystem.writeFile(configPath, content, { encoding: 'utf-8' })
     }
-
-  } catch (error) {
+  }
+  catch (error) {
     throw new Error(`保存配置文件失败: ${(error as Error).message}`)
   }
 }
@@ -128,9 +130,11 @@ export function mergeConfigs(base: ViteLauncherConfig, override: ViteLauncherCon
       const tv = (target as any)[key]
       if (sv && typeof sv === 'object' && !Array.isArray(sv)) {
         result[key] = localDeepMerge(tv || {}, sv)
-      } else if (Array.isArray(sv)) {
+      }
+      else if (Array.isArray(sv)) {
         result[key] = Array.isArray(tv) ? [...tv, ...sv] : [...sv]
-      } else {
+      }
+      else {
         result[key] = sv
       }
     }
@@ -143,7 +147,7 @@ export function mergeConfigs(base: ViteLauncherConfig, override: ViteLauncherCon
 
 /**
  * 验证配置对象
- * 
+ *
  * @param config - 要验证的配置
  * @returns 验证结果
  */
@@ -201,21 +205,21 @@ export function validateConfig(config: ViteLauncherConfig): ValidationResult {
     return {
       valid: errors.length === 0,
       errors,
-      warnings
+      warnings,
     }
-
-  } catch (error) {
+  }
+  catch (error) {
     return {
       valid: false,
       errors: [`配置验证过程中发生错误: ${(error as Error).message}`],
-      warnings
+      warnings,
     }
   }
 }
 
 /**
  * 规范化配置路径
- * 
+ *
  * @param config - 配置对象
  * @param basePath - 基础路径
  * @returns 规范化后的配置
@@ -243,14 +247,14 @@ export function normalizeConfigPaths(config: ViteLauncherConfig, basePath: strin
 
 /**
  * 生成配置文件内容
- * 
+ *
  * @param config - 配置对象
  * @param isTypeScript - 是否为 TypeScript 文件
  * @returns 配置文件内容
  */
 function generateConfigFileContent(config: ViteLauncherConfig, isTypeScript: boolean = false): string {
   const typeImport = isTypeScript
-    ? "import type { ViteLauncherConfig } from '@ldesign/launcher'\n\n"
+    ? 'import type { ViteLauncherConfig } from \'@ldesign/launcher\'\n\n'
     : ''
 
   const typeAnnotation = isTypeScript
@@ -259,7 +263,7 @@ function generateConfigFileContent(config: ViteLauncherConfig, isTypeScript: boo
 
   const configString = JSON.stringify(config, null, 2)
     .replace(/"([^"]+)":/g, '$1:') // 移除属性名的引号
-    .replace(/"/g, "'") // 使用单引号
+    .replace(/"/g, '\'') // 使用单引号
 
   return `${typeImport}/**
  * Launcher 配置文件
@@ -272,7 +276,7 @@ export default ${configString}${typeAnnotation}
 
 /**
  * 获取配置文件的默认路径
- * 
+ *
  * @param cwd - 工作目录
  * @param preferTypeScript - 是否优先使用 TypeScript
  * @returns 默认配置文件路径
@@ -284,7 +288,7 @@ export function getDefaultConfigPath(cwd: string, preferTypeScript: boolean = tr
 
 /**
  * 检查配置文件是否为 TypeScript 格式
- * 
+ *
  * @param configPath - 配置文件路径
  * @returns 是否为 TypeScript 格式
  */
@@ -294,7 +298,7 @@ export function isTypeScriptConfig(configPath: string): boolean {
 
 /**
  * 获取配置文件的监听模式选项
- * 
+ *
  * @param configPath - 配置文件路径
  * @returns 监听选项
  */
@@ -304,10 +308,10 @@ export function getConfigWatchOptions(_configPath: string) {
       '**/node_modules/**',
       '**/.git/**',
       '**/dist/**',
-      '**/build/**'
+      '**/build/**',
     ],
     ignoreInitial: true,
-    persistent: true
+    persistent: true,
   }
 }
 
@@ -326,8 +330,6 @@ export function createPathResolver(cwd?: string) {
     return PathUtils.resolve(workingDir, relativePath)
   }
 }
-
-
 
 /**
  * 定义配置的辅助函数

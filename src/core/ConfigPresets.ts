@@ -1,16 +1,15 @@
 /**
  * 配置预设系统
- * 
+ *
  * 为不同项目类型提供开箱即用的配置模板
  * 支持配置继承和合并
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
 
-import type { ViteLauncherConfig, ProjectPreset, LauncherConfigOptions } from '../types'
+import type { ProjectPreset, ViteLauncherConfig } from '../types'
 import { DEFAULT_VITE_LAUNCHER_CONFIG } from '../constants'
-import { createAliasManager } from './AliasManager'
 
 /**
  * 预设配置基类
@@ -40,7 +39,7 @@ export abstract class BasePreset {
     return {
       dev: 'launcher dev',
       build: 'launcher build',
-      preview: 'launcher preview'
+      preview: 'launcher preview',
     }
   }
 
@@ -65,7 +64,7 @@ export class Vue3Preset extends BasePreset {
       ...DEFAULT_VITE_LAUNCHER_CONFIG,
       plugins: [
         // 注意：这里使用字符串占位，在实际使用时需要由用户或插件系统解析为真正的插件实例
-        '@vitejs/plugin-vue' as any
+        '@vitejs/plugin-vue' as any,
       ],
       launcher: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
@@ -74,32 +73,32 @@ export class Vue3Preset extends BasePreset {
           prefix: 'VITE_',
           variables: {
             APP_TITLE: 'Vue 3 App',
-            APP_VERSION: '1.0.0'
-          }
-        }
+            APP_VERSION: '1.0.0',
+          },
+        },
       },
       server: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.server,
-        port: 3000
+        port: 3000,
       },
       build: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.build,
         rollupOptions: {
           output: {
             manualChunks: {
-              vue: ['vue'],
-              'vue-router': ['vue-router']
-            }
-          }
-        }
-      }
+              'vue': ['vue'],
+              'vue-router': ['vue-router'],
+            },
+          },
+        },
+      },
     }
   }
 
   getDependencies() {
     return {
       dependencies: ['vue', 'vue-router'],
-      devDependencies: ['@vitejs/plugin-vue', '@vue/tsconfig']
+      devDependencies: ['@vitejs/plugin-vue', '@vue/tsconfig'],
     }
   }
 }
@@ -117,27 +116,27 @@ export class Vue3TypeScriptPreset extends BasePreset {
       ...DEFAULT_VITE_LAUNCHER_CONFIG,
       plugins: [
         // 注意：这里使用字符串占位，在实际使用时需要由用户或插件系统解析为真正的插件实例
-        '@vitejs/plugin-vue' as any
+        '@vitejs/plugin-vue' as any,
       ],
       launcher: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
-        preset: 'vue3-ts'
+        preset: 'vue3-ts',
       },
       esbuild: {
-        target: 'es2020'
+        target: 'es2020',
       },
       build: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.build,
         rollupOptions: {
           output: {
             manualChunks: {
-              vue: ['vue'],
+              'vue': ['vue'],
               'vue-router': ['vue-router'],
-              'vue-ecosystem': ['pinia', '@vueuse/core']
-            }
-          }
-        }
-      }
+              'vue-ecosystem': ['pinia', '@vueuse/core'],
+            },
+          },
+        },
+      },
     }
   }
 
@@ -149,15 +148,15 @@ export class Vue3TypeScriptPreset extends BasePreset {
         '@vue/tsconfig',
         'typescript',
         'vue-tsc',
-        '@types/node'
-      ]
+        '@types/node',
+      ],
     }
   }
 
   getScripts() {
     return {
       ...super.getScripts(),
-      'type-check': 'vue-tsc --noEmit'
+      'type-check': 'vue-tsc --noEmit',
     }
   }
 }
@@ -176,11 +175,11 @@ export class Vue2Preset extends BasePreset {
       plugins: [
         // 注意：这里使用字符串占位，在实际使用时需要由用户或插件系统解析为真正的插件实例
         '@vitejs/plugin-vue2' as any,
-        '@vitejs/plugin-legacy' as any
+        '@vitejs/plugin-legacy' as any,
       ],
       launcher: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
-        preset: 'vue2'
+        preset: 'vue2',
       },
       build: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.build,
@@ -188,13 +187,13 @@ export class Vue2Preset extends BasePreset {
         rollupOptions: {
           output: {
             manualChunks: {
-              vue: ['vue'],
+              'vue': ['vue'],
               'vue-router': ['vue-router'],
-              vuex: ['vuex']
-            }
-          }
-        }
-      }
+              'vuex': ['vuex'],
+            },
+          },
+        },
+      },
     }
   }
 
@@ -204,8 +203,8 @@ export class Vue2Preset extends BasePreset {
       devDependencies: [
         '@vitejs/plugin-vue2',
         '@vitejs/plugin-legacy',
-        'terser'
-      ]
+        'terser',
+      ],
     }
   }
 }
@@ -223,7 +222,7 @@ export class ReactPreset extends BasePreset {
       ...DEFAULT_VITE_LAUNCHER_CONFIG,
       plugins: [
         // 注意：这里使用字符串占位，在实际使用时需要由用户或插件系统解析为真正的插件实例
-        '@vitejs/plugin-react' as any
+        '@vitejs/plugin-react' as any,
       ],
       launcher: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
@@ -232,32 +231,32 @@ export class ReactPreset extends BasePreset {
           prefix: 'REACT_APP_',
           variables: {
             APP_TITLE: 'React App',
-            APP_VERSION: '1.0.0'
-          }
-        }
+            APP_VERSION: '1.0.0',
+          },
+        },
       },
       server: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.server,
-        port: 3000
+        port: 3000,
       },
       build: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.build,
         rollupOptions: {
           output: {
             manualChunks: {
-              react: ['react', 'react-dom'],
-              'react-router': ['react-router-dom']
-            }
-          }
-        }
-      }
+              'react': ['react', 'react-dom'],
+              'react-router': ['react-router-dom'],
+            },
+          },
+        },
+      },
     }
   }
 
   getDependencies() {
     return {
       dependencies: ['react', 'react-dom', 'react-router-dom'],
-      devDependencies: ['@vitejs/plugin-react', '@types/react', '@types/react-dom']
+      devDependencies: ['@vitejs/plugin-react', '@types/react', '@types/react-dom'],
     }
   }
 }
@@ -275,28 +274,28 @@ export class ReactTypeScriptPreset extends BasePreset {
       ...DEFAULT_VITE_LAUNCHER_CONFIG,
       plugins: [
         // 注意：这里使用字符串占位，在实际使用时需要由用户或插件系统解析为真正的插件实例
-        '@vitejs/plugin-react' as any
+        '@vitejs/plugin-react' as any,
       ],
       launcher: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
-        preset: 'react-ts'
+        preset: 'react-ts',
       },
       esbuild: {
         target: 'es2020',
-        jsxDev: true
+        jsxDev: true,
       },
       build: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.build,
         rollupOptions: {
           output: {
             manualChunks: {
-              react: ['react', 'react-dom'],
+              'react': ['react', 'react-dom'],
               'react-router': ['react-router-dom'],
-              'ui-libs': ['antd', '@mui/material']
-            }
-          }
-        }
-      }
+              'ui-libs': ['antd', '@mui/material'],
+            },
+          },
+        },
+      },
     }
   }
 
@@ -308,15 +307,15 @@ export class ReactTypeScriptPreset extends BasePreset {
         '@types/react',
         '@types/react-dom',
         '@types/node',
-        'typescript'
-      ]
+        'typescript',
+      ],
     }
   }
 
   getScripts() {
     return {
       ...super.getScripts(),
-      'type-check': 'tsc --noEmit'
+      'type-check': 'tsc --noEmit',
     }
   }
 }
@@ -334,33 +333,33 @@ export class SveltePreset extends BasePreset {
       ...DEFAULT_VITE_LAUNCHER_CONFIG,
       plugins: [
         // 注意：这里使用字符串占位，在实际使用时需要由用户或插件系统解析为真正的插件实例
-        '@sveltejs/vite-plugin-svelte' as any
+        '@sveltejs/vite-plugin-svelte' as any,
       ],
       launcher: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
-        preset: 'svelte'
+        preset: 'svelte',
       },
       server: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.server,
-        port: 5173
+        port: 5173,
       },
       build: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.build,
         rollupOptions: {
           output: {
             manualChunks: {
-              svelte: ['svelte']
-            }
-          }
-        }
-      }
+              svelte: ['svelte'],
+            },
+          },
+        },
+      },
     }
   }
 
   getDependencies() {
     return {
       dependencies: ['svelte'],
-      devDependencies: ['@sveltejs/vite-plugin-svelte', '@sveltejs/adapter-auto']
+      devDependencies: ['@sveltejs/vite-plugin-svelte', '@sveltejs/adapter-auto'],
     }
   }
 }
@@ -378,22 +377,22 @@ export class SvelteTypeScriptPreset extends BasePreset {
       ...DEFAULT_VITE_LAUNCHER_CONFIG,
       plugins: [
         // 注意：这里使用字符串占位，在实际使用时需要由用户或插件系统解析为真正的插件实例
-        '@sveltejs/vite-plugin-svelte' as any
+        '@sveltejs/vite-plugin-svelte' as any,
       ],
       launcher: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
-        preset: 'svelte-ts'
+        preset: 'svelte-ts',
       },
       build: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.build,
         rollupOptions: {
           output: {
             manualChunks: {
-              svelte: ['svelte']
-            }
-          }
-        }
-      }
+              svelte: ['svelte'],
+            },
+          },
+        },
+      },
     }
   }
 
@@ -405,15 +404,15 @@ export class SvelteTypeScriptPreset extends BasePreset {
         '@sveltejs/adapter-auto',
         'typescript',
         'svelte-check',
-        '@types/node'
-      ]
+        '@types/node',
+      ],
     }
   }
 
   getScripts() {
     return {
       ...super.getScripts(),
-      check: 'svelte-check --tsconfig ./tsconfig.json'
+      check: 'svelte-check --tsconfig ./tsconfig.json',
     }
   }
 }
@@ -430,15 +429,15 @@ export class AngularPreset extends BasePreset {
     return {
       ...DEFAULT_VITE_LAUNCHER_CONFIG,
       plugins: [
-        '@analogjs/vite-plugin-angular' as any
+        '@analogjs/vite-plugin-angular' as any,
       ],
       launcher: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
-        preset: 'angular'
+        preset: 'angular',
       },
       server: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.server,
-        port: 4200
+        port: 4200,
       },
       build: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.build,
@@ -449,11 +448,11 @@ export class AngularPreset extends BasePreset {
               '@angular/common': ['@angular/common'],
               '@angular/router': ['@angular/router'],
               '@angular/forms': ['@angular/forms'],
-              'rxjs': ['rxjs']
-            }
-          }
-        }
-      }
+              'rxjs': ['rxjs'],
+            },
+          },
+        },
+      },
     }
   }
 
@@ -469,24 +468,24 @@ export class AngularPreset extends BasePreset {
         '@angular/platform-browser-dynamic',
         '@angular/router',
         'rxjs',
-        'zone.js'
+        'zone.js',
       ],
       devDependencies: [
         '@analogjs/vite-plugin-angular',
         '@angular-devkit/build-angular',
         '@angular/cli',
         '@angular/compiler-cli',
-        'typescript'
-      ]
+        'typescript',
+      ],
     }
   }
 
   getScripts() {
     return {
       ...super.getScripts(),
-      'ng': 'ng',
-      'test': 'ng test',
-      'lint': 'ng lint'
+      ng: 'ng',
+      test: 'ng test',
+      lint: 'ng lint',
     }
   }
 }
@@ -503,18 +502,18 @@ export class AngularTypeScriptPreset extends BasePreset {
     return {
       ...DEFAULT_VITE_LAUNCHER_CONFIG,
       plugins: [
-        '@analogjs/vite-plugin-angular' as any
+        '@analogjs/vite-plugin-angular' as any,
       ],
       launcher: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
-        preset: 'angular-ts'
+        preset: 'angular-ts',
       },
       server: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.server,
-        port: 4200
+        port: 4200,
       },
       esbuild: {
-        target: 'es2022'
+        target: 'es2022',
       },
       build: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.build,
@@ -525,11 +524,11 @@ export class AngularTypeScriptPreset extends BasePreset {
               '@angular/common': ['@angular/common'],
               '@angular/router': ['@angular/router'],
               '@angular/forms': ['@angular/forms'],
-              'rxjs': ['rxjs']
-            }
-          }
-        }
-      }
+              'rxjs': ['rxjs'],
+            },
+          },
+        },
+      },
     }
   }
 
@@ -545,7 +544,7 @@ export class AngularTypeScriptPreset extends BasePreset {
         '@angular/platform-browser-dynamic',
         '@angular/router',
         'rxjs',
-        'zone.js'
+        'zone.js',
       ],
       devDependencies: [
         '@analogjs/vite-plugin-angular',
@@ -553,8 +552,8 @@ export class AngularTypeScriptPreset extends BasePreset {
         '@angular/cli',
         '@angular/compiler-cli',
         '@types/node',
-        'typescript'
-      ]
+        'typescript',
+      ],
     }
   }
 
@@ -564,7 +563,7 @@ export class AngularTypeScriptPreset extends BasePreset {
       'ng': 'ng',
       'test': 'ng test',
       'lint': 'ng lint',
-      'type-check': 'tsc --noEmit'
+      'type-check': 'tsc --noEmit',
     }
   }
 }
@@ -581,15 +580,15 @@ export class SolidPreset extends BasePreset {
     return {
       ...DEFAULT_VITE_LAUNCHER_CONFIG,
       plugins: [
-        'vite-plugin-solid' as any
+        'vite-plugin-solid' as any,
       ],
       launcher: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
-        preset: 'solid'
+        preset: 'solid',
       },
       server: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.server,
-        port: 3000
+        port: 3000,
       },
       build: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.build,
@@ -597,18 +596,18 @@ export class SolidPreset extends BasePreset {
           output: {
             manualChunks: {
               'solid-js': ['solid-js'],
-              'solid-router': ['@solidjs/router']
-            }
-          }
-        }
-      }
+              'solid-router': ['@solidjs/router'],
+            },
+          },
+        },
+      },
     }
   }
 
   getDependencies() {
     return {
       dependencies: ['solid-js', '@solidjs/router'],
-      devDependencies: ['vite-plugin-solid']
+      devDependencies: ['vite-plugin-solid'],
     }
   }
 }
@@ -625,14 +624,14 @@ export class SolidTypeScriptPreset extends BasePreset {
     return {
       ...DEFAULT_VITE_LAUNCHER_CONFIG,
       plugins: [
-        'vite-plugin-solid' as any
+        'vite-plugin-solid' as any,
       ],
       launcher: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
-        preset: 'solid-ts'
+        preset: 'solid-ts',
       },
       esbuild: {
-        target: 'es2020'
+        target: 'es2020',
       },
       build: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.build,
@@ -640,11 +639,11 @@ export class SolidTypeScriptPreset extends BasePreset {
           output: {
             manualChunks: {
               'solid-js': ['solid-js'],
-              'solid-router': ['@solidjs/router']
-            }
-          }
-        }
-      }
+              'solid-router': ['@solidjs/router'],
+            },
+          },
+        },
+      },
     }
   }
 
@@ -654,15 +653,15 @@ export class SolidTypeScriptPreset extends BasePreset {
       devDependencies: [
         'vite-plugin-solid',
         'typescript',
-        '@types/node'
-      ]
+        '@types/node',
+      ],
     }
   }
 
   getScripts() {
     return {
       ...super.getScripts(),
-      'type-check': 'tsc --noEmit'
+      'type-check': 'tsc --noEmit',
     }
   }
 }
@@ -680,25 +679,25 @@ export class LitPreset extends BasePreset {
       ...DEFAULT_VITE_LAUNCHER_CONFIG,
       launcher: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
-        preset: 'lit'
+        preset: 'lit',
       },
       build: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.build,
         rollupOptions: {
           output: {
             manualChunks: {
-              lit: ['lit', 'lit-element', 'lit-html']
-            }
-          }
-        }
-      }
+              lit: ['lit', 'lit-element', 'lit-html'],
+            },
+          },
+        },
+      },
     }
   }
 
   getDependencies() {
     return {
       dependencies: ['lit'],
-      devDependencies: []
+      devDependencies: [],
     }
   }
 }
@@ -716,35 +715,35 @@ export class LitTypeScriptPreset extends BasePreset {
       ...DEFAULT_VITE_LAUNCHER_CONFIG,
       launcher: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
-        preset: 'lit-ts'
+        preset: 'lit-ts',
       },
       esbuild: {
-        target: 'es2020'
+        target: 'es2020',
       },
       build: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.build,
         rollupOptions: {
           output: {
             manualChunks: {
-              lit: ['lit', 'lit-element', 'lit-html']
-            }
-          }
-        }
-      }
+              lit: ['lit', 'lit-element', 'lit-html'],
+            },
+          },
+        },
+      },
     }
   }
 
   getDependencies() {
     return {
       dependencies: ['lit'],
-      devDependencies: ['typescript', '@types/node']
+      devDependencies: ['typescript', '@types/node'],
     }
   }
 
   getScripts() {
     return {
       ...super.getScripts(),
-      'type-check': 'tsc --noEmit'
+      'type-check': 'tsc --noEmit',
     }
   }
 }
@@ -761,30 +760,30 @@ export class PreactPreset extends BasePreset {
     return {
       ...DEFAULT_VITE_LAUNCHER_CONFIG,
       plugins: [
-        '@preact/preset-vite' as any
+        '@preact/preset-vite' as any,
       ],
       launcher: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
-        preset: 'preact'
+        preset: 'preact',
       },
       build: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.build,
         rollupOptions: {
           output: {
             manualChunks: {
-              preact: ['preact'],
-              'preact-router': ['preact-router']
-            }
-          }
-        }
-      }
+              'preact': ['preact'],
+              'preact-router': ['preact-router'],
+            },
+          },
+        },
+      },
     }
   }
 
   getDependencies() {
     return {
       dependencies: ['preact', 'preact-router'],
-      devDependencies: ['@preact/preset-vite']
+      devDependencies: ['@preact/preset-vite'],
     }
   }
 }
@@ -801,28 +800,28 @@ export class PreactTypeScriptPreset extends BasePreset {
     return {
       ...DEFAULT_VITE_LAUNCHER_CONFIG,
       plugins: [
-        '@preact/preset-vite' as any
+        '@preact/preset-vite' as any,
       ],
       launcher: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
-        preset: 'preact-ts'
+        preset: 'preact-ts',
       },
       esbuild: {
         target: 'es2020',
         jsxFactory: 'h',
-        jsxFragment: 'Fragment'
+        jsxFragment: 'Fragment',
       },
       build: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.build,
         rollupOptions: {
           output: {
             manualChunks: {
-              preact: ['preact'],
-              'preact-router': ['preact-router']
-            }
-          }
-        }
-      }
+              'preact': ['preact'],
+              'preact-router': ['preact-router'],
+            },
+          },
+        },
+      },
     }
   }
 
@@ -832,15 +831,15 @@ export class PreactTypeScriptPreset extends BasePreset {
       devDependencies: [
         '@preact/preset-vite',
         'typescript',
-        '@types/node'
-      ]
+        '@types/node',
+      ],
     }
   }
 
   getScripts() {
     return {
       ...super.getScripts(),
-      'type-check': 'tsc --noEmit'
+      'type-check': 'tsc --noEmit',
     }
   }
 }
@@ -857,22 +856,22 @@ export class QwikPreset extends BasePreset {
     return {
       ...DEFAULT_VITE_LAUNCHER_CONFIG,
       plugins: [
-        '@builder.io/qwik/vite' as any
+        '@builder.io/qwik/vite' as any,
       ],
       launcher: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
-        preset: 'qwik'
+        preset: 'qwik',
       },
       build: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.build,
         rollupOptions: {
           output: {
             manualChunks: {
-              qwik: ['@builder.io/qwik']
-            }
-          }
-        }
-      }
+              qwik: ['@builder.io/qwik'],
+            },
+          },
+        },
+      },
     }
   }
 
@@ -882,15 +881,15 @@ export class QwikPreset extends BasePreset {
       devDependencies: [
         '@builder.io/qwik/vite',
         'typescript',
-        '@types/node'
-      ]
+        '@types/node',
+      ],
     }
   }
 
   getScripts() {
     return {
       ...super.getScripts(),
-      'qwik': 'qwik'
+      qwik: 'qwik',
     }
   }
 }
@@ -907,23 +906,23 @@ export class AstroPreset extends BasePreset {
     return {
       ...DEFAULT_VITE_LAUNCHER_CONFIG,
       plugins: [
-        '@astrojs/vite-plugin-astro' as any
+        '@astrojs/vite-plugin-astro' as any,
       ],
       launcher: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
-        preset: 'astro'
+        preset: 'astro',
       },
       server: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.server,
-        port: 4321
-      }
+        port: 4321,
+      },
     }
   }
 
   getDependencies() {
     return {
       dependencies: ['astro'],
-      devDependencies: ['@astrojs/vite-plugin-astro']
+      devDependencies: ['@astrojs/vite-plugin-astro'],
     }
   }
 
@@ -931,7 +930,7 @@ export class AstroPreset extends BasePreset {
     return {
       dev: 'astro dev',
       build: 'astro build',
-      preview: 'astro preview'
+      preview: 'astro preview',
     }
   }
 }
@@ -949,15 +948,15 @@ export class VanillaPreset extends BasePreset {
       ...DEFAULT_VITE_LAUNCHER_CONFIG,
       launcher: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
-        preset: 'vanilla'
-      }
+        preset: 'vanilla',
+      },
     }
   }
 
   getDependencies() {
     return {
       dependencies: [],
-      devDependencies: []
+      devDependencies: [],
     }
   }
 }
@@ -975,25 +974,25 @@ export class VanillaTypeScriptPreset extends BasePreset {
       ...DEFAULT_VITE_LAUNCHER_CONFIG,
       launcher: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
-        preset: 'vanilla-ts'
+        preset: 'vanilla-ts',
       },
       esbuild: {
-        target: 'es2020'
-      }
+        target: 'es2020',
+      },
     }
   }
 
   getDependencies() {
     return {
       dependencies: [],
-      devDependencies: ['typescript', '@types/node']
+      devDependencies: ['typescript', '@types/node'],
     }
   }
 
   getScripts() {
     return {
       ...super.getScripts(),
-      'type-check': 'tsc --noEmit'
+      'type-check': 'tsc --noEmit',
     }
   }
 }
@@ -1012,7 +1011,7 @@ export class LDesignPreset extends BasePreset {
       ...DEFAULT_VITE_LAUNCHER_CONFIG,
       launcher: {
         ...DEFAULT_VITE_LAUNCHER_CONFIG.launcher,
-        preset: 'ldesign'
+        preset: 'ldesign',
       },
 
       // 构建优化配置
@@ -1047,12 +1046,12 @@ export class LDesignPreset extends BasePreset {
               const ext = info[info.length - 1]
 
               // 图片资源
-              if (/\.(png|jpe?g|gif|svg|webp|avif)$/i.test(fileName)) {
+              if (/\.(?:png|jpe?g|gif|svg|webp|avif)$/i.test(fileName)) {
                 return 'images/[name]-[hash].[ext]'
               }
 
               // 字体资源
-              if (/\.(woff2?|eot|ttf|otf)$/i.test(fileName)) {
+              if (/\.(?:woff2?|eot|ttf|otf)$/i.test(fileName)) {
                 return 'fonts/[name]-[hash].[ext]'
               }
 
@@ -1091,20 +1090,38 @@ export class LDesignPreset extends BasePreset {
               if (id.includes('node_modules')) {
                 return 'vendor'
               }
-            }
+            },
           },
 
           // 外部化 Node.js 内置模块
           external: (id) => {
             const nodeBuiltins = [
-              'fs', 'path', 'os', 'util', 'stream', 'events',
-              'node:fs', 'node:path', 'node:os', 'node:util', 'node:stream', 'node:events',
-              'fs/promises', 'node:fs/promises',
-              'chokidar', 'fsevents', 'readdirp', 'glob-parent', 'is-binary-path',
-              'picomatch', 'fill-range', 'braces', 'micromatch'
+              'fs',
+              'path',
+              'os',
+              'util',
+              'stream',
+              'events',
+              'node:fs',
+              'node:path',
+              'node:os',
+              'node:util',
+              'node:stream',
+              'node:events',
+              'fs/promises',
+              'node:fs/promises',
+              'chokidar',
+              'fsevents',
+              'readdirp',
+              'glob-parent',
+              'is-binary-path',
+              'picomatch',
+              'fill-range',
+              'braces',
+              'micromatch',
             ]
             return nodeBuiltins.includes(id)
-          }
+          },
         },
 
         // 代码分割阈值
@@ -1120,7 +1137,7 @@ export class LDesignPreset extends BasePreset {
         assetsDir: 'assets',
 
         // 内联资源大小限制
-        assetsInlineLimit: 4096
+        assetsInlineLimit: 4096,
       },
 
       // 环境变量和全局变量定义
@@ -1135,18 +1152,18 @@ export class LDesignPreset extends BasePreset {
         'process.nextTick': 'setTimeout',
         'global': 'globalThis',
         '__DEV__': false,
-        '__PROD__': true
+        '__PROD__': true,
       },
 
       // 基础 resolve 配置
       resolve: {
         extensions: ['.ts', '.tsx', '.js', '.jsx', '.vue', '.json'],
-        alias: [] // 将在运行时根据阶段动态生成
+        alias: [], // 将在运行时根据阶段动态生成
       },
 
       // 优化依赖配置
       optimizeDeps: {
-        exclude: ['alova', 'alova/GlobalFetch', 'axios']
+        exclude: ['alova', 'alova/GlobalFetch', 'axios'],
       },
 
       // 内置 polyfill 插件
@@ -1165,7 +1182,7 @@ export class LDesignPreset extends BasePreset {
                   version: 'v18.0.0',
                   versions: { node: '18.0.0' },
                   browser: true,
-                  nextTick: function (fn: any) { setTimeout(fn, 0) }
+                  nextTick(fn: any) { setTimeout(fn, 0) },
                 }),
                 'process.env': JSON.stringify({ NODE_ENV: 'production' }),
                 'process.env.NODE_ENV': JSON.stringify('production'),
@@ -1173,10 +1190,10 @@ export class LDesignPreset extends BasePreset {
                 'process.version': JSON.stringify('v18.0.0'),
                 'process.versions': JSON.stringify({ node: '18.0.0' }),
                 'process.browser': true,
-                'global': 'globalThis'
+                'global': 'globalThis',
               })
             }
-          }
+          },
         } as any,
         // Crypto polyfill 插件
         {
@@ -1200,18 +1217,18 @@ export class LDesignPreset extends BasePreset {
               }
 
               // 添加 crypto polyfill
-              config.resolve.alias['crypto'] = 'crypto-js'
+              config.resolve.alias.crypto = 'crypto-js'
             }
-          }
-        } as any
-      ]
+          },
+        } as any,
+      ],
     }
   }
 
   getDependencies() {
     return {
       dependencies: ['vue', 'vue-router', 'crypto-js'],
-      devDependencies: ['@vitejs/plugin-vue', '@vue/tsconfig', 'typescript']
+      devDependencies: ['@vitejs/plugin-vue', '@vue/tsconfig', 'typescript'],
     }
   }
 
@@ -1219,7 +1236,7 @@ export class LDesignPreset extends BasePreset {
     return {
       ...super.getScripts(),
       'build:npm': 'ldesign-builder build',
-      'type-check': 'vue-tsc --noEmit'
+      'type-check': 'vue-tsc --noEmit',
     }
   }
 }
@@ -1316,8 +1333,8 @@ export class ConfigPresetsManager {
    * 自动检测项目类型
    */
   async detectProjectType(cwd: string = process.cwd()): Promise<ProjectPreset | null> {
-    const fs = await import('fs/promises')
-    const path = await import('path')
+    const fs = await import('node:fs/promises')
+    const path = await import('node:path')
 
     try {
       // 读取 package.json
@@ -1326,7 +1343,7 @@ export class ConfigPresetsManager {
 
       const dependencies = {
         ...packageJson.dependencies,
-        ...packageJson.devDependencies
+        ...packageJson.devDependencies,
       }
 
       // 检测 Vue
@@ -1334,7 +1351,8 @@ export class ConfigPresetsManager {
         const vueVersion = dependencies.vue
         if (vueVersion.startsWith('^3') || vueVersion.startsWith('3')) {
           return dependencies.typescript ? 'vue3-ts' : 'vue3'
-        } else if (vueVersion.startsWith('^2') || vueVersion.startsWith('2')) {
+        }
+        else if (vueVersion.startsWith('^2') || vueVersion.startsWith('2')) {
           return 'vue2'
         }
       }
@@ -1385,8 +1403,8 @@ export class ConfigPresetsManager {
       }
 
       return 'vanilla'
-
-    } catch (error) {
+    }
+    catch {
       return null
     }
   }
@@ -1396,7 +1414,7 @@ export class ConfigPresetsManager {
    */
   applyPreset(
     baseConfig: ViteLauncherConfig,
-    presetName: ProjectPreset
+    presetName: ProjectPreset,
   ): ViteLauncherConfig {
     const preset = this.get(presetName)
     if (!preset) {
@@ -1414,7 +1432,7 @@ export class ConfigPresetsManager {
    */
   private deepMergeConfigs(
     base: ViteLauncherConfig,
-    override: ViteLauncherConfig
+    override: ViteLauncherConfig,
   ): ViteLauncherConfig {
     const result = { ...base } as any
 
@@ -1422,13 +1440,15 @@ export class ConfigPresetsManager {
       if (value && typeof value === 'object' && !Array.isArray(value)) {
         result[key] = this.deepMergeConfigs(
           (base[key as keyof ViteLauncherConfig] as any) || {},
-          value as any
+          value as any,
         )
-      } else if (Array.isArray(value)) {
+      }
+      else if (Array.isArray(value)) {
         // 合并数组
         const baseArray = (base[key as keyof ViteLauncherConfig] as any) || []
         result[key] = [...baseArray, ...value]
-      } else {
+      }
+      else {
         result[key] = value
       }
     }

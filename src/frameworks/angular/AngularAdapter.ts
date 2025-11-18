@@ -1,6 +1,6 @@
 /**
  * Angular 框架适配器
- * 
+ *
  * 负责：
  * - 自动检测 Angular 项目
  * - 为 Vite 注入 @analogjs/vite-plugin-angular
@@ -8,14 +8,14 @@
  */
 
 import type { Plugin } from 'vite'
+import type { ViteLauncherConfig } from '../../types/config'
+import type { BuildEngine } from '../../types/engine'
 import type {
-  FrameworkDetectionResult,
   FrameworkDependencies,
+  FrameworkDetectionResult,
   FrameworkFeatures,
   FrameworkOptions,
 } from '../../types/framework'
-import type { BuildEngine } from '../../types/engine'
-import type { ViteLauncherConfig } from '../../types/config'
 import { FrameworkAdapter } from '../base/FrameworkAdapter'
 
 export class AngularAdapter extends FrameworkAdapter {
@@ -69,7 +69,7 @@ export class AngularAdapter extends FrameworkAdapter {
     }
   }
 
-  async getPlugins(engine: BuildEngine, _options?: FrameworkOptions): Promise<Plugin[]> {
+  async getPlugins(_engine: BuildEngine, _options?: FrameworkOptions): Promise<Plugin[]> {
     // Angular 插件由 PluginManager 统一加载
     // 这里返回空数组,避免重复加载
     return []
@@ -105,11 +105,10 @@ export class AngularAdapter extends FrameworkAdapter {
 
   getScripts(): Record<string, string> {
     return {
-      dev: 'ldesign-launcher dev',
-      build: 'ldesign-launcher build',
-      preview: 'ldesign-launcher preview',
+      'dev': 'ldesign-launcher dev',
+      'build': 'ldesign-launcher build',
+      'preview': 'ldesign-launcher preview',
       'type-check': 'tsc --noEmit',
     }
   }
 }
-

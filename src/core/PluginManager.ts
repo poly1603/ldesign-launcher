@@ -1,8 +1,8 @@
 /**
  * 智能插件管理器
- * 
+ *
  * 自动检测项目类型并加载对应的插件
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
@@ -25,7 +25,7 @@ export enum ProjectType {
   LIT = 'lit',
   QWIK = 'qwik',
   ANGULAR = 'angular',
-  VANILLA = 'vanilla'
+  VANILLA = 'vanilla',
 }
 
 /**
@@ -78,9 +78,9 @@ export class PluginManager {
       detection: {
         dependencies: ['vue'],
         filePatterns: ['**/*.vue'],
-        configFiles: ['vue.config.js', 'vue.config.ts']
+        configFiles: ['vue.config.js', 'vue.config.ts'],
       },
-      options: {}
+      options: {},
     })
 
     // Vue 3 JSX 插件配置
@@ -91,12 +91,12 @@ export class PluginManager {
       detection: {
         dependencies: ['vue'],
         filePatterns: ['**/*.tsx', '**/*.jsx'],
-        configFiles: []
+        configFiles: [],
       },
       options: {
         transformOn: true,
-        mergeProps: true
-      }
+        mergeProps: true,
+      },
     })
 
     // Vue 2 插件配置
@@ -107,9 +107,9 @@ export class PluginManager {
       detection: {
         dependencies: ['vue@^2'],
         filePatterns: ['**/*.vue'],
-        configFiles: ['vue.config.js', 'vue.config.ts']
+        configFiles: ['vue.config.js', 'vue.config.ts'],
       },
-      options: {}
+      options: {},
     })
 
     // React 插件配置
@@ -120,9 +120,9 @@ export class PluginManager {
       detection: {
         dependencies: ['react', 'react-dom'],
         filePatterns: ['**/*.jsx', '**/*.tsx'],
-        configFiles: []
+        configFiles: [],
       },
-      options: {}
+      options: {},
     })
 
     // Preact 插件配置
@@ -133,9 +133,9 @@ export class PluginManager {
       detection: {
         dependencies: ['preact'],
         filePatterns: ['**/*.tsx', '**/*.jsx'],
-        configFiles: []
+        configFiles: [],
       },
-      options: {}
+      options: {},
     })
 
     // Svelte 插件配置
@@ -146,9 +146,9 @@ export class PluginManager {
       detection: {
         dependencies: ['svelte'],
         filePatterns: ['**/*.svelte'],
-        configFiles: ['svelte.config.js', 'svelte.config.ts']
+        configFiles: ['svelte.config.js', 'svelte.config.ts'],
       },
-      options: {}
+      options: {},
     })
 
     // Solid 插件配置
@@ -159,9 +159,9 @@ export class PluginManager {
       detection: {
         dependencies: ['solid-js'],
         filePatterns: ['**/*.tsx', '**/*.jsx'],
-        configFiles: []
+        configFiles: [],
       },
-      options: {}
+      options: {},
     })
 
     // Lit 插件配置
@@ -172,9 +172,9 @@ export class PluginManager {
       detection: {
         dependencies: ['lit'],
         filePatterns: ['**/*.ts', '**/*.js'],
-        configFiles: []
+        configFiles: [],
       },
-      options: {}
+      options: {},
     })
 
     // Qwik 插件配置
@@ -186,12 +186,12 @@ export class PluginManager {
       detection: {
         dependencies: ['@builder.io/qwik'],
         filePatterns: ['**/*.tsx'],
-        configFiles: []
+        configFiles: [],
       },
       options: {
         // Qwik 插件需要特殊的导入方式
-        importName: 'qwikVite'
-      }
+        importName: 'qwikVite',
+      },
     })
 
     // Angular 插件配置
@@ -203,12 +203,12 @@ export class PluginManager {
       detection: {
         dependencies: ['@angular/core'],
         filePatterns: ['**/*.ts'],
-        configFiles: ['angular.json']
+        configFiles: ['angular.json'],
       },
       options: {
         // Angular 插件配置 - 必须使用 tsconfig.app.json
-        tsconfig: './tsconfig.app.json'
-      }
+        tsconfig: './tsconfig.app.json',
+      },
     })
   }
 
@@ -236,7 +236,8 @@ export class PluginManager {
             this.detectedType = ProjectType.VUE3
             this.logger.info('检测到 Vue 3 项目')
             return this.detectedType
-          } else if (vueVersion.includes('^2') || vueVersion.includes('~2') || vueVersion.startsWith('2')) {
+          }
+          else if (vueVersion.includes('^2') || vueVersion.includes('~2') || vueVersion.startsWith('2')) {
             this.detectedType = ProjectType.VUE2
             this.logger.info('检测到 Vue 2 项目')
             return this.detectedType
@@ -292,8 +293,8 @@ export class PluginManager {
       this.detectedType = ProjectType.VANILLA
       this.logger.info('未检测到特定框架，使用 Vanilla 配置')
       return this.detectedType
-
-    } catch (error) {
+    }
+    catch (error) {
       this.logger.warn('项目类型检测失败', { error: (error as Error).message })
       this.detectedType = ProjectType.VANILLA
       return this.detectedType
@@ -313,7 +314,8 @@ export class PluginManager {
       const checkPromise = this.doFileCheck(patterns)
 
       return await Promise.race([checkPromise, timeoutPromise])
-    } catch (error) {
+    }
+    catch (error) {
       this.logger.warn('文件检查失败', { error: (error as Error).message })
       return false
     }
@@ -325,7 +327,7 @@ export class PluginManager {
   private async doFileCheck(patterns: string[]): Promise<boolean> {
     // 只检查当前项目的src目录，避免误检测packages目录中的其他项目文件
     const dirsToCheck = [
-      PathUtils.resolve(this.cwd, 'src')
+      PathUtils.resolve(this.cwd, 'src'),
     ]
 
     for (const dir of dirsToCheck) {
@@ -365,8 +367,10 @@ export class PluginManager {
         if (stat.isDirectory()) {
           // 递归检查子目录（限制深度避免性能问题）
           const hasFilesInSubdir = await this.checkFilesInDirectory(filePath, patterns, depth + 1)
-          if (hasFilesInSubdir) return true
-        } else {
+          if (hasFilesInSubdir)
+            return true
+        }
+        else {
           // 检查文件是否匹配模式
           for (const pattern of patterns) {
             const extension = pattern.replace('**/*.', '.')
@@ -377,7 +381,8 @@ export class PluginManager {
         }
       }
       return false
-    } catch {
+    }
+    catch {
       return false
     }
   }
@@ -397,7 +402,8 @@ export class PluginManager {
       const devDependencies = packageJson.devDependencies || {}
 
       return !!(dependencies[packageName] || devDependencies[packageName])
-    } catch {
+    }
+    catch {
       return false
     }
   }
@@ -413,21 +419,22 @@ export class PluginManager {
       this.logger.info('使用用户指定的框架类型', { type: explicitType })
       // 映射字符串类型到ProjectType枚举
       const typeMap: Record<string, ProjectType> = {
-        'vue': ProjectType.VUE3,
-        'vue2': ProjectType.VUE2,
-        'vue3': ProjectType.VUE3,
-        'react': ProjectType.REACT,
-        'svelte': ProjectType.SVELTE,
-        'solid': ProjectType.SOLID,
-        'preact': ProjectType.PREACT,
-        'lit': ProjectType.LIT,
-        'qwik': ProjectType.QWIK,
-        'angular': ProjectType.ANGULAR,
-        'vanilla': ProjectType.VANILLA
+        vue: ProjectType.VUE3,
+        vue2: ProjectType.VUE2,
+        vue3: ProjectType.VUE3,
+        react: ProjectType.REACT,
+        svelte: ProjectType.SVELTE,
+        solid: ProjectType.SOLID,
+        preact: ProjectType.PREACT,
+        lit: ProjectType.LIT,
+        qwik: ProjectType.QWIK,
+        angular: ProjectType.ANGULAR,
+        vanilla: ProjectType.VANILLA,
       }
       projectType = typeMap[explicitType] || (explicitType as ProjectType)
       this.detectedType = projectType
-    } else {
+    }
+    else {
       projectType = await this.detectProjectType()
     }
 
@@ -435,12 +442,13 @@ export class PluginManager {
 
     this.logger.info('PluginManager: 开始加载推荐插件...', { projectType })
 
-    try {
+      try {
       // 根据项目类型加载对应插件
       switch (projectType) {
-        case ProjectType.VUE3:
+        case ProjectType.VUE3: {
           const vuePlugins = await this.loadPlugin('vue3')
-          if (vuePlugins) plugins.push(...vuePlugins)
+          if (vuePlugins)
+            plugins.push(...vuePlugins)
 
           // 尝试加载 Vue JSX 插件（如果已安装依赖，则自动加载）
           const hasJsxDep = await this.hasDependency('@vitejs/plugin-vue-jsx')
@@ -451,42 +459,59 @@ export class PluginManager {
             if (vueJsxPlugins) {
               plugins.push(...vueJsxPlugins)
               this.logger.info('Vue JSX 插件加载成功')
-            } else {
+            }
+            else {
               this.logger.warn('Vue JSX 插件加载失败')
             }
-          } else {
+          }
+          else {
             this.logger.debug('未检测到 @vitejs/plugin-vue-jsx 依赖，跳过 Vue JSX 插件加载')
           }
           break
-        case ProjectType.VUE2:
+        }
+        case ProjectType.VUE2: {
           const vue2Plugins = await this.loadPlugin('vue2')
-          if (vue2Plugins) plugins.push(...vue2Plugins)
+          if (vue2Plugins)
+            plugins.push(...vue2Plugins)
           break
-        case ProjectType.REACT:
+        }
+        case ProjectType.REACT: {
           const reactPlugins = await this.loadPlugin('react')
-          if (reactPlugins) plugins.push(...reactPlugins)
+          if (reactPlugins)
+            plugins.push(...reactPlugins)
           break
-        case ProjectType.PREACT:
+        }
+        case ProjectType.PREACT: {
           const preactPlugins = await this.loadPlugin('preact')
-          if (preactPlugins) plugins.push(...preactPlugins)
+          if (preactPlugins)
+            plugins.push(...preactPlugins)
           break
-        case ProjectType.SVELTE:
+        }
+        case ProjectType.SVELTE: {
           const sveltePlugins = await this.loadPlugin('svelte')
-          if (sveltePlugins) plugins.push(...sveltePlugins)
+          if (sveltePlugins)
+            plugins.push(...sveltePlugins)
           break
-        case ProjectType.SOLID:
+        }
+        case ProjectType.SOLID: {
           const solidPlugins = await this.loadPlugin('solid')
-          if (solidPlugins) plugins.push(...solidPlugins)
+          if (solidPlugins)
+            plugins.push(...solidPlugins)
           break
-        case ProjectType.LIT:
+        }
+        case ProjectType.LIT: {
           const litPlugins = await this.loadPlugin('lit')
-          if (litPlugins) plugins.push(...litPlugins)
+          if (litPlugins)
+            plugins.push(...litPlugins)
           break
-        case ProjectType.QWIK:
+        }
+        case ProjectType.QWIK: {
           const qwikPlugins = await this.loadPlugin('qwik')
-          if (qwikPlugins) plugins.push(...qwikPlugins)
+          if (qwikPlugins)
+            plugins.push(...qwikPlugins)
           break
-        case ProjectType.ANGULAR:
+        }
+        case ProjectType.ANGULAR: {
           // 使用简单的 Angular 插件替代 Analog (Analog 不兼容 Vite 7)
           const { angularPlugin: angularPluginFn } = await import('../frameworks/angular/angular-plugin')
           const angularPlugin = angularPluginFn({
@@ -495,6 +520,7 @@ export class PluginManager {
           plugins.push(angularPlugin)
           this.logger.info('✅ Angular 插件加载成功')
           break
+        }
       }
 
       if (plugins.length > 0) {
@@ -502,8 +528,8 @@ export class PluginManager {
         this.logger.success(`智能插件加载完成: ${pluginNames}`)
       }
       return plugins
-
-    } catch (error) {
+    }
+    catch (error) {
       this.logger.error('智能插件加载失败', { error: (error as Error).message })
       return []
     }
@@ -522,7 +548,7 @@ export class PluginManager {
 
     this.logger.debug(`加载插件: ${pluginKey}`, {
       name: config.name,
-      package: config.packageName
+      package: config.packageName,
     })
 
     try {
@@ -532,33 +558,38 @@ export class PluginManager {
       // 统一使用动态 import 加载插件，避免 ExperimentalWarning
       try {
         // 使用动态 import（支持 ESM 和 CommonJS）
-        const { pathToFileURL } = await import('url')
+        const { pathToFileURL } = await import('node:url')
 
         // 尝试从项目的 node_modules 构建路径
         const modulePath = PathUtils.resolve(this.cwd, 'node_modules', config.packageName)
 
         // 检查 package.json 的 exports 字段
         const pkgJsonPath = PathUtils.resolve(modulePath, 'package.json')
-        const pkgJson = JSON.parse(await import('fs').then(fs => fs.promises.readFile(pkgJsonPath, 'utf-8')))
+        const pkgJson = JSON.parse(await import('node:fs').then(fs => fs.promises.readFile(pkgJsonPath, 'utf-8')))
 
         // 解析入口点
         let entryPoint = modulePath
         if (pkgJson.exports) {
           if (typeof pkgJson.exports === 'string') {
             entryPoint = PathUtils.resolve(modulePath, pkgJson.exports)
-          } else if (pkgJson.exports['.']) {
+          }
+          else if (pkgJson.exports['.']) {
             const dotExport = pkgJson.exports['.']
             if (typeof dotExport === 'string') {
               entryPoint = PathUtils.resolve(modulePath, dotExport)
-            } else if (dotExport.import) {
+            }
+            else if (dotExport.import) {
               entryPoint = PathUtils.resolve(modulePath, dotExport.import.default || dotExport.import)
-            } else if (dotExport.default) {
+            }
+            else if (dotExport.default) {
               entryPoint = PathUtils.resolve(modulePath, dotExport.default)
             }
           }
-        } else if (pkgJson.module) {
+        }
+        else if (pkgJson.module) {
           entryPoint = PathUtils.resolve(modulePath, pkgJson.module)
-        } else if (pkgJson.main) {
+        }
+        else if (pkgJson.main) {
           entryPoint = PathUtils.resolve(modulePath, pkgJson.main)
         }
 
@@ -567,9 +598,10 @@ export class PluginManager {
 
         // 使用动态 import 加载模块
         pluginModule = await import(moduleUrl)
-      } catch (importError) {
+      }
+      catch (importError) {
         this.logger.warn(`加载插件失败: ${config.packageName}`, {
-          error: (importError as Error).message
+          error: (importError as Error).message,
         })
         pluginModule = null
       }
@@ -610,7 +642,8 @@ export class PluginManager {
 
       // 返回所有插件（某些框架如 React 会返回多个插件）
       return pluginArray.length > 0 ? pluginArray : null
-    } catch (error) {
+    }
+    catch (error) {
       // 显示插件加载失败的警告信息
       this.logger.warn(`插件加载失败: ${config.name} (${config.packageName})`)
       this.logger.warn(`错误详情: ${(error as Error).message}`)

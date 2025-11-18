@@ -1,17 +1,18 @@
 /**
  * 服务器管理器
- * 
+ *
  * 负责开发服务器和预览服务器的生命周期管理
- * 
+ *
  * @author LDesign Team
  * @since 1.1.0
  */
 
-import type { ViteDevServer, PreviewServer } from 'vite'
+import type { ViteDevServer, PreviewServer as VitePreviewServer } from 'vite'
+import type { ViteLauncherConfig } from '../types'
+import type { DevServer, PreviewServer } from '../types/engine'
 import type { Logger } from '../utils/logger'
-import type { ViteLauncherConfig, ServerInfo } from '../types'
-import { getPreferredLocalIP } from '../utils/network'
 import qrcode from 'qrcode-terminal'
+import { getPreferredLocalIP } from '../utils/network'
 
 export interface ServerManagerOptions {
   logger: Logger
@@ -20,14 +21,14 @@ export interface ServerManagerOptions {
 
 /**
  * 服务器管理器
- * 
+ *
  * 管理开发服务器和预览服务器的启动、停止、重启等操作
  */
 export class ServerManager {
   private logger: Logger
   private cwd: string
   private devServer: ViteDevServer | null = null
-  private previewServer: PreviewServer | null = null
+  private previewServer: VitePreviewServer | null = null
 
   constructor(options: ServerManagerOptions) {
     this.logger = options.logger
@@ -77,7 +78,7 @@ export class ServerManager {
   /**
    * 启动预览服务器
    */
-  async startPreviewServer(config: ViteLauncherConfig, viteModule: any): Promise<PreviewServer> {
+  async startPreviewServer(config: ViteLauncherConfig, viteModule: any): Promise<VitePreviewServer> {
     const { preview } = viteModule
 
     this.logger.info('正在启动预览服务器...')
@@ -104,7 +105,8 @@ export class ServerManager {
     if (this.previewServer.httpServer) {
       await new Promise<void>((resolve, reject) => {
         this.previewServer!.httpServer.close((err) => {
-          if (err) reject(err)
+          if (err)
+            reject(err)
           else resolve()
         })
       })
@@ -123,24 +125,24 @@ export class ServerManager {
   /**
    * 获取当前预览服务器实例
    */
-  getPreviewServer(): PreviewServer | null {
+  getPreviewServer(): VitePreviewServer | null {
     return this.previewServer
   }
 
   /**
    * 获取服务器 URL
    */
-  getServerUrl(server: ViteDevServer | PreviewServer): string {
+  getServerUrl(server: ViteDevServer | VitePreviewServer): string {
     if ('resolvedUrls' in server && server.resolvedUrls) {
       return server.resolvedUrls.local[0] || ''
     }
-    
+
     // 预览服务器的 URL 获取
     if ('httpServer' in server && server.httpServer) {
       const address = server.httpServer.address()
       if (address && typeof address === 'object') {
-        const host = address.address === '::' || address.address === '0.0.0.0' 
-          ? 'localhost' 
+        const host = address.address === '::' || address.address === '0.0.0.0'
+          ? 'localhost'
           : address.address
         return `http://${host}:${address.port}`
       }
@@ -152,51 +154,71 @@ export class ServerManager {
   /**
    * 获取服务器信息（简化版）
    */
-  getServerInfo(server: ViteDevServer | PreviewServer): { url: string; host: string; port: number; https: boolean } {
+  getServerInfo(server: ViteDevServer | VitePreviewServer): { url: string, host: string, port: number, https: boolean } {
     const url = this.getServerUrl(server)
     const urlObj = new URL(url)
 
     return {
       url,
       host: urlObj.hostname,
-      port: parseInt(urlObj.port),
-      https: urlObj.protocol === 'https:'
+      port: Number.parseInt(urlObj.port),
+      https: urlObj.protocol === 'https:',
     }
   }
 
   /**
-   * 打印服务器信息
+   * 打印服务器信息（通用版本 - 支持所有引擎）
    */
-  printServerInfo(server: ViteDevServer | PreviewServer, type: 'dev' | 'preview'): void {
-    const info = this.getServerInfo(server)
+  printServerInfo(server: DevServer | PreviewServer | ViteDevServer | VitePreviewServer, type: 'dev' | 'preview'): void {
     const typeName = type === 'dev' ? '开发' : '预览'
 
+    // 处理通用 Server 接口（来自 BuildEngine）
+    if ('type' in server && 'url' in server && 'port' in server) {
+      this.logger.info(`\n🚀 ${typeName}服务器已启动`)
+      this.logger.info(`   引擎: ${server.type}`)
+      this.logger.info(`   本地访问: ${server.url}`)
+
+      const localIP = getPreferredLocalIP()
+      if (localIP && localIP !== 'localhost' && localIP !== '127.0.0.1') {
+        const protocol = server.https ? 'https' : 'http'
+        const networkUrl = `${protocol}://${localIP}:${server.port}`
+        this.logger.info(`   局域网访问: ${networkUrl}`)
+        this.printQRCode(networkUrl)
+      }
+      return
+    }
+
+    // 处理 Vite 特定的 Server（向后兼容）
+    const info = this.getServerInfo(server as ViteDevServer | VitePreviewServer)
     this.logger.info(`\n🚀 ${typeName}服务器已启动`)
     this.logger.info(`   本地访问: ${info.url}`)
 
-    // 获取局域网 IP
     const localIP = getPreferredLocalIP()
     if (localIP && localIP !== 'localhost' && localIP !== '127.0.0.1') {
       const networkUrl = `http://${localIP}:${info.port}`
       this.logger.info(`   局域网访问: ${networkUrl}`)
-      
-      // 生成二维码（只在非 CI 环境）
-      if (!process.env.CI) {
-        this.logger.info('\n   扫描二维码访问:')
-        try {
-          qrcode.generate(networkUrl, { small: true }, (qr) => {
-            // 将二维码每行缩进
-            const lines = qr.split('\n')
-            lines.forEach(line => {
-              if (line.trim()) {
-                this.logger.info(`   ${line}`)
-              }
-            })
-          })
-        } catch (error) {
-          // 忽略二维码生成错误
-        }
-      }
+      this.printQRCode(networkUrl)
+    }
+  }
+
+  /**
+   * 打印二维码
+   */
+  private printQRCode(url: string): void {
+    if (process.env.CI)
+      return
+
+    this.logger.info('\n   扫描二维码访问:')
+    try {
+      qrcode.generate(url, { small: true }, (qr) => {
+        qr.split('\n').forEach((line) => {
+          if (line.trim())
+            this.logger.info(`   ${line}`)
+        })
+      })
+    }
+    catch {
+      // 忽略二维码生成错误
     }
 
     this.logger.info('')
@@ -209,7 +231,8 @@ export class ServerManager {
     if (this.devServer) {
       const info = this.getServerInfo(this.devServer)
       this.logger.success(`✨ 服务器已重启: ${info.url}`)
-    } else if (this.previewServer) {
+    }
+    else if (this.previewServer) {
       const info = this.getServerInfo(this.previewServer)
       this.logger.success(`✨ 预览服务器已重启: ${info.url}`)
     }

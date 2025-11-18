@@ -1,13 +1,16 @@
 /**
  * 代理配置处理工具
- * 
+ *
  * 提供代理配置的转换、验证和增强功能
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
 
-import type { ProxyOptions, ExtendedProxyRule } from '../types'
+import type { ExtendedProxyRule } from '../types'
+import { Logger } from './logger'
+
+const proxyConfigLogger = new Logger('ProxyConfigProcessor')
 
 /**
  * 简化的代理配置接口
@@ -74,7 +77,7 @@ export interface SimpleProxyConfig {
 export class ProxyConfigProcessor {
   /**
    * 转换简化配置为标准代理配置
-   * 
+   *
    * @param simpleConfig - 简化的代理配置
    * @returns 标准的代理配置
    */
@@ -84,10 +87,10 @@ export class ProxyConfigProcessor {
     // 处理 API 代理
     if (simpleConfig.api) {
       const { target, pathPrefix = '/api', changeOrigin = true, rewrite = true, headers, timeout } = simpleConfig.api
-      
-      const rewriteFn = typeof rewrite === 'function' 
-        ? rewrite 
-        : rewrite 
+
+      const rewriteFn = typeof rewrite === 'function'
+        ? rewrite
+        : rewrite
           ? (path: string) => path.replace(new RegExp(`^${pathPrefix}`), '')
           : undefined
 
@@ -99,12 +102,12 @@ export class ProxyConfigProcessor {
         ...(timeout && { timeout }),
         configure: (proxy: any) => {
           proxy.on('error', (err: Error) => {
-            console.error(`API 代理错误 (${pathPrefix}):`, err.message)
+            proxyConfigLogger.error(`API 代理错误 (${pathPrefix}): ${err.message}`)
           })
           proxy.on('proxyReq', (proxyReq: any, req: any) => {
-            console.log(`API 代理请求: ${req.method} ${req.url} -> ${target}`)
+            proxyConfigLogger.debug(`API 代理请求: ${req.method} ${req.url} -> ${target}`)
           })
-        }
+        },
       }
     }
 
@@ -117,9 +120,9 @@ export class ProxyConfigProcessor {
         changeOrigin,
         configure: (proxy: any) => {
           proxy.on('error', (err: Error) => {
-            console.error(`静态资源代理错误 (${pathPrefix}):`, err.message)
+            proxyConfigLogger.error(`静态资源代理错误 (${pathPrefix}): ${err.message}`)
           })
-          
+
           // 添加缓存头
           if (cache) {
             proxy.on('proxyRes', (proxyRes: any) => {
@@ -131,7 +134,7 @@ export class ProxyConfigProcessor {
               }
             })
           }
-        }
+        },
       }
     }
 
@@ -145,9 +148,9 @@ export class ProxyConfigProcessor {
         ws: true,
         configure: (proxy: any) => {
           proxy.on('error', (err: Error) => {
-            console.error(`WebSocket 代理错误 (${pathPrefix}):`, err.message)
+            proxyConfigLogger.error(`WebSocket 代理错误 (${pathPrefix}): ${err.message}`)
           })
-        }
+        },
       }
     }
 
@@ -158,7 +161,7 @@ export class ProxyConfigProcessor {
         proxyConfig[pathKey] = {
           target: rule.target,
           changeOrigin: true,
-          ...rule.options
+          ...rule.options,
         }
       }
     }
@@ -168,11 +171,11 @@ export class ProxyConfigProcessor {
 
   /**
    * 验证代理配置
-   * 
+   *
    * @param config - 代理配置
    * @returns 验证结果
    */
-  static validateProxyConfig(config: any): { valid: boolean; errors: string[]; warnings: string[] } {
+  static validateProxyConfig(config: any): { valid: boolean, errors: string[], warnings: string[] } {
     const errors: string[] = []
     const warnings: string[] = []
 
@@ -199,7 +202,8 @@ export class ProxyConfigProcessor {
       // 验证目标地址格式
       try {
         new URL(ruleObj.target)
-      } catch {
+      }
+      catch {
         errors.push(`代理规则 "${path}" 的目标地址格式无效: ${ruleObj.target}`)
       }
 
@@ -216,20 +220,22 @@ export class ProxyConfigProcessor {
     return {
       valid: errors.length === 0,
       errors,
-      warnings
+      warnings,
     }
   }
 
   /**
    * 合并代理配置
-   * 
+   *
    * @param baseConfig - 基础配置
    * @param overrideConfig - 覆盖配置
    * @returns 合并后的配置
    */
   static mergeProxyConfigs(baseConfig: any, overrideConfig: any): any {
-    if (!baseConfig) return overrideConfig || {}
-    if (!overrideConfig) return baseConfig || {}
+    if (!baseConfig)
+      return overrideConfig || {}
+    if (!overrideConfig)
+      return baseConfig || {}
 
     const merged = { ...baseConfig }
 
@@ -237,7 +243,8 @@ export class ProxyConfigProcessor {
       if (merged[path] && typeof merged[path] === 'object' && typeof rule === 'object') {
         // 深度合并代理规则
         merged[path] = { ...merged[path], ...rule }
-      } else {
+      }
+      else {
         // 直接覆盖
         merged[path] = rule
       }
@@ -248,7 +255,7 @@ export class ProxyConfigProcessor {
 
   /**
    * 生成代理配置示例
-   * 
+   *
    * @param type - 配置类型
    * @returns 配置示例
    */
@@ -260,23 +267,24 @@ export class ProxyConfigProcessor {
           pathPrefix: '/api',
           rewrite: true,
           headers: {
-            'X-Forwarded-Host': 'localhost'
-          }
+            'X-Forwarded-Host': 'localhost',
+          },
         },
         assets: {
           target: 'http://localhost:9000',
           pathPrefix: '/assets',
           cache: {
             maxAge: 3600,
-            etag: true
-          }
+            etag: true,
+          },
         },
         websocket: {
           target: 'ws://localhost:8080',
-          pathPrefix: '/ws'
-        }
+          pathPrefix: '/ws',
+        },
       }
-    } else {
+    }
+    else {
       return {
         '/api': {
           target: 'http://localhost:8080',
@@ -284,20 +292,20 @@ export class ProxyConfigProcessor {
           rewrite: (path: string) => path.replace(/^\/api/, ''),
           configure: (proxy: any) => {
             proxy.on('error', (err: Error) => {
-              console.log('proxy error', err)
+              proxyConfigLogger.error('proxy error', err)
             })
-          }
+          },
         },
         '/upload': {
           target: 'http://localhost:9000',
           changeOrigin: true,
-          timeout: 30000
+          timeout: 30000,
         },
         '^/ws/.*': {
           target: 'ws://localhost:8080',
           ws: true,
-          changeOrigin: true
-        }
+          changeOrigin: true,
+        },
       }
     }
   }
@@ -305,7 +313,7 @@ export class ProxyConfigProcessor {
 
 /**
  * 创建简化的代理配置
- * 
+ *
  * @param config - 简化配置
  * @returns 标准代理配置
  */
@@ -315,7 +323,7 @@ export function createProxyConfig(config: SimpleProxyConfig): Record<string, any
 
 /**
  * 验证代理配置
- * 
+ *
  * @param config - 代理配置
  * @returns 验证结果
  */

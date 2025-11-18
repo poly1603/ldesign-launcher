@@ -1,11 +1,13 @@
 /**
  * 性能监控工具函数
- * 
+ *
  * 提供性能监控、分析和优化建议的工具函数
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
+
+import { Logger } from './logger'
 
 /**
  * 性能指标接口
@@ -59,7 +61,7 @@ export class PerformanceMonitor {
   private startTime: number = Date.now()
   private metrics: PerformanceMetrics
   private intervals: NodeJS.Timeout[] = []
-  private gcStats: { count: number; totalTime: number } = { count: 0, totalTime: 0 }
+  private gcStats: { count: number, totalTime: number } = { count: 0, totalTime: 0 }
 
   constructor() {
     this.metrics = this.getInitialMetrics()
@@ -77,7 +79,7 @@ export class PerformanceMonitor {
       buildTime: 0,
       hmrTime: 0,
       fileChangeResponseTime: 0,
-      eventLoopDelay: 0
+      eventLoopDelay: 0,
     }
   }
 
@@ -87,25 +89,27 @@ export class PerformanceMonitor {
   private setupGCMonitoring(): void {
     try {
       // 尝试启用 GC 监控（需要 --expose-gc 标志）
-      if (global.gc) {
-        const originalGC = global.gc
-          ; (global as any).gc = () => {
-            const start = Date.now()
-            originalGC()
-            const duration = Date.now() - start
+      const g: any = globalThis as any
+      if (g.gc) {
+        const originalGC = g.gc
+        g.gc = () => {
+          const start = Date.now()
+          originalGC()
+          const duration = Date.now() - start
 
-            this.gcStats.count++
-            this.gcStats.totalTime += duration
-          }
+          this.gcStats.count++
+          this.gcStats.totalTime += duration
+        }
       }
-    } catch (error) {
+    }
+    catch {
       // GC 监控不可用
     }
   }
 
   /**
    * 开始监控
-   * 
+   *
    * @param interval - 监控间隔（毫秒）
    */
   start(interval: number = 1000): void {
@@ -140,7 +144,7 @@ export class PerformanceMonitor {
    */
   private updateMemoryMetrics(): void {
     const memUsage = process.memoryUsage()
-    const totalMemory = require('os').totalmem()
+    const totalMemory = require('node:os').totalmem()
 
     this.metrics.memory = {
       used: memUsage.rss,
@@ -148,7 +152,7 @@ export class PerformanceMonitor {
       percentage: (memUsage.rss / totalMemory) * 100,
       heapUsed: memUsage.heapUsed,
       heapTotal: memUsage.heapTotal,
-      external: memUsage.external
+      external: memUsage.external,
     }
   }
 
@@ -157,13 +161,13 @@ export class PerformanceMonitor {
    */
   private updateCpuMetrics(): void {
     const cpuUsage = process.cpuUsage()
-    const loadAverage = require('os').loadavg()
+    const loadAverage = require('node:os').loadavg()
 
     this.metrics.cpu = {
       usage: 0, // 需要计算差值
       loadAverage,
       userTime: cpuUsage.user,
-      systemTime: cpuUsage.system
+      systemTime: cpuUsage.system,
     }
   }
 
@@ -187,7 +191,7 @@ export class PerformanceMonitor {
 
   /**
    * 记录构建时间
-   * 
+   *
    * @param duration - 构建持续时间
    */
   recordBuildTime(duration: number): void {
@@ -196,7 +200,7 @@ export class PerformanceMonitor {
 
   /**
    * 记录热更新时间
-   * 
+   *
    * @param duration - 热更新持续时间
    */
   recordHmrTime(duration: number): void {
@@ -205,7 +209,7 @@ export class PerformanceMonitor {
 
   /**
    * 记录文件变更响应时间
-   * 
+   *
    * @param duration - 响应时间
    */
   recordFileChangeResponseTime(duration: number): void {
@@ -221,7 +225,7 @@ export class PerformanceMonitor {
       this.metrics.gc = {
         count: this.gcStats.count,
         totalTime: this.gcStats.totalTime,
-        averageTime: this.gcStats.totalTime / this.gcStats.count
+        averageTime: this.gcStats.totalTime / this.gcStats.count,
       }
     }
 
@@ -240,13 +244,13 @@ export class PerformanceMonitor {
 
 /**
  * 测量函数执行时间
- * 
+ *
  * @param fn - 要测量的函数
  * @returns 执行结果和时间
  */
 export async function measureExecutionTime<T>(
-  fn: () => Promise<T> | T
-): Promise<{ result: T; duration: number }> {
+  fn: () => Promise<T> | T,
+): Promise<{ result: T, duration: number }> {
   const start = Date.now()
   const result = await fn()
   const duration = Date.now() - start
@@ -256,11 +260,13 @@ export async function measureExecutionTime<T>(
 
 /**
  * 创建性能计时器
- * 
+ *
  * @param name - 计时器名称
  * @returns 计时器对象
  */
-export function createTimer(name: string) {
+const performanceLogger = new Logger('Performance')
+
+export function createTimer(name: string, logger: Logger = performanceLogger) {
   const start = Date.now()
 
   return {
@@ -268,20 +274,20 @@ export function createTimer(name: string) {
     start,
     end(): number {
       const duration = Date.now() - start
-      console.log(`⏱️  ${name}: ${duration}ms`)
+      logger.info(`⏱️  ${name}: ${duration}ms`)
       return duration
     },
     lap(label: string): number {
       const duration = Date.now() - start
-      console.log(`⏱️  ${name} (${label}): ${duration}ms`)
+      logger.info(`⏱️  ${name} (${label}): ${duration}ms`)
       return duration
-    }
+    },
   }
 }
 
 /**
  * 获取系统资源使用情况
- * 
+ *
  * @returns 系统资源信息
  */
 export function getSystemResources(): {
@@ -299,7 +305,7 @@ export function getSystemResources(): {
   }
   uptime: number
 } {
-  const os = require('os')
+  const os = require('node:os')
   const totalMemory = os.totalmem()
   const freeMemory = os.freemem()
   const usedMemory = totalMemory - freeMemory
@@ -311,21 +317,21 @@ export function getSystemResources(): {
       total: totalMemory,
       free: freeMemory,
       used: usedMemory,
-      percentage: (usedMemory / totalMemory) * 100
+      percentage: (usedMemory / totalMemory) * 100,
     },
     cpu: {
       count: cpus.length,
       model: cpus[0]?.model || 'Unknown',
       speed: cpus[0]?.speed || 0,
-      loadAverage: os.loadavg()
+      loadAverage: os.loadavg(),
     },
-    uptime: os.uptime()
+    uptime: os.uptime(),
   }
 }
 
 /**
  * 检查性能警告
- * 
+ *
  * @param metrics - 性能指标
  * @returns 警告列表
  */
@@ -351,15 +357,16 @@ export function checkPerformanceWarnings(metrics: PerformanceMetrics): Array<{
       level: 'critical',
       message: '内存使用率过高',
       value: metrics.memory.percentage,
-      threshold: 90
+      threshold: 90,
     })
-  } else if (metrics.memory.percentage > 80) {
+  }
+  else if (metrics.memory.percentage > 80) {
     warnings.push({
       type: 'memory',
       level: 'warning',
       message: '内存使用率较高',
       value: metrics.memory.percentage,
-      threshold: 80
+      threshold: 80,
     })
   }
 
@@ -371,15 +378,16 @@ export function checkPerformanceWarnings(metrics: PerformanceMetrics): Array<{
       level: 'critical',
       message: 'CPU 负载过高',
       value: avgLoad,
-      threshold: 2
+      threshold: 2,
     })
-  } else if (avgLoad > 1) {
+  }
+  else if (avgLoad > 1) {
     warnings.push({
       type: 'cpu',
       level: 'warning',
       message: 'CPU 负载较高',
       value: avgLoad,
-      threshold: 1
+      threshold: 1,
     })
   }
 
@@ -390,15 +398,16 @@ export function checkPerformanceWarnings(metrics: PerformanceMetrics): Array<{
       level: 'critical',
       message: '事件循环延迟过高',
       value: metrics.eventLoopDelay,
-      threshold: 100
+      threshold: 100,
     })
-  } else if (metrics.eventLoopDelay > 50) {
+  }
+  else if (metrics.eventLoopDelay > 50) {
     warnings.push({
       type: 'eventLoop',
       level: 'warning',
       message: '事件循环延迟较高',
       value: metrics.eventLoopDelay,
-      threshold: 50
+      threshold: 50,
     })
   }
 
@@ -409,7 +418,7 @@ export function checkPerformanceWarnings(metrics: PerformanceMetrics): Array<{
       level: 'warning',
       message: '垃圾回收时间过长',
       value: metrics.gc.averageTime,
-      threshold: 50
+      threshold: 50,
     })
   }
 
@@ -418,7 +427,7 @@ export function checkPerformanceWarnings(metrics: PerformanceMetrics): Array<{
 
 /**
  * 生成性能报告
- * 
+ *
  * @param metrics - 性能指标
  * @returns 性能报告
  */
@@ -461,13 +470,13 @@ export function generatePerformanceReport(metrics: PerformanceMetrics): {
     summary,
     details: metrics,
     warnings,
-    recommendations
+    recommendations,
   }
 }
 
 /**
  * 优化建议生成器
- * 
+ *
  * @param metrics - 性能指标
  * @returns 优化建议
  */
@@ -490,7 +499,7 @@ export function generateOptimizationSuggestions(metrics: PerformanceMetrics): Ar
       category: '内存优化',
       priority: 'high',
       suggestion: '启用代码分割和懒加载',
-      impact: '减少内存使用 20-40%'
+      impact: '减少内存使用 20-40%',
     })
   }
 
@@ -500,7 +509,7 @@ export function generateOptimizationSuggestions(metrics: PerformanceMetrics): Ar
       category: '构建优化',
       priority: 'high',
       suggestion: '启用并行构建和缓存',
-      impact: '提高构建速度 30-50%'
+      impact: '提高构建速度 30-50%',
     })
   }
 
@@ -510,7 +519,7 @@ export function generateOptimizationSuggestions(metrics: PerformanceMetrics): Ar
       category: '开发体验',
       priority: 'medium',
       suggestion: '优化热更新范围和策略',
-      impact: '提高开发响应速度 50-70%'
+      impact: '提高开发响应速度 50-70%',
     })
   }
 

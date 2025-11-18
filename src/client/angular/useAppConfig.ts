@@ -1,11 +1,11 @@
 /**
  * Angular Service - AppConfigService
- * 
+ *
  * 使用方式：
  * ```typescript
  * import { Component, inject } from '@angular/core'
  * import { AppConfigService } from '@ldesign/launcher/client/angular'
- * 
+ *
  * @Component({
  *   selector: 'app-root',
  *   template: `<div>{{ config().app.name }}</div>`
@@ -18,22 +18,26 @@
  * ```
  */
 
-import { Injectable, signal, Signal, OnDestroy } from '@angular/core'
-import { appConfigManager, AppConfig } from '../app-config'
+import type { OnDestroy, Signal } from '@angular/core'
+import type { AppConfig } from '../app-config'
+import { Injectable, signal } from '@angular/core'
+import { appConfigManager } from '../app-config'
+
+/* eslint-disable no-console */
 
 /**
  * Angular 应用配置服务
- * 
+ *
  * 提供响应式的应用配置访问，当配置更新时自动触发视图更新。
  * 使用 Angular Signals 实现响应式。
  */
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AppConfigService implements OnDestroy {
   /** 应用配置对象（Signal） */
   readonly config: Signal<AppConfig>
-  
+
   /** 环境信息（Signal） */
   readonly environment: Signal<{
     /** 当前运行模式 (development/production/test) */
@@ -57,7 +61,9 @@ export class AppConfigService implements OnDestroy {
       this.configSignal.set(newConfig)
     })
 
-    console.log('✅ AppConfigService 已初始化，HMR 已启用')
+    if (import.meta.env.DEV) {
+      console.log('✅ AppConfigService 已初始化，HMR 已启用')
+    }
   }
 
   ngOnDestroy() {
@@ -83,5 +89,4 @@ export class AppConfigService implements OnDestroy {
 }
 
 // 也提供函数式 API（需要手动管理订阅）
-export { getAppConfig, subscribeConfig, getEnvironment } from '../app-config'
-
+export { getAppConfig, getEnvironment, subscribeConfig } from '../app-config'

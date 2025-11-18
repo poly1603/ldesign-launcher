@@ -1,23 +1,23 @@
 /**
  * CLI 工具主入口
- * 
+ *
  * 基于 @ldesign/kit 包的 CLI 工具实现命令行接口
  * 支持开发服务器、构建、预览等核心功能
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
 
-import { Logger } from '../utils/logger'
 import type { CliConfig, CliContext } from '../types'
 import { CliCommand } from '../types'
-import { DevCommand } from './commands/dev'
+import { Logger } from '../utils/logger'
 import { BuildCommand } from './commands/build'
-import { PreviewCommand } from './commands/preview'
 import { ConfigCommand } from './commands/config'
-import { HelpCommand } from './commands/help'
-import { VersionCommand } from './commands/version'
+import { DevCommand } from './commands/dev'
 import { doctorCommand } from './commands/doctor'
+import { HelpCommand } from './commands/help'
+import { PreviewCommand } from './commands/preview'
+import { VersionCommand } from './commands/version'
 
 /**
  * 创建 CLI 应用
@@ -46,7 +46,7 @@ export function createCli(config?: Partial<CliConfig>) {
   const logger = new Logger('CLI', {
     level: isSilent ? 'silent' : (isDebug ? 'debug' : 'info'),
     colors: true,
-    compact: !isDebug // 非 debug 模式使用简洁输出
+    compact: !isDebug, // 非 debug 模式使用简洁输出
   })
 
   const defaultConfig: CliConfig = {
@@ -59,49 +59,49 @@ export function createCli(config?: Partial<CliConfig>) {
         name: 'config',
         alias: 'c',
         description: '指定配置文件路径',
-        type: 'string'
+        type: 'string',
       },
       {
         name: 'mode',
         alias: 'm',
         description: '指定运行模式 (development, production, test)',
         type: 'string',
-        choices: ['development', 'production', 'test']
+        choices: ['development', 'production', 'test'],
       },
       {
         name: 'debug',
         alias: 'd',
         description: '启用调试模式',
         type: 'boolean',
-        default: false
+        default: false,
       },
       {
         name: 'silent',
         alias: 's',
         description: '静默模式',
         type: 'boolean',
-        default: false
+        default: false,
       },
       {
         name: 'help',
         alias: 'h',
         description: '显示帮助信息',
         type: 'boolean',
-        default: false
+        default: false,
       },
       {
         name: 'version',
         alias: 'v',
         description: '显示版本信息',
         type: 'boolean',
-        default: false
-      }
+        default: false,
+      },
     ],
     help: {
       showExamples: true,
       showAliases: true,
       showDefaults: true,
-      maxWidth: 80
+      maxWidth: 80,
     },
     theme: {
       primary: '#722ED1',
@@ -111,8 +111,8 @@ export function createCli(config?: Partial<CliConfig>) {
       info: '#1890ff',
       debug: '#722ED1',
       enableColors: true,
-      enableIcons: true
-    }
+      enableIcons: true,
+    },
   }
 
   const mergedConfig = { ...defaultConfig, ...config }
@@ -125,7 +125,7 @@ export function createCli(config?: Partial<CliConfig>) {
     ['config', new ConfigCommand()],
     ['doctor', { execute: async (ctx: any) => doctorCommand(ctx.cwd || process.cwd()) }],
     ['help', new HelpCommand()],
-    ['version', new VersionCommand()]
+    ['version', new VersionCommand()],
   ])
 
   /**
@@ -138,7 +138,7 @@ export function createCli(config?: Partial<CliConfig>) {
     const result = {
       command: 'help' as CliCommand,
       options: {} as Record<string, any>,
-      args: [] as string[]
+      args: [] as string[],
     }
 
     let i = 0
@@ -150,27 +150,34 @@ export function createCli(config?: Partial<CliConfig>) {
         const [key, value] = arg.slice(2).split('=')
         if (value !== undefined) {
           result.options[key] = value
-        } else if (i + 1 < args.length && !args[i + 1].startsWith('-')) {
+        }
+        else if (i + 1 < args.length && !args[i + 1].startsWith('-')) {
           result.options[key] = args[++i]
-        } else {
+        }
+        else {
           result.options[key] = true
         }
-      } else if (arg.startsWith('-')) {
+      }
+      else if (arg.startsWith('-')) {
         // 短选项（不支持打包为 -abc 的组合，保持简单）
         const key = arg.slice(1)
         if (i + 1 < args.length && !args[i + 1].startsWith('-')) {
           result.options[key] = args[++i]
-        } else {
+        }
+        else {
           result.options[key] = true
         }
-      } else if (!result.command || result.command === 'help') {
+      }
+      else if (!result.command || result.command === 'help') {
         // 命令
         if (commands.has(arg)) {
           result.command = arg as CliCommand
-        } else {
+        }
+        else {
           result.args.push(arg)
         }
-      } else {
+      }
+      else {
         // 参数
         result.args.push(arg)
       }
@@ -192,17 +199,21 @@ export function createCli(config?: Partial<CliConfig>) {
     const typeMap = new Map<string, 'string' | 'number' | 'boolean' | 'array'>()
 
     const addDefs = (defs: any[] | undefined) => {
-      if (!defs) return
+      if (!defs)
+        return
       for (const d of defs) {
-        if (!d || typeof d !== 'object') continue
-        if (d.alias) aliasToName.set(String(d.alias), d.name)
+        if (!d || typeof d !== 'object')
+          continue
+        if (d.alias)
+          aliasToName.set(String(d.alias), d.name)
         typeMap.set(d.name, d.type)
       }
     }
 
     addDefs(mergedConfig.globalOptions)
     const cmdDef = commands.get(command) as { options?: any[] } | undefined
-    if (cmdDef && Array.isArray(cmdDef.options)) addDefs(cmdDef.options)
+    if (cmdDef && Array.isArray(cmdDef.options))
+      addDefs(cmdDef.options)
 
     // 应用别名映射
     for (const [key, value] of Object.entries(raw)) {
@@ -212,20 +223,24 @@ export function createCli(config?: Partial<CliConfig>) {
 
     // 类型转换
     for (const [name, type] of typeMap.entries()) {
-      if (normalized[name] === undefined) continue
+      if (normalized[name] === undefined)
+        continue
       const val = normalized[name]
       switch (type) {
         case 'number':
           if (typeof val !== 'number') {
             const n = Number(val)
-            if (!Number.isNaN(n)) normalized[name] = n
+            if (!Number.isNaN(n))
+              normalized[name] = n
           }
           break
         case 'boolean':
           if (typeof val !== 'boolean') {
             const s = String(val).toLowerCase()
-            if (['1', 'true', 'yes', 'y'].includes(s)) normalized[name] = true
-            else if (['0', 'false', 'no', 'n'].includes(s)) normalized[name] = false
+            if (['1', 'true', 'yes', 'y'].includes(s))
+              normalized[name] = true
+            else if (['0', 'false', 'no', 'n'].includes(s))
+              normalized[name] = false
           }
           break
         case 'array':
@@ -242,7 +257,7 @@ export function createCli(config?: Partial<CliConfig>) {
 
   /**
    * 创建 CLI 上下文
-   * 
+   *
    * @param command - 命令
    * @param options - 选项
    * @param args - 参数
@@ -251,7 +266,7 @@ export function createCli(config?: Partial<CliConfig>) {
   function createContext(
     command: CliCommand,
     options: Record<string, any>,
-    args: string[]
+    args: string[],
   ): CliContext {
     return {
       command,
@@ -266,7 +281,7 @@ export function createCli(config?: Partial<CliConfig>) {
         supportsColor: process.stdout.hasColors?.() || false,
         isTTY: process.stdout.isTTY,
         type: process.env.TERM,
-        supportsUnicode: process.env.LANG?.includes('UTF-8') || false
+        supportsUnicode: process.env.LANG?.includes('UTF-8') || false,
       },
       environment: {
         nodeVersion: process.version,
@@ -276,8 +291,8 @@ export function createCli(config?: Partial<CliConfig>) {
         os: process.platform,
         arch: process.arch,
         memory: process.memoryUsage().heapTotal,
-        env: process.env as Record<string, string>
-      }
+        env: process.env as Record<string, string>,
+      },
     }
   }
 
@@ -325,7 +340,8 @@ export function createCli(config?: Partial<CliConfig>) {
       // 设置日志级别
       if (normalizedOptions.silent) {
         logger.setLevel('silent')
-      } else if (normalizedOptions.debug) {
+      }
+      else if (normalizedOptions.debug) {
         logger.setLevel('debug')
       }
 
@@ -353,16 +369,18 @@ export function createCli(config?: Partial<CliConfig>) {
       logger.debug('执行命令', {
         command: parsed.command,
         options: normalizedOptions,
-        args: parsed.args
+        args: parsed.args,
       })
 
       await commandHandler.handler(context)
-
-    } catch (error) {
+    }
+    catch (error) {
       logger.error('CLI 执行失败', { error: (error as Error).message })
 
       if (logger.getLevel() === 'debug') {
-        console.error((error as Error).stack)
+        logger.error('CLI 执行失败 - 堆栈信息', {
+          stack: (error as Error).stack,
+        })
       }
 
       process.exit(1)
@@ -371,7 +389,7 @@ export function createCli(config?: Partial<CliConfig>) {
 
   /**
    * 显示帮助信息
-   * 
+   *
    * @param commandName - 命令名称（可选）
    */
   function showHelp(commandName?: string) {
@@ -395,7 +413,7 @@ export function createCli(config?: Partial<CliConfig>) {
     showVersion,
     config: mergedConfig,
     commands,
-    logger
+    logger,
   }
 }
 

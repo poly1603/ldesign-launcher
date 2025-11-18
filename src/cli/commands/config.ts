@@ -1,19 +1,19 @@
 /**
  * Config 命令实现
- * 
+ *
  * 配置管理命令（为后续 config 包预留）
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
 
-import { Logger } from '../../utils/logger'
-import { FileSystem } from '../../utils/file-system'
-import { PathUtils } from '../../utils/path-utils'
-import { validateConfig } from '../../utils/config'
-import { ConfigManager } from '../../core/ConfigManager'
 import type { CliCommandDefinition, CliContext } from '../../types'
 import { DEFAULT_CONFIG_FILES } from '../../constants'
+import { ConfigManager } from '../../core/ConfigManager'
+import { validateConfig } from '../../utils/config'
+import { FileSystem } from '../../utils/file-system'
+import { Logger } from '../../utils/logger'
+import { PathUtils } from '../../utils/path-utils'
 
 /**
  * Config 命令类
@@ -30,54 +30,54 @@ export class ConfigCommand implements CliCommandDefinition {
       alias: 'g',
       description: '操作全局配置',
       type: 'boolean' as const,
-      default: false
+      default: false,
     },
     {
       name: 'json',
       alias: 'j',
       description: '以 JSON 格式输出',
       type: 'boolean' as const,
-      default: false
+      default: false,
     },
     {
       name: 'pretty',
       alias: 'p',
       description: '美化输出格式',
       type: 'boolean' as const,
-      default: true
-    }
+      default: true,
+    },
   ]
 
   examples = [
     {
       description: '列出所有配置项',
-      command: 'launcher config list'
+      command: 'launcher config list',
     },
     {
       description: '获取指定配置项的值',
-      command: 'launcher config get server.port'
+      command: 'launcher config get server.port',
     },
     {
       description: '设置指定配置项的值',
-      command: 'launcher config set server.port 8080'
+      command: 'launcher config set server.port 8080',
     },
     {
       description: '删除指定配置项',
-      command: 'launcher config delete server.port'
+      command: 'launcher config delete server.port',
     },
     {
       description: '验证配置文件',
-      command: 'launcher config validate'
+      command: 'launcher config validate',
     },
     {
       description: '初始化配置文件',
-      command: 'launcher config init'
-    }
+      command: 'launcher config init',
+    },
   ]
 
   /**
    * 验证命令参数
-   * 
+   *
    * @param context - CLI 上下文
    * @returns 验证结果
    */
@@ -121,13 +121,13 @@ export class ConfigCommand implements CliCommandDefinition {
 
   /**
    * 执行命令
-   * 
+   *
    * @param context - CLI 上下文
    */
   async handler(context: CliContext): Promise<void> {
     const logger = new Logger('config', {
       level: context.options.debug ? 'debug' : 'info',
-      colors: context.terminal.supportsColor
+      colors: context.terminal.supportsColor,
     })
 
     try {
@@ -136,7 +136,7 @@ export class ConfigCommand implements CliCommandDefinition {
       // 创建配置管理器
       const configManager = new ConfigManager({
         cwd: context.cwd,
-        watch: false
+        watch: false,
       })
 
       switch (action) {
@@ -168,12 +168,14 @@ export class ConfigCommand implements CliCommandDefinition {
           logger.error(`未知操作: ${action}`)
           process.exit(1)
       }
-
-    } catch (error) {
+    }
+    catch (error) {
       logger.error('配置操作失败', { error: (error as Error).message })
 
       if (context.options.debug) {
-        console.error((error as Error).stack)
+        logger.error('配置操作失败 - 堆栈信息', {
+          stack: (error as Error).stack,
+        })
       }
 
       process.exit(1)
@@ -186,7 +188,7 @@ export class ConfigCommand implements CliCommandDefinition {
   private async handleList(
     configManager: ConfigManager,
     context: CliContext,
-    logger: Logger
+    logger: Logger,
   ): Promise<void> {
     try {
       // 尝试加载配置
@@ -194,19 +196,21 @@ export class ConfigCommand implements CliCommandDefinition {
       const config = configManager.getConfig()
 
       if (context.options.json) {
-        console.log(JSON.stringify(config, null, context.options.pretty ? 2 : 0))
-      } else {
+        logger.raw(JSON.stringify(config, null, context.options.pretty ? 2 : 0))
+      }
+      else {
         logger.info('当前配置:')
         this.printConfig(config, '', logger)
       }
-
-    } catch (error) {
+    }
+    catch {
       logger.warn('无法加载配置文件，显示默认配置')
       const config = configManager.getConfig()
 
       if (context.options.json) {
-        console.log(JSON.stringify(config, null, context.options.pretty ? 2 : 0))
-      } else {
+        logger.raw(JSON.stringify(config, null, context.options.pretty ? 2 : 0))
+      }
+      else {
         logger.info('默认配置:')
         this.printConfig(config, '', logger)
       }
@@ -219,7 +223,7 @@ export class ConfigCommand implements CliCommandDefinition {
   private async handleGet(
     configManager: ConfigManager,
     context: CliContext,
-    logger: Logger
+    logger: Logger,
   ): Promise<void> {
     const key = context.args[1]
 
@@ -234,12 +238,13 @@ export class ConfigCommand implements CliCommandDefinition {
       }
 
       if (context.options.json) {
-        console.log(JSON.stringify(value, null, context.options.pretty ? 2 : 0))
-      } else {
+        logger.raw(JSON.stringify(value, null, context.options.pretty ? 2 : 0))
+      }
+      else {
         logger.info(`${key} = ${JSON.stringify(value)}`)
       }
-
-    } catch (error) {
+    }
+    catch (error) {
       logger.error(`获取配置项失败: ${(error as Error).message}`)
       process.exit(1)
     }
@@ -251,7 +256,7 @@ export class ConfigCommand implements CliCommandDefinition {
   private async handleSet(
     configManager: ConfigManager,
     context: CliContext,
-    logger: Logger
+    logger: Logger,
   ): Promise<void> {
     const key = context.args[1]
     const value = context.args[2]
@@ -261,14 +266,16 @@ export class ConfigCommand implements CliCommandDefinition {
       let parsedValue: any
       try {
         parsedValue = JSON.parse(value)
-      } catch {
+      }
+      catch {
         parsedValue = value
       }
 
       // 加载现有配置
       try {
         await configManager.loadConfig(context.configFile)
-      } catch {
+      }
+      catch {
         // 如果加载失败，使用默认配置
         logger.info('使用默认配置')
       }
@@ -283,8 +290,8 @@ export class ConfigCommand implements CliCommandDefinition {
       await configManager.save(configFile, updatedConfig)
 
       logger.success(`配置项 "${key}" 已设置为 ${JSON.stringify(parsedValue)}`)
-
-    } catch (error) {
+    }
+    catch (error) {
       logger.error(`设置配置项失败: ${(error as Error).message}`)
       process.exit(1)
     }
@@ -296,7 +303,7 @@ export class ConfigCommand implements CliCommandDefinition {
   private async handleDelete(
     configManager: ConfigManager,
     context: CliContext,
-    logger: Logger
+    logger: Logger,
   ): Promise<void> {
     const key = context.args[1]
 
@@ -319,8 +326,8 @@ export class ConfigCommand implements CliCommandDefinition {
       await configManager.save(configFile, updatedConfig)
 
       logger.success(`配置项 "${key}" 已删除`)
-
-    } catch (error) {
+    }
+    catch (error) {
       logger.error(`删除配置项失败: ${(error as Error).message}`)
       process.exit(1)
     }
@@ -332,7 +339,7 @@ export class ConfigCommand implements CliCommandDefinition {
   private async handleValidate(
     configManager: ConfigManager,
     context: CliContext,
-    logger: Logger
+    logger: Logger,
   ): Promise<void> {
     try {
       const configFile = context.configFile || await this.findConfigFile(context.cwd)
@@ -348,7 +355,8 @@ export class ConfigCommand implements CliCommandDefinition {
 
       if (validation.valid) {
         logger.success('配置文件验证通过')
-      } else {
+      }
+      else {
         logger.error('配置文件验证失败:')
         validation.errors.forEach(error => logger.error(`  - ${error}`))
         process.exit(1)
@@ -358,8 +366,8 @@ export class ConfigCommand implements CliCommandDefinition {
         logger.warn('配置警告:')
         validation.warnings.forEach(warning => logger.warn(`  - ${warning}`))
       }
-
-    } catch (error) {
+    }
+    catch (error) {
       logger.error(`验证配置文件失败: ${(error as Error).message}`)
       process.exit(1)
     }
@@ -371,7 +379,7 @@ export class ConfigCommand implements CliCommandDefinition {
   private async handleInit(
     configManager: ConfigManager,
     context: CliContext,
-    logger: Logger
+    logger: Logger,
   ): Promise<void> {
     try {
       const configFile = PathUtils.join(context.cwd, 'launcher.config.ts')
@@ -390,8 +398,8 @@ export class ConfigCommand implements CliCommandDefinition {
       await FileSystem.writeFile(configFile, configContent)
 
       logger.success('配置文件已创建', { path: configFile })
-
-    } catch (error) {
+    }
+    catch (error) {
       logger.error(`初始化配置文件失败: ${(error as Error).message}`)
       process.exit(1)
     }
@@ -407,7 +415,8 @@ export class ConfigCommand implements CliCommandDefinition {
       if (value && typeof value === 'object' && !Array.isArray(value)) {
         logger.info(`${fullKey}:`)
         this.printConfig(value, fullKey, logger)
-      } else {
+      }
+      else {
         logger.info(`  ${fullKey} = ${JSON.stringify(value)}`)
       }
     }

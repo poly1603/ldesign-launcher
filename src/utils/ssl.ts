@@ -1,18 +1,17 @@
 /**
  * SSL 证书生成和管理工具
- * 
+ *
  * 提供开发环境下的自签名SSL证书生成功能
- * 
+ *
  * @author LDesign Team
  * @since 2.0.0
  */
 
+import { execSync } from 'node:child_process'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
-import { execSync } from 'node:child_process'
-import { Logger } from './logger'
-import { PathUtils } from './path-utils'
 import { FileSystem } from './file-system'
+import { Logger } from './logger'
 
 /**
  * SSL 证书配置接口
@@ -54,7 +53,7 @@ export class SSLManager {
 
   /**
    * 获取或生成SSL证书
-   * 
+   *
    * @param options - 生成选项
    * @returns SSL配置
    */
@@ -63,7 +62,7 @@ export class SSLManager {
       domains = ['localhost', '127.0.0.1', '::1'],
       days = 365,
       certDir = this.certDir,
-      force = false
+      force = false,
     } = options
 
     // 确保证书目录存在
@@ -80,7 +79,7 @@ export class SSLManager {
       this.logger.debug('使用现有SSL证书', { certPath, keyPath })
       return {
         cert: certPath,
-        key: keyPath
+        key: keyPath,
       }
     }
 
@@ -90,13 +89,13 @@ export class SSLManager {
       certPath,
       keyPath,
       domains,
-      days
+      days,
     })
 
     this.logger.debug('SSL证书生成完成', { certPath, keyPath })
     return {
       cert: certPath,
-      key: keyPath
+      key: keyPath,
     }
   }
 
@@ -129,14 +128,14 @@ export class SSLManager {
       const keyContent = await fs.readFile(keyPath, 'utf8')
 
       // 检查证书格式
-      if (!certContent.includes('-----BEGIN CERTIFICATE-----') ||
-        !certContent.includes('-----END CERTIFICATE-----')) {
+      if (!certContent.includes('-----BEGIN CERTIFICATE-----')
+        || !certContent.includes('-----END CERTIFICATE-----')) {
         this.logger.debug('证书格式无效')
         return false
       }
 
-      if (!keyContent.includes('-----BEGIN PRIVATE KEY-----') ||
-        !keyContent.includes('-----END PRIVATE KEY-----')) {
+      if (!keyContent.includes('-----BEGIN PRIVATE KEY-----')
+        || !keyContent.includes('-----END PRIVATE KEY-----')) {
         this.logger.debug('私钥格式无效')
         return false
       }
@@ -150,19 +149,20 @@ export class SSLManager {
         if (certAge > maxAge) {
           this.logger.debug('证书文件过旧，需要重新生成', {
             certAge: Math.floor(certAge / (24 * 60 * 60 * 1000)),
-            maxAgeDays: 30
+            maxAgeDays: 30,
           })
           return false
         }
-      } catch (error) {
+      }
+      catch (error) {
         this.logger.debug('证书时间检查失败', { error: (error as Error).message })
       }
 
       // 证书格式正确且不过期，认为有效
       this.logger.debug('证书验证通过')
       return true
-
-    } catch (error) {
+    }
+    catch (error) {
       this.logger.debug('证书验证失败', { error: (error as Error).message })
       return false
     }
@@ -170,7 +170,7 @@ export class SSLManager {
 
   /**
    * 生成自签名证书
-   * 
+   *
    * @param options - 生成选项
    */
   private async generateSelfSignedCertificate(options: {
@@ -187,9 +187,10 @@ export class SSLManager {
         await this.generateWithMkcert({ certPath, keyPath, domains, days })
         this.logger.debug('使用mkcert生成证书成功', { certPath, keyPath })
         return
-      } catch (mkcertError) {
+      }
+      catch (mkcertError) {
         this.logger.debug('mkcert不可用，尝试使用OpenSSL', {
-          error: (mkcertError as Error).message
+          error: (mkcertError as Error).message,
         })
       }
 
@@ -199,17 +200,18 @@ export class SSLManager {
         await this.generateWithOpenSSL({ certPath, keyPath, domains, days })
         this.logger.debug('使用OpenSSL生成证书成功', { certPath, keyPath })
         return
-      } catch (opensslError) {
+      }
+      catch (opensslError) {
         this.logger.debug('OpenSSL不可用，使用预生成证书', {
-          error: (opensslError as Error).message
+          error: (opensslError as Error).message,
         })
       }
 
       // 最后回退到预生成证书
       await this.generateWithPrebuilt({ certPath, keyPath, domains, days })
       this.logger.debug('使用预生成证书成功', { certPath, keyPath })
-
-    } catch (error) {
+    }
+    catch (error) {
       throw new Error(`SSL证书生成失败: ${(error as Error).message}`)
     }
   }
@@ -237,16 +239,17 @@ export class SSLManager {
       const caKeyPath = join(caDir, 'ca-key.pem')
       const caCertPath = join(caDir, 'ca-cert.pem')
 
-      let ca: { key: string; cert: string }
+      let ca: { key: string, cert: string }
 
       // 尝试读取现有CA
       if (await FileSystem.exists(caKeyPath) && await FileSystem.exists(caCertPath)) {
         this.logger.debug('使用现有CA证书')
         ca = {
           key: await fs.readFile(caKeyPath, 'utf8'),
-          cert: await fs.readFile(caCertPath, 'utf8')
+          cert: await fs.readFile(caCertPath, 'utf8'),
         }
-      } else {
+      }
+      else {
         this.logger.debug('创建新的CA证书')
         // 创建新CA
         ca = await mkcert.createCA({
@@ -254,7 +257,7 @@ export class SSLManager {
           countryCode: 'CN',
           state: 'Beijing',
           locality: 'Beijing',
-          validity: 365 * 10 // CA证书10年有效期
+          validity: 365 * 10, // CA证书10年有效期
         })
 
         // 保存CA证书
@@ -263,18 +266,18 @@ export class SSLManager {
 
         this.logger.info('已创建新的CA证书，建议将其添加到系统信任列表', {
           caCertPath,
-          tip: '可以双击证书文件并选择"安装证书"到"受信任的根证书颁发机构"'
+          tip: '可以双击证书文件并选择"安装证书"到"受信任的根证书颁发机构"',
         })
       }
 
       // 生成服务器证书
       const cert = await mkcert.createCert({
-        domains: domains,
+        domains,
         validity: options.days,
         ca: {
           key: ca.key,
-          cert: ca.cert
-        }
+          cert: ca.cert,
+        },
       })
 
       // 写入文件
@@ -282,8 +285,8 @@ export class SSLManager {
       await fs.writeFile(certPath, cert.cert, 'utf8')
 
       this.logger.debug('mkcert证书生成完成', { certPath, keyPath, domains, caDir })
-
-    } catch (error) {
+    }
+    catch (error) {
       throw new Error(`mkcert证书生成失败: ${(error as Error).message}`)
     }
   }
@@ -317,7 +320,7 @@ export class SSLManager {
       `-out "${certPath}"`,
       `-days ${days}`,
       `-config "${configPath}"`,
-      '-extensions v3_req'
+      '-extensions v3_req',
     ].join(' ')
 
     execSync(opensslCmd, { stdio: 'ignore' })
@@ -335,7 +338,7 @@ export class SSLManager {
     domains: string[]
     days: number
   }): Promise<void> {
-    const { certPath, keyPath, domains, days } = options
+    const { certPath, keyPath, domains: _domains, days: _days } = options
 
     // 使用简单的预生成证书（仅用于开发环境）
     const privateKey = `-----BEGIN PRIVATE KEY-----
@@ -373,11 +376,9 @@ GiWU1ZdAMTYK4VOcS68u7MyhQUSzEZKAUMOFnr5CBhyr+7LfRIheDCAQW84+idc=
     await fs.writeFile(certPath, certificate, 'utf8')
   }
 
-
-
   /**
    * 创建OpenSSL配置文件内容
-   * 
+   *
    * @param domains - 域名列表
    * @returns 配置文件内容
    */
@@ -413,7 +414,7 @@ ${altNames}
 
   /**
    * 删除证书文件
-   * 
+   *
    * @param certDir - 证书目录（可选，默认使用实例的证书目录）
    */
   async removeCertificates(certDir?: string): Promise<void> {
@@ -425,11 +426,12 @@ ${altNames}
 
       await Promise.all([
         fs.unlink(certPath).catch(() => { }),
-        fs.unlink(keyPath).catch(() => { })
+        fs.unlink(keyPath).catch(() => { }),
       ])
 
       this.logger.info('SSL证书已删除', { certDir: targetDir })
-    } catch (error) {
+    }
+    catch (error) {
       this.logger.warn('删除SSL证书失败', { error: (error as Error).message })
     }
   }
@@ -437,7 +439,7 @@ ${altNames}
 
 /**
  * 创建SSL管理器实例
- * 
+ *
  * @param certDir - 证书目录
  * @param logger - 日志记录器
  * @returns SSL管理器实例
@@ -448,14 +450,14 @@ export function createSSLManager(certDir: string, logger?: Logger): SSLManager {
 
 /**
  * 快速生成SSL配置
- * 
+ *
  * @param certDir - 证书目录
  * @param options - 生成选项
  * @returns SSL配置
  */
 export async function generateSSLConfig(
   certDir: string,
-  options: SSLGenerateOptions = {}
+  options: SSLGenerateOptions = {},
 ): Promise<SSLConfig> {
   const manager = createSSLManager(certDir)
   return manager.getOrCreateSSLConfig(options)

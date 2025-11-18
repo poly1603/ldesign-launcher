@@ -1,14 +1,17 @@
 /**
  * 配置验证工具
- * 
+ *
  * 提供完整的配置文件验证功能
- * 
+ *
  * @author LDesign Team
  * @since 2.0.0
  */
 
 import type { ViteLauncherConfig } from '../types'
-import { ErrorCode, createConfigError } from './errors'
+import { createConfigError, ErrorCode } from './errors'
+import { Logger } from './logger'
+
+const configValidatorLogger = new Logger('ConfigValidator')
 
 /**
  * 验证结果
@@ -70,7 +73,7 @@ export class ConfigValidator {
     return {
       valid: this.errors.length === 0,
       errors: this.errors,
-      warnings: this.warnings
+      warnings: this.warnings,
     }
   }
 
@@ -82,7 +85,8 @@ export class ConfigValidator {
     if (server.port !== undefined) {
       if (typeof server.port !== 'number') {
         this.addError('server.port', '端口必须是数字', ErrorCode.CONFIG_VALIDATION_ERROR, server.port)
-      } else if (server.port < 1 || server.port > 65535) {
+      }
+      else if (server.port < 1 || server.port > 65535) {
         this.addError('server.port', '端口必须在 1-65535 之间', ErrorCode.CONFIG_VALIDATION_ERROR, server.port)
       }
     }
@@ -163,19 +167,18 @@ export function validateConfigOrThrow(config: ViteLauncherConfig): void {
     throw createConfigError(
       `配置验证失败:\n${errorMessages.join('\n')}`,
       ErrorCode.CONFIG_VALIDATION_ERROR,
-      { errors: result.errors }
+      { errors: result.errors },
     )
   }
 
   // 输出警告
   if (result.warnings.length > 0) {
-    console.warn('\n配置警告:')
-    result.warnings.forEach(w => {
-      console.warn(`  - ${w.path}: ${w.message}`)
+    configValidatorLogger.warn('配置警告：')
+    result.warnings.forEach((w) => {
+      configValidatorLogger.warn(`  - ${w.path}: ${w.message}`)
       if (w.suggestion) {
-        console.warn(`    建议: ${w.suggestion}`)
+        configValidatorLogger.warn(`    建议: ${w.suggestion}`)
       }
     })
-    console.warn('')
   }
 }

@@ -1,12 +1,14 @@
 /**
  * 日志记录器 (精简版)
- * 
+ *
  * 删除了文件轮转、日志历史、性能追踪、子 logger、表格/分组输出等高级功能
  * 保留基础的日志级别、颜色输出、时间戳功能
- * 
+ *
  * @author LDesign Team
  * @since 2.1.0
  */
+
+/* eslint-disable no-console */
 
 import picocolors from 'picocolors'
 
@@ -35,7 +37,7 @@ export class Logger {
     info: 1,
     warn: 2,
     error: 3,
-    silent: 4
+    silent: 4,
   }
 
   constructor(name: string = 'Logger', options: LoggerOptions = {}) {
@@ -85,7 +87,8 @@ export class Logger {
           formatted += '❌ '
           break
       }
-    } else {
+    }
+    else {
       switch (level) {
         case 'debug':
           formatted += '[DEBUG] '
@@ -106,7 +109,7 @@ export class Logger {
 
     // 添加数据（如果有）
     if (data !== undefined) {
-      formatted += ' ' + this.formatData(data)
+      formatted += ` ${this.formatData(data)}`
     }
 
     return formatted
@@ -126,7 +129,8 @@ export class Logger {
 
     try {
       return JSON.stringify(data)
-    } catch {
+    }
+    catch {
       return String(data)
     }
   }
@@ -167,9 +171,11 @@ export class Logger {
     // 根据级别选择输出流
     if (level === 'error') {
       console.error(colored)
-    } else if (level === 'warn') {
+    }
+    else if (level === 'warn') {
       console.warn(colored)
-    } else {
+    }
+    else {
       console.log(colored)
     }
   }
@@ -223,7 +229,7 @@ export class Logger {
     formatted += message
 
     if (data !== undefined) {
-      formatted += ' ' + this.formatData(data)
+      formatted += ` ${this.formatData(data)}`
     }
 
     console.log(this.colors ? picocolors.green(formatted) : formatted)
@@ -255,6 +261,17 @@ export class Logger {
    */
   setColors(enabled: boolean): void {
     this.colors = enabled
+  }
+
+  /**
+   * 原样输出消息（无时间戳、无级别前缀），用于 ASCII 布局等 UI 输出
+   */
+  raw(message: string): void {
+    // 遵守日志级别：silent 时不输出
+    if (!this.shouldLog('info'))
+      return
+
+    console.log(message)
   }
 }
 

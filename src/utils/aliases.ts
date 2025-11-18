@@ -8,8 +8,6 @@
  * @since 1.0.0
  */
 
-import path from 'path'
-
 /**
  * 构建阶段类型
  */
@@ -38,12 +36,12 @@ export interface AliasEntry {
 export function createAlias(
   find: string | RegExp,
   replacement: string,
-  stages: BuildStage[] = ['dev']
+  stages: BuildStage[] = ['dev'],
 ): AliasEntry {
   return {
     find,
     replacement,
-    stages
+    stages,
   }
 }
 
@@ -56,11 +54,11 @@ export function createAlias(
  */
 export function createBasicAliases(
   srcDir: string = './src',
-  stages: BuildStage[] = ['dev']
+  stages: BuildStage[] = ['dev'],
 ): AliasEntry[] {
   return [
     createAlias('@', srcDir, stages),
-    createAlias('~', './', stages)
+    createAlias('~', './', stages),
   ]
 }
 
@@ -73,7 +71,7 @@ export function createBasicAliases(
  */
 export function createDevAlias(
   find: string | RegExp,
-  replacement: string
+  replacement: string,
 ): AliasEntry {
   return createAlias(find, replacement, ['dev'])
 }
@@ -87,7 +85,7 @@ export function createDevAlias(
  */
 export function createBuildAlias(
   find: string | RegExp,
-  replacement: string
+  replacement: string,
 ): AliasEntry {
   return createAlias(find, replacement, ['build'])
 }
@@ -101,7 +99,7 @@ export function createBuildAlias(
  */
 export function createUniversalAlias(
   find: string | RegExp,
-  replacement: string
+  replacement: string,
 ): AliasEntry {
   return createAlias(find, replacement, ['dev', 'build', 'preview'])
 }

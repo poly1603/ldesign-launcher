@@ -1,12 +1,12 @@
 /**
  * 路径工具
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
 
-import * as path from 'path'
-import { homedir, platform } from 'os'
+import { homedir, platform } from 'node:os'
+import * as path from 'node:path'
 
 export class PathUtils {
   /**
@@ -162,8 +162,10 @@ export class PathUtils {
    * 获取公共路径前缀
    */
   static getCommonPath(paths: string[]): string {
-    if (paths.length === 0) return ''
-    if (paths.length === 1) return path.dirname(paths[0])
+    if (paths.length === 0)
+      return ''
+    if (paths.length === 1)
+      return path.dirname(paths[0])
 
     const resolved = paths.map(p => path.resolve(p))
     const parts = resolved[0].split(path.sep)
@@ -226,7 +228,7 @@ export class PathUtils {
     return format({
       ...parsed,
       base: undefined,
-      ext: newExt.startsWith('.') ? newExt : '.' + newExt
+      ext: newExt.startsWith('.') ? newExt : `.${newExt}`,
     })
   }
 
@@ -238,7 +240,7 @@ export class PathUtils {
     return format({
       ...parsed,
       base: undefined,
-      name: parsed.name + suffix
+      name: parsed.name + suffix,
     })
   }
 
@@ -278,7 +280,8 @@ export class PathUtils {
         const packageJsonPath = join(currentPath, 'package.json')
         require.resolve(packageJsonPath)
         return currentPath
-      } catch {
+      }
+      catch {
         currentPath = dirname(currentPath)
       }
     }
@@ -313,13 +316,13 @@ export class PathUtils {
     let counter = 1
     let uniquePath = basePath
 
-    const fs = require('fs')
+    const fs = require('node:fs')
 
     while (fs.existsSync(uniquePath)) {
       uniquePath = path.format({
         ...parsed,
         base: undefined,
-        name: `${parsed.name}_${counter}`
+        name: `${parsed.name}_${counter}`,
       })
       counter++
     }
@@ -350,7 +353,7 @@ export const {
   findProjectRoot,
   getPlatformPath,
   sanitizeFilename,
-  getUniquePath
+  getUniquePath,
 } = PathUtils
 
 // 重新导出 path 模块的基本函数

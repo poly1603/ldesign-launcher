@@ -1,21 +1,21 @@
 /**
  * 构建引擎基类
- * 
+ *
  * 提供构建引擎的抽象基类，所有具体引擎实现都应继承此类
- * 
+ *
  * @author LDesign Team
  * @since 2.0.0
  */
 
-import type {
-  BuildEngine as IBuildEngine,
-  BuildEngineType,
-  DevServer,
-  PreviewServer,
-  EngineBuildResult,
-  ConfigTransformer
-} from '../../types/engine'
 import type { ViteLauncherConfig } from '../../types/config'
+import type {
+  BuildEngineType,
+  ConfigTransformer,
+  DevServer,
+  EngineBuildResult,
+  BuildEngine as IBuildEngine,
+  PreviewServer,
+} from '../../types/engine'
 import { Logger } from '../../utils/logger'
 
 /**
@@ -24,19 +24,19 @@ import { Logger } from '../../utils/logger'
 export abstract class BuildEngine implements IBuildEngine {
   /** 引擎名称 */
   abstract readonly name: BuildEngineType
-  
+
   /** 引擎版本 */
   abstract readonly version: string
-  
+
   /** 引擎描述 */
   abstract readonly description?: string
-  
+
   /** 日志记录器 */
   protected logger: Logger
-  
+
   /** 配置转换器 */
   protected configTransformer?: ConfigTransformer
-  
+
   /** 是否已初始化 */
   protected initialized = false
 
@@ -83,7 +83,7 @@ export abstract class BuildEngine implements IBuildEngine {
     if (this.configTransformer) {
       return this.configTransformer.transform(config)
     }
-    
+
     // 默认实现：直接返回配置
     return config
   }
@@ -121,4 +121,3 @@ export abstract class BuildEngine implements IBuildEngine {
     }
   }
 }
-

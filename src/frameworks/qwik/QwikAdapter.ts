@@ -1,21 +1,21 @@
 /**
  * Qwik 框架适配器
- * 
+ *
  * 提供 Qwik 项目的自动检测、插件配置和构建支持
- * 
+ *
  * @author LDesign Team
  * @since 2.0.0
  */
 
 import type { Plugin } from 'vite'
-import type {
-  FrameworkDetectionResult,
-  FrameworkDependencies,
-  FrameworkFeatures,
-  FrameworkOptions
-} from '../../types/framework'
-import type { BuildEngine } from '../../types/engine'
 import type { ViteLauncherConfig } from '../../types/config'
+import type { BuildEngine } from '../../types/engine'
+import type {
+  FrameworkDependencies,
+  FrameworkDetectionResult,
+  FrameworkFeatures,
+  FrameworkOptions,
+} from '../../types/framework'
 import { FrameworkAdapter } from '../base/FrameworkAdapter'
 
 /**
@@ -33,7 +33,7 @@ export class QwikAdapter extends FrameworkAdapter {
     ssr: true,
     ssg: true,
     hmr: true,
-    fastRefresh: true
+    fastRefresh: true,
   }
 
   /**
@@ -43,7 +43,7 @@ export class QwikAdapter extends FrameworkAdapter {
     const evidence: FrameworkDetectionResult['evidence'] = {
       dependencies: [],
       files: [],
-      configFiles: []
+      configFiles: [],
     }
 
     let confidence = 0
@@ -65,7 +65,7 @@ export class QwikAdapter extends FrameworkAdapter {
     const qwikFiles = await this.findFiles(cwd, [
       'src/root.tsx',
       'src/entry.ssr.tsx',
-      'src/routes/index.tsx'
+      'src/routes/index.tsx',
     ])
     if (qwikFiles.length > 0) {
       evidence.files = qwikFiles
@@ -76,7 +76,7 @@ export class QwikAdapter extends FrameworkAdapter {
     const configFiles = await this.findFiles(cwd, [
       'vite.config.ts',
       'vite.config.js',
-      'adapters/static/vite.config.ts'
+      'adapters/static/vite.config.ts',
     ])
     if (configFiles.length > 0) {
       evidence.configFiles = configFiles
@@ -90,7 +90,7 @@ export class QwikAdapter extends FrameworkAdapter {
       type: detected ? 'qwik' : undefined,
       version: qwikVersion ? this.parseVersion(qwikVersion) : undefined,
       confidence,
-      evidence
+      evidence,
     }
   }
 
@@ -112,12 +112,13 @@ export class QwikAdapter extends FrameworkAdapter {
 
         if (options?.options?.devInput) {
           qwikOptions.client = {
-            devInput: options.options.devInput
+            devInput: options.options.devInput,
           }
         }
 
         if (options?.options?.outDir) {
-          if (!qwikOptions.client) qwikOptions.client = {}
+          if (!qwikOptions.client)
+            qwikOptions.client = {}
           qwikOptions.client.outDir = options.options.outDir
         }
 
@@ -126,7 +127,8 @@ export class QwikAdapter extends FrameworkAdapter {
         // 插件可能返回单个插件或插件数组
         if (Array.isArray(plugin)) {
           plugins.push(...plugin)
-        } else {
+        }
+        else {
           plugins.push(plugin)
         }
 
@@ -137,13 +139,16 @@ export class QwikAdapter extends FrameworkAdapter {
           const cityPlugin = qwikCity()
           if (Array.isArray(cityPlugin)) {
             plugins.push(...(cityPlugin as any))
-          } else if (cityPlugin) {
+          }
+          else if (cityPlugin) {
             plugins.push(cityPlugin as any)
           }
-        } catch (error) {
+        }
+        catch {
           this.logger.warn('未找到 @builder.io/qwik-city，跳过 Qwik City 支持')
         }
-      } catch (error) {
+      }
+      catch (error) {
         this.logger.error('加载 Qwik 插件失败', error)
         throw new Error('请安装 @builder.io/qwik: npm install @builder.io/qwik')
       }
@@ -155,14 +160,14 @@ export class QwikAdapter extends FrameworkAdapter {
   /**
    * 获取 Qwik 特定配置
    */
-  getConfig(options?: FrameworkOptions): Partial<ViteLauncherConfig> {
+  getConfig(_options?: FrameworkOptions): Partial<ViteLauncherConfig> {
     return {
       server: {
         port: 5173,
         open: true,
         headers: {
-          'Cache-Control': 'public, max-age=0'
-        }
+          'Cache-Control': 'public, max-age=0',
+        },
       },
       build: {
         outDir: 'dist',
@@ -170,24 +175,24 @@ export class QwikAdapter extends FrameworkAdapter {
         target: 'es2020',
         rollupOptions: {
           output: {
-            manualChunks: undefined
-          }
-        }
+            manualChunks: undefined,
+          },
+        },
       },
       resolve: {
         alias: [
           { find: '@', replacement: '/src' },
-          { find: '~', replacement: '/src' }
+          { find: '~', replacement: '/src' },
         ],
-        extensions: ['.js', '.ts', '.jsx', '.tsx', '.json']
+        extensions: ['.js', '.ts', '.jsx', '.tsx', '.json'],
       },
       optimizeDeps: {
-        include: []
+        include: [],
       },
       ssr: {
         target: 'webworker',
-        noExternal: true
-      }
+        noExternal: true,
+      },
     }
   }
 
@@ -198,16 +203,16 @@ export class QwikAdapter extends FrameworkAdapter {
     return {
       dependencies: [
         '@builder.io/qwik',
-        '@builder.io/qwik-city'
+        '@builder.io/qwik-city',
       ],
       devDependencies: [
         '@types/node',
         'typescript',
-        'vite'
+        'vite',
       ],
       optionalDependencies: [
-        '@builder.io/partytown'
-      ]
+        '@builder.io/partytown',
+      ],
     }
   }
 
@@ -216,14 +221,14 @@ export class QwikAdapter extends FrameworkAdapter {
    */
   getScripts(): Record<string, string> {
     return {
-      dev: 'launcher dev',
+      'dev': 'launcher dev',
       'dev.debug': 'node --inspect-brk ./node_modules/vite/bin/vite.js --mode ssr',
-      build: 'launcher build',
+      'build': 'launcher build',
       'build.client': 'vite build',
       'build.preview': 'vite build --ssr src/entry.preview.tsx',
       'build.types': 'tsc --incremental --noEmit',
-      preview: 'launcher preview',
-      'type-check': 'tsc --noEmit'
+      'preview': 'launcher preview',
+      'type-check': 'tsc --noEmit',
     }
   }
 
@@ -233,8 +238,7 @@ export class QwikAdapter extends FrameworkAdapter {
   getEnvConfig(): Record<string, string> {
     return {
       VITE_APP_TITLE: 'Qwik App',
-      VITE_APP_VERSION: '1.0.0'
+      VITE_APP_VERSION: '1.0.0',
     }
   }
 }
-

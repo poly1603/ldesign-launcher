@@ -20,7 +20,7 @@ export interface UIConfigField {
   /** 是否必填 */
   required?: boolean
   /** 选项（用于select类型） */
-  options?: Array<{ label: string; value: any }>
+  options?: Array<{ label: string, value: any }>
   /** 验证规则 */
   validation?: {
     min?: number
@@ -78,26 +78,26 @@ export const SUPPORTED_ENVIRONMENTS: UIEnvironmentConfig[] = [
     key: 'development',
     description: '本地开发环境配置',
     isDefault: true,
-    configPath: 'launcher.config.development.ts'
+    configPath: 'launcher.config.development.ts',
   },
   {
     name: '生产环境',
     key: 'production',
     description: '生产环境配置',
-    configPath: 'launcher.config.production.ts'
+    configPath: 'launcher.config.production.ts',
   },
   {
     name: '测试环境',
     key: 'test',
     description: '测试环境配置',
-    configPath: 'launcher.config.test.ts'
+    configPath: 'launcher.config.test.ts',
   },
   {
     name: '预发布环境',
     key: 'staging',
     description: '预发布环境配置',
-    configPath: 'launcher.config.staging.ts'
-  }
+    configPath: 'launcher.config.staging.ts',
+  },
 ]
 
 /**
@@ -121,15 +121,15 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
           { label: '错误 (error)', value: 'error' },
           { label: '警告 (warn)', value: 'warn' },
           { label: '信息 (info)', value: 'info' },
-          { label: '调试 (debug)', value: 'debug' }
-        ]
+          { label: '调试 (debug)', value: 'debug' },
+        ],
       },
       {
         key: 'launcher.autoRestart',
         label: '自动重启',
         description: '配置文件变更时是否自动重启开发服务器',
         type: 'boolean',
-        defaultValue: true
+        defaultValue: true,
       },
       {
         key: 'launcher.debug',
@@ -137,7 +137,7 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         description: '是否启用调试模式',
         type: 'boolean',
         defaultValue: false,
-        advanced: true
+        advanced: true,
       },
       {
         key: 'launcher.mode',
@@ -149,8 +149,8 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
           { label: '开发模式', value: 'development' },
           { label: '生产模式', value: 'production' },
           { label: '测试模式', value: 'test' },
-          { label: '预发布模式', value: 'staging' }
-        ]
+          { label: '预发布模式', value: 'staging' },
+        ],
       },
       {
         key: 'launcher.configFile',
@@ -158,7 +158,7 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         description: '指定配置文件路径',
         type: 'string',
         placeholder: 'launcher.config.ts',
-        advanced: true
+        advanced: true,
       },
       {
         key: 'launcher.cwd',
@@ -166,7 +166,7 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         description: '设置工作目录',
         type: 'string',
         placeholder: process.cwd(),
-        advanced: true
+        advanced: true,
       },
       {
         key: 'launcher.aliasStages',
@@ -174,9 +174,9 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         description: '控制在哪些阶段启用开发时别名',
         type: 'array',
         defaultValue: ['dev'],
-        advanced: true
-      }
-    ]
+        advanced: true,
+      },
+    ],
   },
   {
     id: 'server',
@@ -190,7 +190,7 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         description: '开发服务器监听的主机地址',
         type: 'string',
         defaultValue: 'localhost',
-        placeholder: 'localhost 或 0.0.0.0'
+        placeholder: 'localhost 或 0.0.0.0',
       },
       {
         key: 'server.port',
@@ -201,15 +201,15 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         validation: {
           min: 1000,
           max: 65535,
-          message: '端口号必须在1000-65535之间'
-        }
+          message: '端口号必须在1000-65535之间',
+        },
       },
       {
         key: 'server.open',
         label: '自动打开浏览器',
         description: '启动时是否自动打开浏览器',
         type: 'boolean',
-        defaultValue: true
+        defaultValue: true,
       },
       {
         key: 'server.cors',
@@ -217,7 +217,7 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         description: '是否启用跨域资源共享',
         type: 'boolean',
         defaultValue: true,
-        advanced: true
+        advanced: true,
       },
       {
         key: 'server.https',
@@ -225,7 +225,7 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         description: '是否启用HTTPS协议',
         type: 'boolean',
         defaultValue: false,
-        advanced: true
+        advanced: true,
       },
       {
         key: 'server.strictPort',
@@ -233,7 +233,7 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         description: '端口被占用时是否退出而不是尝试下一个可用端口',
         type: 'boolean',
         defaultValue: false,
-        advanced: true
+        advanced: true,
       },
       {
         key: 'server.hmr',
@@ -241,7 +241,7 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         description: '是否启用热模块替换',
         type: 'boolean',
         defaultValue: true,
-        advanced: true
+        advanced: true,
       },
       {
         key: 'server.proxy',
@@ -250,9 +250,9 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         type: 'keyValue',
         defaultValue: {},
         placeholder: '例如: /api -> http://localhost:8080',
-        advanced: true
-      }
-    ]
+        advanced: true,
+      },
+    ],
   },
   {
     id: 'build',
@@ -265,14 +265,14 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         label: '输出目录',
         description: '构建输出目录',
         type: 'string',
-        defaultValue: 'dist'
+        defaultValue: 'dist',
       },
       {
         key: 'build.sourcemap',
         label: '生成源码映射',
         description: '是否生成源码映射文件',
         type: 'boolean',
-        defaultValue: false
+        defaultValue: false,
       },
       {
         key: 'build.minify',
@@ -283,8 +283,8 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         options: [
           { label: '不压缩', value: false },
           { label: 'ESBuild', value: 'esbuild' },
-          { label: 'Terser', value: 'terser' }
-        ]
+          { label: 'Terser', value: 'terser' },
+        ],
       },
       {
         key: 'build.target',
@@ -292,7 +292,7 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         description: '构建目标环境',
         type: 'string',
         defaultValue: 'es2015',
-        advanced: true
+        advanced: true,
       },
       {
         key: 'build.emptyOutDir',
@@ -300,9 +300,9 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         description: '构建前是否清空输出目录',
         type: 'boolean',
         defaultValue: true,
-        advanced: true
-      }
-    ]
+        advanced: true,
+      },
+    ],
   },
   {
     id: 'preview',
@@ -315,7 +315,7 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         label: '预览主机',
         description: '预览服务器监听的主机地址',
         type: 'string',
-        defaultValue: 'localhost'
+        defaultValue: 'localhost',
       },
       {
         key: 'preview.port',
@@ -326,15 +326,15 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         validation: {
           min: 1000,
           max: 65535,
-          message: '端口号必须在1000-65535之间'
-        }
+          message: '端口号必须在1000-65535之间',
+        },
       },
       {
         key: 'preview.open',
         label: '自动打开浏览器',
         description: '启动预览时是否自动打开浏览器',
         type: 'boolean',
-        defaultValue: true
+        defaultValue: true,
       },
       {
         key: 'preview.https',
@@ -342,9 +342,9 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         description: '预览服务器是否启用HTTPS',
         type: 'boolean',
         defaultValue: false,
-        advanced: true
-      }
-    ]
+        advanced: true,
+      },
+    ],
   },
   {
     id: 'resolve',
@@ -358,7 +358,7 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         description: '配置路径别名映射',
         type: 'keyValue',
         defaultValue: {},
-        placeholder: '例如: @ -> ./src'
+        placeholder: '例如: @ -> ./src',
       },
       {
         key: 'resolve.extensions',
@@ -366,7 +366,7 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         description: '自动解析的文件扩展名',
         type: 'array',
         defaultValue: ['.ts', '.js', '.vue', '.json'],
-        advanced: true
+        advanced: true,
       },
       {
         key: 'resolve.mainFields',
@@ -374,9 +374,9 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         description: 'package.json中的主字段',
         type: 'array',
         defaultValue: ['module', 'jsnext:main', 'jsnext'],
-        advanced: true
-      }
-    ]
+        advanced: true,
+      },
+    ],
   },
   {
     id: 'css',
@@ -390,7 +390,7 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         description: '是否启用CSS模块',
         type: 'boolean',
         defaultValue: false,
-        advanced: true
+        advanced: true,
       },
       {
         key: 'css.preprocessorOptions.scss.additionalData',
@@ -399,7 +399,7 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         type: 'string',
         placeholder: '@import "@/styles/variables.scss";',
         multiline: true,
-        advanced: true
+        advanced: true,
       },
       {
         key: 'css.preprocessorOptions.less.javascriptEnabled',
@@ -407,7 +407,7 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         description: '是否启用Less中的JavaScript',
         type: 'boolean',
         defaultValue: true,
-        advanced: true
+        advanced: true,
       },
       {
         key: 'css.postcss',
@@ -415,9 +415,9 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         description: 'PostCSS插件配置',
         type: 'json',
         defaultValue: {},
-        advanced: true
-      }
-    ]
+        advanced: true,
+      },
+    ],
   },
   {
     id: 'optimizeDeps',
@@ -432,7 +432,7 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         type: 'array',
         defaultValue: [],
         placeholder: '例如: vue, vue-router',
-        advanced: true
+        advanced: true,
       },
       {
         key: 'optimizeDeps.exclude',
@@ -441,7 +441,7 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         type: 'array',
         defaultValue: [],
         placeholder: '例如: @vueuse/core',
-        advanced: true
+        advanced: true,
       },
       {
         key: 'optimizeDeps.force',
@@ -449,9 +449,9 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         description: '是否强制重新构建依赖',
         type: 'boolean',
         defaultValue: false,
-        advanced: true
-      }
-    ]
+        advanced: true,
+      },
+    ],
   },
   {
     id: 'define',
@@ -466,9 +466,9 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         type: 'keyValue',
         defaultValue: {},
         placeholder: '例如: __VERSION__ -> "1.0.0"',
-        advanced: true
-      }
-    ]
+        advanced: true,
+      },
+    ],
   },
   {
     id: 'env',
@@ -482,7 +482,7 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         description: '客户端可访问的环境变量前缀',
         type: 'array',
         defaultValue: ['VITE_'],
-        placeholder: '例如: VITE_, APP_'
+        placeholder: '例如: VITE_, APP_',
       },
       {
         key: 'envDir',
@@ -491,10 +491,10 @@ export const LAUNCHER_CONFIG_FIELDS: UIConfigSection[] = [
         type: 'string',
         defaultValue: '.',
         placeholder: '.env文件所在目录',
-        advanced: true
-      }
-    ]
-  }
+        advanced: true,
+      },
+    ],
+  },
 ]
 
 /**
@@ -551,7 +551,8 @@ export function getDefaultConfig(): Record<string, any> {
  */
 export function validateConfigValue(path: string, value: any): string | null {
   const field = getFieldByPath(path)
-  if (!field) return null
+  if (!field)
+    return null
 
   if (field.required && (value === undefined || value === null || value === '')) {
     return `${field.label}是必填项`

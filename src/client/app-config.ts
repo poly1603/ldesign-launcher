@@ -7,6 +7,8 @@
 
 /// <reference types="vite/client" />
 
+/* eslint-disable no-console */
+
 import { notification } from './notification'
 
 export interface AppConfig {
@@ -55,21 +57,27 @@ class AppConfigManager {
       || (envConfig.constructor === Object && Object.keys(envConfig).length === 0)
 
     if (isEmpty) {
-      console.warn('⚠️ 未找到应用配置或配置为空，使用默认配置', {
-        hasEnvConfig: !!envConfig,
-        envConfigType: typeof envConfig,
-        envConfigKeys: envConfig ? Object.keys(envConfig) : [],
-        envConfigValue: envConfig
-      })
+      if (import.meta.env.DEV) {
+        console.warn('⚠️ 未找到应用配置或配置为空，使用默认配置', {
+          hasEnvConfig: !!envConfig,
+          envConfigType: typeof envConfig,
+          envConfigKeys: envConfig ? Object.keys(envConfig) : [],
+          envConfigValue: envConfig,
+        })
+      }
       const defaultConfig = this.getDefaultConfig()
-      console.log('✅ 使用默认配置:', defaultConfig)
+      if (import.meta.env.DEV) {
+        console.log('✅ 使用默认配置:', defaultConfig)
+      }
       return defaultConfig
     }
 
-    console.log('✅ 从 import.meta.env.appConfig 加载配置', {
-      keys: Object.keys(envConfig),
-      config: envConfig
-    })
+    if (import.meta.env.DEV) {
+      console.log('✅ 从 import.meta.env.appConfig 加载配置', {
+        keys: Object.keys(envConfig),
+        config: envConfig,
+      })
+    }
 
     return envConfig
   }
@@ -82,16 +90,16 @@ class AppConfigManager {
       app: {
         name: 'App',
         version: '1.0.0',
-        description: 'Application'
+        description: 'Application',
       },
       api: {
         baseUrl: 'http://localhost:8080/api',
-        timeout: 30000
+        timeout: 30000,
       },
       features: {
         enableAnalytics: false,
-        enableDebug: true
-      }
+        enableDebug: true,
+      },
     }
   }
 
@@ -99,11 +107,14 @@ class AppConfigManager {
    * 初始化 HMR 监听
    */
   private initHMR() {
-    if (this.hmrInitialized) return
+    if (this.hmrInitialized)
+      return
 
     if (import.meta.hot) {
       import.meta.hot.on('app-config-updated', (newConfig: AppConfig) => {
-        console.log('🔄 配置已更新:', newConfig)
+        if (import.meta.env.DEV) {
+          console.log('🔄 配置已更新:', newConfig)
+        }
         this.config = newConfig
         this.notifyListeners()
 
@@ -111,12 +122,14 @@ class AppConfigManager {
         notification.success(
           '✨ 应用配置已更新',
           '配置文件已重新加载，页面将自动更新',
-          3000
+          3000,
         )
       })
 
       this.hmrInitialized = true
-      console.log('✅ 应用配置 HMR 已启用')
+      if (import.meta.env.DEV) {
+        console.log('✅ 应用配置 HMR 已启用')
+      }
     }
   }
 
@@ -145,11 +158,14 @@ class AppConfigManager {
    * 通知所有监听器
    */
   private notifyListeners() {
-    this.listeners.forEach(listener => {
+    this.listeners.forEach((listener) => {
       try {
         listener(this.config)
-      } catch (error) {
-        console.error('配置监听器执行失败:', error)
+      }
+      catch (error) {
+        if (import.meta.env.DEV) {
+          console.error('配置监听器执行失败:', error)
+        }
       }
     })
   }
@@ -161,7 +177,7 @@ class AppConfigManager {
     return {
       mode: import.meta.env.MODE || 'development',
       isDev: import.meta.env.DEV || false,
-      isProd: import.meta.env.PROD || false
+      isProd: import.meta.env.PROD || false,
     }
   }
 }
@@ -176,4 +192,3 @@ export { appConfigManager }
 export const getAppConfig = () => appConfigManager.getConfig()
 export const subscribeConfig = (listener: ConfigChangeListener) => appConfigManager.subscribe(listener)
 export const getEnvironment = () => appConfigManager.getEnvironment()
-

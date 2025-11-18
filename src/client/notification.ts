@@ -1,8 +1,8 @@
 /**
  * 配置更新通知组件
- * 
+ *
  * 提供美观的配置变更通知弹窗
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
@@ -173,20 +173,22 @@ const ICONS = {
   info: '🔔',
   success: '✅',
   warning: '⚠️',
-  error: '❌'
+  error: '❌',
 }
 
 class NotificationManager {
   private container: HTMLDivElement | null = null
   private styleElement: HTMLStyleElement | null = null
   private notifications: Map<string, HTMLDivElement> = new Map()
+  private closeCallbacks: Map<string, () => void> = new Map()
   private notificationCount = 0
 
   /**
    * 初始化
    */
   private init() {
-    if (this.container) return
+    if (this.container)
+      return
 
     // 注入样式
     this.styleElement = document.createElement('style')
@@ -212,10 +214,14 @@ class NotificationManager {
       duration = 4000,
       closable = true,
       onClick,
-      onClose
+      onClose,
     } = options
 
     const id = `notification-${++this.notificationCount}`
+
+    if (onClose) {
+      this.closeCallbacks.set(id, onClose)
+    }
 
     // 创建通知元素
     const notification = document.createElement('div')
@@ -284,7 +290,8 @@ class NotificationManager {
    */
   close(id: string) {
     const notification = this.notifications.get(id)
-    if (!notification) return
+    if (!notification)
+      return
 
     notification.classList.add('closing')
 
@@ -293,6 +300,17 @@ class NotificationManager {
         notification.parentNode.removeChild(notification)
       }
       this.notifications.delete(id)
+
+      const onClose = this.closeCallbacks.get(id)
+      if (onClose) {
+        this.closeCallbacks.delete(id)
+        try {
+          onClose()
+        }
+        catch {
+          // 忽略 onClose 回调中的错误
+        }
+      }
     }, 300)
   }
 
@@ -363,7 +381,7 @@ export const notification = {
     showNotification({ title, message, type: 'warning', duration }),
 
   error: (title: string, message: string, duration = 6000) =>
-    showNotification({ title, message, type: 'error', duration })
+    showNotification({ title, message, type: 'error', duration }),
 }
 
 export default notification

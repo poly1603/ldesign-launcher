@@ -1,21 +1,21 @@
 /**
  * Vue 2 框架适配器
- * 
+ *
  * 提供 Vue 2 项目的自动检测、插件配置和构建支持
- * 
+ *
  * @author LDesign Team
  * @since 2.0.0
  */
 
 import type { Plugin } from 'vite'
-import type {
-  FrameworkDetectionResult,
-  FrameworkDependencies,
-  FrameworkFeatures,
-  FrameworkOptions
-} from '../../types/framework'
-import type { BuildEngine } from '../../types/engine'
 import type { ViteLauncherConfig } from '../../types/config'
+import type { BuildEngine } from '../../types/engine'
+import type {
+  FrameworkDependencies,
+  FrameworkDetectionResult,
+  FrameworkFeatures,
+  FrameworkOptions,
+} from '../../types/framework'
 import { FrameworkAdapter } from '../base/FrameworkAdapter'
 
 /**
@@ -33,7 +33,7 @@ export class Vue2Adapter extends FrameworkAdapter {
     ssr: true,
     ssg: true,
     hmr: true,
-    fastRefresh: false
+    fastRefresh: false,
   }
 
   /**
@@ -43,7 +43,7 @@ export class Vue2Adapter extends FrameworkAdapter {
     const evidence: FrameworkDetectionResult['evidence'] = {
       dependencies: [],
       files: [],
-      configFiles: []
+      configFiles: [],
     }
 
     let confidence = 0
@@ -52,7 +52,7 @@ export class Vue2Adapter extends FrameworkAdapter {
     const vueVersion = await this.getDependencyVersion(cwd, 'vue')
     if (vueVersion) {
       evidence.dependencies!.push('vue')
-      
+
       // 解析版本号
       const version = this.parseVersion(vueVersion)
       if (version.major === 2) {
@@ -69,7 +69,7 @@ export class Vue2Adapter extends FrameworkAdapter {
     // 检查 .vue 文件
     const vueFiles = await this.findFiles(cwd, [
       'src/App.vue',
-      'src/main.js'
+      'src/main.js',
     ])
     if (vueFiles.length > 0) {
       evidence.files = vueFiles
@@ -80,7 +80,7 @@ export class Vue2Adapter extends FrameworkAdapter {
     const configFiles = await this.findFiles(cwd, [
       'vite.config.ts',
       'vite.config.js',
-      'vue.config.js'
+      'vue.config.js',
     ])
     if (configFiles.length > 0) {
       evidence.configFiles = configFiles
@@ -94,7 +94,7 @@ export class Vue2Adapter extends FrameworkAdapter {
       type: detected ? 'vue2' : undefined,
       version: vueVersion ? this.parseVersion(vueVersion) : undefined,
       confidence,
-      evidence
+      evidence,
     }
   }
 
@@ -113,7 +113,8 @@ export class Vue2Adapter extends FrameworkAdapter {
         // 插件可能返回单个插件或插件数组
         if (Array.isArray(plugin)) {
           plugins.push(...(plugin as any[]))
-        } else {
+        }
+        else {
           plugins.push(plugin as any)
         }
 
@@ -124,14 +125,17 @@ export class Vue2Adapter extends FrameworkAdapter {
             const jsxPlugin = vueJsx()
             if (Array.isArray(jsxPlugin)) {
               plugins.push(...(jsxPlugin as any[]))
-            } else {
+            }
+            else {
               plugins.push(jsxPlugin as any)
             }
-          } catch (error) {
+          }
+          catch {
             this.logger.warn('未找到 @vitejs/plugin-vue2-jsx，跳过 JSX 支持')
           }
         }
-      } catch (error) {
+      }
+      catch (error) {
         this.logger.error('加载 Vue 2 插件失败', error)
         throw new Error('请安装 @vitejs/plugin-vue2: npm install -D @vitejs/plugin-vue2')
       }
@@ -143,11 +147,11 @@ export class Vue2Adapter extends FrameworkAdapter {
   /**
    * 获取 Vue 2 特定配置
    */
-  getConfig(options?: FrameworkOptions): Partial<ViteLauncherConfig> {
+  getConfig(_options?: FrameworkOptions): Partial<ViteLauncherConfig> {
     return {
       server: {
         port: 3000,
-        open: true
+        open: true,
       },
       build: {
         outDir: 'dist',
@@ -155,24 +159,24 @@ export class Vue2Adapter extends FrameworkAdapter {
         rollupOptions: {
           output: {
             manualChunks: {
-              vue: ['vue'],
+              'vue': ['vue'],
               'vue-router': ['vue-router'],
-              'vue-vendor': ['vuex', 'axios']
-            }
-          }
-        }
+              'vue-vendor': ['vuex', 'axios'],
+            },
+          },
+        },
       },
       resolve: {
         alias: [
           { find: '@', replacement: '/src' },
           { find: '~', replacement: '/src' },
-          { find: 'vue', replacement: 'vue/dist/vue.esm.js' }
+          { find: 'vue', replacement: 'vue/dist/vue.esm.js' },
         ],
-        extensions: ['.vue', '.js', '.ts', '.jsx', '.tsx', '.json']
+        extensions: ['.vue', '.js', '.ts', '.jsx', '.tsx', '.json'],
       },
       optimizeDeps: {
-        include: ['vue', 'vue-router']
-      }
+        include: ['vue', 'vue-router'],
+      },
     }
   }
 
@@ -184,13 +188,13 @@ export class Vue2Adapter extends FrameworkAdapter {
       dependencies: ['vue@^2.7.0'],
       devDependencies: [
         '@vitejs/plugin-vue2',
-        'vite'
+        'vite',
       ],
       optionalDependencies: [
         '@vitejs/plugin-vue2-jsx',
         'vue-router@^3.6.0',
-        'vuex@^3.6.0'
-      ]
+        'vuex@^3.6.0',
+      ],
     }
   }
 
@@ -201,7 +205,7 @@ export class Vue2Adapter extends FrameworkAdapter {
     return {
       dev: 'launcher dev',
       build: 'launcher build',
-      preview: 'launcher preview'
+      preview: 'launcher preview',
     }
   }
 
@@ -211,8 +215,7 @@ export class Vue2Adapter extends FrameworkAdapter {
   getEnvConfig(): Record<string, string> {
     return {
       VITE_APP_TITLE: 'Vue 2 App',
-      VITE_APP_VERSION: '1.0.0'
+      VITE_APP_VERSION: '1.0.0',
     }
   }
 }
-

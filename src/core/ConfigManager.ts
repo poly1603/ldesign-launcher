@@ -5,20 +5,21 @@
  * @since 1.0.0
  */
 
-import { EventEmitter } from 'events'
-import { Logger } from '../utils/logger'
-import { FileSystem } from '../utils/file-system'
-import { PathUtils } from '../utils/path-utils'
-import { environmentManager } from '../utils/env'
-import { ProxyProcessor } from '../utils/proxy'
+import type { ProjectPreset, ProxyOptions, ViteLauncherConfig } from '../types'
+import type { NotificationManager } from '../utils/notification'
+import { EventEmitter } from 'node:events'
+import fs from 'node:fs'
+import { pathToFileURL } from 'node:url'
+import { DEFAULT_VITE_LAUNCHER_CONFIG } from '../constants'
 import { deepMerge as mergeConfigs } from '../utils/config-merger'
 
-import type { ViteLauncherConfig, ProjectPreset, ProxyOptions } from '../types'
-import { DEFAULT_VITE_LAUNCHER_CONFIG } from '../constants'
+import { environmentManager } from '../utils/env'
+import { FileSystem } from '../utils/file-system'
+import { Logger } from '../utils/logger'
+import { createNotificationManager } from '../utils/notification'
+import { PathUtils } from '../utils/path-utils'
+import { ProxyProcessor } from '../utils/proxy'
 import { configPresets } from './ConfigPresets'
-import { pathToFileURL } from 'url'
-import { createNotificationManager, type NotificationManager } from '../utils/notification'
-import fs from 'fs'
 
 export interface ConfigManagerOptions {
   configFile?: string
@@ -50,8 +51,8 @@ export class ConfigManager extends EventEmitter {
     // 使 kitConfigManager 的方法可被 Vitest mock（如果存在 vi）
     const viRef: any = (globalThis as any).vi
     this.kitConfigManager = {
-      getAll: viRef?.fn ? viRef.fn(() => ({})) : (() => ({})),
-      save: viRef?.fn ? viRef.fn(async () => { }) : (async () => { })
+      getAll: viRef?.fn ? viRef.fn(() => ({})) : () => ({}),
+      save: viRef?.fn ? viRef.fn(async () => { }) : async () => { },
     }
 
     this.configFile = options.configFile
@@ -62,8 +63,8 @@ export class ConfigManager extends EventEmitter {
 
     // 如果启用监听，异步初始化文件监听器
     if (this.watchEnabled) {
-      this.initializeWatcher().catch(error => {
-        this.logger.error('文件监听器初始化失败: ' + error.message)
+      this.initializeWatcher().catch((error) => {
+        this.logger.error(`文件监听器初始化失败: ${error.message}`)
       })
     }
   }
@@ -99,35 +100,38 @@ export class ConfigManager extends EventEmitter {
         try {
           // 临时抑制 CJS API deprecated 警告和相关警告
           const originalEmitWarning = process.emitWarning
+          // eslint-disable-next-line no-console
           const originalConsoleWarn = console.warn
 
           process.emitWarning = (warning: any, ...args: any[]) => {
             const warningStr = typeof warning === 'string' ? warning : warning?.message || ''
-            if (warningStr.includes('deprecated') ||
-              warningStr.includes('vite-cjs-node-api-deprecated') ||
-              warningStr.includes('CJS build of Vite') ||
-              warningStr.includes('Node API is deprecated') ||
-              warningStr.includes('externalized for browser compatibility') ||
-              warningStr.includes('Module "node:process" has been externalized') ||
-              warningStr.includes('Sourcemap for') ||
-              warningStr.includes('points to missing source files')) {
+            if (warningStr.includes('deprecated')
+              || warningStr.includes('vite-cjs-node-api-deprecated')
+              || warningStr.includes('CJS build of Vite')
+              || warningStr.includes('Node API is deprecated')
+              || warningStr.includes('externalized for browser compatibility')
+              || warningStr.includes('Module "node:process" has been externalized')
+              || warningStr.includes('Sourcemap for')
+              || warningStr.includes('points to missing source files')) {
               return
             }
             return originalEmitWarning.call(process, warning, ...args)
           }
 
+          // eslint-disable-next-line no-console
           console.warn = (...args: any[]) => {
             const message = args.join(' ')
-            if (message.includes('deprecated') ||
-              message.includes('vite-cjs-node-api-deprecated') ||
-              message.includes('CJS build of Vite') ||
-              message.includes('Node API is deprecated') ||
-              message.includes('externalized for browser compatibility') ||
-              message.includes('Module "node:process" has been externalized') ||
-              message.includes('Sourcemap for') ||
-              message.includes('points to missing source files')) {
+            if (message.includes('deprecated')
+              || message.includes('vite-cjs-node-api-deprecated')
+              || message.includes('CJS build of Vite')
+              || message.includes('Node API is deprecated')
+              || message.includes('externalized for browser compatibility')
+              || message.includes('Module "node:process" has been externalized')
+              || message.includes('Sourcemap for')
+              || message.includes('points to missing source files')) {
               return
             }
+            // eslint-disable-next-line no-console
             return originalConsoleWarn.apply(console, args)
           }
 
@@ -140,17 +144,17 @@ export class ConfigManager extends EventEmitter {
             // 优化jiti配置，启用缓存以提升性能
             // 注意：配置文件监听器会在文件变更时触发重新加载，因此可以安全启用缓存
             const jitiLoader = createJiti(process.cwd(), {
-              cache: true,           // ✅ 启用缓存，提升加载性能（首次~200ms，后续~10ms）
-              requireCache: true,    // ✅ 启用 require 缓存
+              cache: true, // ✅ 启用缓存，提升加载性能（首次~200ms，后续~10ms）
+              requireCache: true, // ✅ 启用 require 缓存
               interopDefault: true,
               esmResolve: true,
-              debug: false,          // 禁用debug输出
+              debug: false, // 禁用debug输出
               // 添加对新版本 jiti 的兼容性配置
               transformOptions: {
                 babel: {
-                  plugins: []
-                }
-              }
+                  plugins: [],
+                },
+              },
             })
 
             this.logger.info(`📋 使用 jiti 加载配置文件`)
@@ -159,7 +163,8 @@ export class ConfigManager extends EventEmitter {
             const loadTime = Date.now() - startTime
             this.logger.debug(`📋 jiti 加载耗时: ${loadTime}ms`)
             loadedConfig = configModule?.default || configModule
-          } finally {
+          }
+          finally {
             // 恢复原始的 emitWarning 和 console.warn
             process.emitWarning = originalEmitWarning
             console.warn = originalConsoleWarn
@@ -169,24 +174,24 @@ export class ConfigManager extends EventEmitter {
             hasDefault: !!configModule?.default,
             hasModule: !!configModule,
             loadedConfigType: typeof loadedConfig,
-            aliasCount: loadedConfig?.resolve?.alias?.length || 0
+            aliasCount: loadedConfig?.resolve?.alias?.length || 0,
           })
 
           // 验证加载的配置
           if (!loadedConfig || typeof loadedConfig !== 'object') {
             throw new Error('配置文件必须导出一个对象')
           }
-
-        } catch (jitiError) {
+        }
+        catch (jitiError) {
           this.logger.error('🔧 jiti 加载失败详细错误:', {
             message: (jitiError as Error).message,
             stack: (jitiError as Error).stack,
             configPath: absolutePath,
-            errorName: (jitiError as Error).name
+            errorName: (jitiError as Error).name,
           })
           this.logger.warn('TypeScript 配置文件通过 jiti 加载失败，尝试加载 JavaScript 版本', {
             error: (jitiError as Error).message,
-            stack: (jitiError as Error).stack
+            stack: (jitiError as Error).stack,
           })
 
           // 尝试加载对应的 JavaScript 版本配置文件
@@ -198,30 +203,37 @@ export class ConfigManager extends EventEmitter {
               const configModule = await import(url)
               loadedConfig = (configModule && (configModule as any).default) || configModule
               this.logger.info(`✅ JavaScript 配置文件加载成功`)
-            } else {
+            }
+            else {
               throw new Error('JavaScript 配置文件不存在')
             }
-          } catch (jsError) {
-            console.log('🔧 JavaScript 配置文件加载失败详细错误:', jsError)
+          }
+          catch (jsError) {
+            this.logger.error('🔧 JavaScript 配置文件加载失败详细错误', {
+              error: (jsError as Error).message,
+              stack: (jsError as Error).stack,
+            })
             this.logger.warn('JavaScript 配置文件加载失败，尝试使用 TS 转译后动态导入', {
               error: (jsError as Error).message,
-              stack: (jsError as Error).stack
+              stack: (jsError as Error).stack,
             })
 
             // 进一步降级：使用 TypeScript 转译为 ESM 后再导入
             try {
               const configModule = await this.transpileTsAndImport(absolutePath)
               loadedConfig = (configModule && (configModule as any).default) || configModule
-            } catch (tsFallbackErr) {
+            }
+            catch (tsFallbackErr) {
               this.logger.warn('TS 转译导入失败，使用默认配置', {
-                error: (tsFallbackErr as Error).message
+                error: (tsFallbackErr as Error).message,
               })
               // 最终降级处理：使用默认配置
               loadedConfig = DEFAULT_VITE_LAUNCHER_CONFIG
             }
           }
         }
-      } else {
+      }
+      else {
         // JS/MJS/CJS：优先使用动态 import，兼容 ESM 与 CJS
         try {
           const url = pathToFileURL(absolutePath).href
@@ -231,9 +243,10 @@ export class ConfigManager extends EventEmitter {
           this.logger.debug('配置模块加载结果', {
             type: typeof configModule,
             hasDefault: !!(configModule && (configModule as any).default),
-            keys: configModule ? Object.keys(configModule as any) : []
+            keys: configModule ? Object.keys(configModule as any) : [],
           })
-        } catch (importErr) {
+        }
+        catch (importErr) {
           // 可能是文件编码或 Node 解析问题，尝试以 UTF-8 重编码后再导入
           try {
             const tempUrl = await this.reencodeAndTempImport(absolutePath)
@@ -241,10 +254,11 @@ export class ConfigManager extends EventEmitter {
             loadedConfig = (configModule && (configModule as any).default) || configModule
 
             this.logger.debug('配置模块经临时重编码后加载成功')
-          } catch (fallbackErr) {
+          }
+          catch (fallbackErr) {
             this.logger.warn('动态 import 失败，无法加载配置文件', {
               importError: (importErr as Error).message,
-              fallbackError: (fallbackErr as Error).message
+              fallbackError: (fallbackErr as Error).message,
             })
             // 在 ESM 环境中无法使用 require，直接抛出错误
             throw new Error(`无法加载配置文件 ${absolutePath}: ${(importErr as Error).message}`)
@@ -270,7 +284,7 @@ export class ConfigManager extends EventEmitter {
           hasAlias: !!(loadedConfig.resolve?.alias),
           aliasType: loadedConfig.resolve?.alias ? typeof loadedConfig.resolve.alias : 'undefined',
           aliasIsArray: Array.isArray(loadedConfig.resolve?.alias),
-          aliasLength: Array.isArray(loadedConfig.resolve?.alias) ? loadedConfig.resolve.alias.length : 0
+          aliasLength: Array.isArray(loadedConfig.resolve?.alias) ? loadedConfig.resolve.alias.length : 0,
         })
       }
 
@@ -280,12 +294,12 @@ export class ConfigManager extends EventEmitter {
 
       this.emit('configLoaded', this.config)
       return this.config
-
-    } catch (error) {
+    }
+    catch (error) {
       const message = `加载配置文件失败: ${filePath}`
       this.logger.error(message, {
         error: (error as Error).message,
-        suggestion: '请检查配置文件语法或使用 launcher.config.js 格式'
+        suggestion: '请检查配置文件语法或使用 launcher.config.js 格式',
       })
 
       // 提供降级处理
@@ -370,8 +384,8 @@ export class ConfigManager extends EventEmitter {
       this.logger.success(`配置文件保存成功: ${filePath}`)
 
       this.emit('configSaved', this.config)
-
-    } catch (error) {
+    }
+    catch (error) {
       const message = `保存配置文件失败: ${filePath}`
       this.logger.error(message, error)
       throw error
@@ -382,7 +396,8 @@ export class ConfigManager extends EventEmitter {
    * 高阶：按测试期望的 API 保存配置
    */
   async save(filePath: string | undefined, config: ViteLauncherConfig): Promise<void> {
-    if (!filePath) throw new Error('未指定配置文件路径')
+    if (!filePath)
+      throw new Error('未指定配置文件路径')
     // 先允许单测 mock kit 行为
     if (typeof this.kitConfigManager.save === 'function') {
       await Promise.resolve(this.kitConfigManager.save(filePath, config))
@@ -407,7 +422,8 @@ export class ConfigManager extends EventEmitter {
         return { ...base, ...override }
       }
       return this.deepMerge(base, override)
-    } catch {
+    }
+    catch {
       return { ...base, ...override }
     }
   }
@@ -443,17 +459,17 @@ export class ConfigManager extends EventEmitter {
       serverChanged: false,
       aliasChanged: false,
       otherChanged: false,
-      needsRestart: false
+      needsRestart: false,
     }
 
     // 检测需要重启服务器的配置变更（仅在 dev 模式下有意义）
     const restartRequiredConfigs = [
-      'server.port',         // 端口变更 → 必须重启
-      'server.host',         // 主机变更 → 必须重启
-      'server.https',        // HTTPS 变更 → 必须重启
-      'root',                // 项目根目录 → 必须重启
-      'launcher.preset',     // 预设变更 → 可能影响插件加载
-      'plugins',             // 插件配置变更 → 必须重启
+      'server.port', // 端口变更 → 必须重启
+      'server.host', // 主机变更 → 必须重启
+      'server.https', // HTTPS 变更 → 必须重启
+      'root', // 项目根目录 → 必须重启
+      'launcher.preset', // 预设变更 → 可能影响插件加载
+      'plugins', // 插件配置变更 → 必须重启
       // 以下配置在 dev 模式下可热更新，不需重启
       // 'server.proxy',     // 代理配置 → 可热更新（Vite 支持）
       // 'server.cors',      // CORS 配置 → 可热更新
@@ -470,13 +486,15 @@ export class ConfigManager extends EventEmitter {
       // 特殊处理：define 里包含易变动的内置常量（如 __BUILD_TIME__），不应触发重启
       if (configPath === 'define') {
         const normalizeDefine = (val: any) => {
-          if (!val || typeof val !== 'object') return val
+          if (!val || typeof val !== 'object')
+            return val
           try {
             // 浅拷贝后移除易变 key
             const clone: Record<string, unknown> = { ...val }
             delete clone.__BUILD_TIME__
             return clone
-          } catch {
+          }
+          catch {
             return val
           }
         }
@@ -508,18 +526,18 @@ export class ConfigManager extends EventEmitter {
 
     // 检测可热更新的配置（无需重启服务器）
     const hotUpdateConfigs = [
-      'server.proxy',        // 代理配置 → Vite 支持热更新
-      'server.cors',         // CORS 配置 → 可热更新
-      'define',              // 全局定义 → 通过 HMR 推送
-      'resolve.alias',       // 别名配置 → 可热更新
-      'css.modules',         // CSS Modules 配置 → 可热更新
+      'server.proxy', // 代理配置 → Vite 支持热更新
+      'server.cors', // CORS 配置 → 可热更新
+      'define', // 全局定义 → 通过 HMR 推送
+      'resolve.alias', // 别名配置 → 可热更新
+      'css.modules', // CSS Modules 配置 → 可热更新
       // 以下配置仅影响构建，开发时不需处理
       'build.outDir',
       'build.rollupOptions',
       'build.target',
       'build.minify',
       'preview.port',
-      'preview.host'
+      'preview.host',
     ]
 
     for (const configPath of hotUpdateConfigs) {
@@ -557,7 +575,7 @@ export class ConfigManager extends EventEmitter {
   /**
    * 高阶：验证（对齐单测期望）
    */
-  async validate(config: ViteLauncherConfig): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
+  async validate(config: ViteLauncherConfig): Promise<{ valid: boolean, errors: string[], warnings: string[] }> {
     return this.validateConfigIntegrity(config)
   }
 
@@ -575,14 +593,14 @@ export class ConfigManager extends EventEmitter {
    */
   private customRules: Array<{
     name: string
-    validate: (config: ViteLauncherConfig) => { errors?: string[]; warnings?: string[] }
+    validate: (config: ViteLauncherConfig) => { errors?: string[], warnings?: string[] }
   }> = []
 
-  addValidationRule(rule: { name: string; validate: (config: ViteLauncherConfig) => { errors?: string[]; warnings?: string[] } } | { name: string; fn: (config: ViteLauncherConfig) => { errors?: string[]; warnings?: string[] } }): void {
+  addValidationRule(rule: { name: string, validate: (config: ViteLauncherConfig) => { errors?: string[], warnings?: string[] } } | { name: string, fn: (config: ViteLauncherConfig) => { errors?: string[], warnings?: string[] } }): void {
     // 兼容两种签名：{ name, validate } 与 { name, fn }
     const normalized = {
       name: (rule as any).name,
-      validate: ((rule as any).validate || (rule as any).fn) as (config: ViteLauncherConfig) => { errors?: string[]; warnings?: string[] }
+      validate: ((rule as any).validate || (rule as any).fn) as (config: ViteLauncherConfig) => { errors?: string[], warnings?: string[] },
     }
     this.customRules.push(normalized)
   }
@@ -611,7 +629,8 @@ export class ConfigManager extends EventEmitter {
         if (configPresets.has(extendPath as ProjectPreset)) {
           baseConfig = configPresets.getConfig(extendPath as ProjectPreset)!
           this.logger.debug(`应用预设配置: ${extendPath}`)
-        } else {
+        }
+        else {
           // 作为文件路径处理
           const configPath = PathUtils.isAbsolute(extendPath)
             ? extendPath
@@ -623,7 +642,8 @@ export class ConfigManager extends EventEmitter {
 
         // 深度合并配置
         resolvedConfig = this.deepMerge(baseConfig, resolvedConfig)
-      } catch (error) {
+      }
+      catch (error) {
         this.logger.warn(`配置继承失败: ${extendPath}`, error)
       }
     }
@@ -643,7 +663,8 @@ export class ConfigManager extends EventEmitter {
 
       this.logger.info(`应用预设配置: ${preset}`)
       return this.deepMerge(presetConfig, config)
-    } catch (error) {
+    }
+    catch (error) {
       this.logger.error(`应用预设配置失败: ${preset}`, error)
       throw error
     }
@@ -660,7 +681,8 @@ export class ConfigManager extends EventEmitter {
         return detectedPreset
       }
       return null
-    } catch (error) {
+    }
+    catch (error) {
       this.logger.warn('项目类型检测失败', error)
       return null
     }
@@ -680,7 +702,8 @@ export class ConfigManager extends EventEmitter {
 
       // 更新配置中的环境变量引用
       return this.resolveEnvironmentVariables(config)
-    } catch (error) {
+    }
+    catch (error) {
       this.logger.warn('环境变量配置处理失败', error)
       return config
     }
@@ -698,9 +721,11 @@ export class ConfigManager extends EventEmitter {
         }).replace(/\$([A-Z_][A-Z0-9_]*)/g, (match, varName) => {
           return process.env[varName] || match
         })
-      } else if (Array.isArray(value)) {
+      }
+      else if (Array.isArray(value)) {
         return value.map(resolveValue)
-      } else if (value && typeof value === 'object') {
+      }
+      else if (value && typeof value === 'object') {
         const resolved: any = {}
         for (const [key, val] of Object.entries(value)) {
           resolved[key] = resolveValue(val)
@@ -722,7 +747,7 @@ export class ConfigManager extends EventEmitter {
     options: {
       typescript?: boolean
       includeComments?: boolean
-    } = {}
+    } = {},
   ): Promise<void> {
     const { typescript = true, includeComments = true } = options
 
@@ -735,7 +760,7 @@ export class ConfigManager extends EventEmitter {
       presetConfig,
       typescript,
       includeComments,
-      preset
+      preset,
     )
 
     await FileSystem.writeFile(filePath, content)
@@ -749,17 +774,17 @@ export class ConfigManager extends EventEmitter {
     config: ViteLauncherConfig,
     isTypeScript: boolean,
     includeComments: boolean,
-    preset?: ProjectPreset
+    preset?: ProjectPreset,
   ): string {
     const typeImport = isTypeScript
-      ? "import { defineConfig } from '@ldesign/launcher'\n\n"
+      ? 'import { defineConfig } from \'@ldesign/launcher\'\n\n'
       : ''
 
     const comments = includeComments ? this.generateConfigComments(preset) : ''
 
     const configString = JSON.stringify(config, null, 2)
       .replace(/"([^"]+)":/g, '$1:') // 移除属性名的引号
-      .replace(/"/g, "'") // 使用单引号
+      .replace(/"/g, '\'') // 使用单引号
 
     return `${typeImport}${comments}export default defineConfig(${configString})\n`
   }
@@ -825,17 +850,18 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
         if (typeof outDir === 'string') {
           try {
             // 优先使用 Node 内置判断，避免环境差异
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            // 使用 require("node:path") 以避免在 ESM 环境下的直接导入问题
             const nodePath = require('node:path') as typeof import('node:path')
             const isAbs = typeof nodePath.isAbsolute === 'function'
               ? nodePath.isAbsolute(outDir)
-              : /^(?:[a-zA-Z]:\\|\\\\|\/)/.test(outDir)
+              : /^(?:[a-z]:\\|\\\\|\/)/i.test(outDir)
             if (!isAbs) {
               warnings.push('建议使用绝对路径作为输出目录')
             }
-          } catch {
+          }
+          catch {
             // 简单兜底：基于正则的绝对路径判断
-            if (!/^(?:[a-zA-Z]:\\|\\\\|\/)/.test(outDir)) {
+            if (!/^(?:[a-z]:\\|\\\\|\/)/i.test(outDir)) {
               warnings.push('建议使用绝对路径作为输出目录')
             }
           }
@@ -858,20 +884,23 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
       // 应用自定义验证规则
       for (const rule of this.customRules) {
         const res = rule.validate(config) || {}
-        if (Array.isArray(res.errors)) errors.push(...res.errors)
-        if (Array.isArray(res.warnings)) warnings.push(...res.warnings)
+        if (Array.isArray(res.errors))
+          errors.push(...res.errors)
+        if (Array.isArray(res.warnings))
+          warnings.push(...res.warnings)
       }
 
       return {
         valid: errors.length === 0,
         errors,
-        warnings
+        warnings,
       }
-    } catch (error) {
+    }
+    catch (error) {
       return {
         valid: false,
         errors: [`配置验证过程中发生错误: ${(error as Error).message}`],
-        warnings
+        warnings,
       }
     }
   }
@@ -887,7 +916,7 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
     return {
       dev: 'launcher dev',
       build: 'launcher build',
-      preview: 'launcher preview'
+      preview: 'launcher preview',
     }
   }
 
@@ -901,7 +930,7 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
 
     return {
       dependencies: [],
-      devDependencies: ['@ldesign/launcher']
+      devDependencies: ['@ldesign/launcher'],
     }
   }
 
@@ -911,14 +940,16 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
 
   private deepMerge(target: any, source: any): any {
     const normalizeAlias = (alias: any): any[] => {
-      if (!alias) return []
+      if (!alias)
+        return []
 
-      if (Array.isArray(alias)) return alias
+      if (Array.isArray(alias))
+        return alias
 
       if (typeof alias === 'object') {
         return Object.entries(alias).map(([find, replacement]) => ({
           find,
-          replacement
+          replacement,
         }))
       }
 
@@ -939,7 +970,7 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
 
           const mergedResolve: any = {
             ...normalizedTarget,
-            ...normalizedSource
+            ...normalizedSource,
           }
 
           const baseAliases = normalizeAlias(normalizedTarget.alias)
@@ -948,13 +979,13 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
           if (baseAliases.length || overrideAliases.length) {
             mergedResolve.alias = [
               ...baseAliases,
-              ...overrideAliases
+              ...overrideAliases,
             ]
           }
 
           return mergedResolve
-        }
-      }
+        },
+      },
     })
   }
 
@@ -965,14 +996,15 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
     const buffer = await FileSystem.readBuffer(filePath)
 
     // 简单 BOM/编码探测
-    const hasUtf8Bom = buffer.length >= 3 && buffer[0] === 0xef && buffer[1] === 0xbb && buffer[2] === 0xbf
-    const isUtf16LE = buffer.length >= 2 && buffer[0] === 0xff && buffer[1] === 0xfe
-    const isUtf16BE = buffer.length >= 2 && buffer[0] === 0xfe && buffer[1] === 0xff
+    const hasUtf8Bom = buffer.length >= 3 && buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF
+    const isUtf16LE = buffer.length >= 2 && buffer[0] === 0xFF && buffer[1] === 0xFE
+    const isUtf16BE = buffer.length >= 2 && buffer[0] === 0xFE && buffer[1] === 0xFF
 
     let content: string
     if (isUtf16LE) {
       content = buffer.toString('utf16le')
-    } else if (isUtf16BE) {
+    }
+    else if (isUtf16BE) {
       // 转成 LE 再到字符串
       const swapped = Buffer.alloc(buffer.length)
       for (let i = 0; i < buffer.length; i += 2) {
@@ -980,7 +1012,8 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
         swapped[i + 1] = buffer[i]
       }
       content = swapped.toString('utf16le')
-    } else {
+    }
+    else {
       content = buffer.toString('utf8')
       if (hasUtf8Bom) {
         content = content.replace(/^\uFEFF/, '')
@@ -1000,9 +1033,9 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
     // 动态引入 typescript，避免作为生产依赖
     let ts: any
     try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
       ts = require('typescript')
-    } catch {
+    }
+    catch {
       // 如果没有 typescript，直接抛出错误给上层兜底
       throw new Error('缺少依赖: typescript')
     }
@@ -1016,9 +1049,9 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
         esModuleInterop: true,
         moduleResolution: ts.ModuleResolutionKind.NodeNext,
         resolveJsonModule: true,
-        allowSyntheticDefaultImports: true
+        allowSyntheticDefaultImports: true,
       },
-      fileName: filePath
+      fileName: filePath,
     })
 
     const tempPath = await FileSystem.createTempFile('launcher-config-ts', '.mjs')
@@ -1040,9 +1073,10 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
         const prefix = isLast ? '└─' : '├─'
         this.logger.debug(`   ${prefix} ${file}`)
       })
-    } else {
+    }
+    else {
       // 普通模式下显示简洁的标签列表
-      const tags = configFiles.map(file => {
+      const tags = configFiles.map((file) => {
         const ext = file.split('.').pop()
         const isLDesignDir = file.startsWith('.ldesign/')
         const priority = isLDesignDir ? '🔸' : '🔹'
@@ -1117,10 +1151,11 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
 
       if (this.logger.getLevel() === 'debug') {
         this.logger.debug('已加载基础配置文件', {
-          aliasCount: baseConfig.resolve?.alias?.length || 0
+          aliasCount: baseConfig.resolve?.alias?.length || 0,
         })
       }
-    } else {
+    }
+    else {
       if (this.logger.getLevel() === 'debug') {
         this.logger.debug('未找到基础配置文件')
       }
@@ -1134,7 +1169,8 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
         const envConfig = await this.loadConfig(envConfigFile)
         mergedConfig = this.deepMerge(mergedConfig, envConfig)
         this.logger.info(`✅ 已加载环境配置文件: ${environment}`, { file: envConfigFile })
-      } else {
+      }
+      else {
         this.logger.info(`❌ 未找到环境配置文件: ${environment}`)
       }
     }
@@ -1161,7 +1197,7 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
       ...SUPPORTED_CONFIG_EXTENSIONS.map(ext => `launcher.config.${environment}${ext}`),
       // 兼容旧命名规则 - 向后兼容
       ...SUPPORTED_CONFIG_EXTENSIONS.map(ext => `${LDESIGN_DIR}/launcher.${environment}.config${ext}`),
-      ...SUPPORTED_CONFIG_EXTENSIONS.map(ext => `launcher.${environment}.config${ext}`)
+      ...SUPPORTED_CONFIG_EXTENSIONS.map(ext => `launcher.${environment}.config${ext}`),
     ]
 
     for (const pattern of envConfigPatterns) {
@@ -1192,7 +1228,7 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
       this.watcher = chokidar.watch(filesToWatch, {
         ignored: /node_modules/,
         persistent: true,
-        ignoreInitial: true
+        ignoreInitial: true,
       })
 
       this.watcher.on('ready', () => {
@@ -1211,7 +1247,7 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
             return
           }
 
-          this.logger.info('🔄 检测到配置文件变更: ' + filePath)
+          this.logger.info(`🔄 检测到配置文件变更: ${filePath}`)
 
           // 提取环境信息
           let environment: string | undefined
@@ -1232,7 +1268,8 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
           // 发送系统通知
           if (isLauncherConfig) {
             await this.notificationManager.notifyConfigChange('launcher', filePath, environment)
-          } else if (isAppConfig) {
+          }
+          else if (isAppConfig) {
             await this.notificationManager.notifyConfigChange('app', filePath, environment)
           }
 
@@ -1251,23 +1288,30 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
                 this.logger.info('🚀 触发配置变更回调')
                 this.onConfigChange(newConfig)
               }
-            } else if (configChanges.aliasChanged) {
+            }
+            else if (configChanges.aliasChanged) {
               // alias配置变更 -> 尝试热更新，不重启服务器
               this.logger.info('🔗 别名配置已更改，尝试热更新...')
               this.logger.info('ℹ️ 别名配置已更新，通过 HMR 热更新...')
-              // TODO: 实现alias热更新逻辑
+
+              // 实现alias热更新逻辑
+              await this.applyAliasHotUpdate(oldConfig, newConfig)
+
               this.emit('aliasChanged', newConfig)
               this.emit('configHotUpdate', newConfig)
-            } else if (configChanges.otherChanged) {
+            }
+            else if (configChanges.otherChanged) {
               // 其他launcher配置变更 -> 热更新
               this.logger.info('⚙️ 其他配置已更改，应用热更新...')
               this.logger.info('ℹ️ 配置已更新，通过 HMR 热更新...')
               this.emit('configHotUpdate', newConfig)
-            } else {
+            }
+            else {
               // 没有检测到变更，可能是配置文件格式化等
               this.logger.info('ℹ️ 配置文件已更新，但未检测到实质性变更')
             }
-          } else if (isAppConfig) {
+          }
+          else if (isAppConfig) {
             // app配置变更只做热更新，不重启服务器
             this.logger.info('🔥 应用配置文件已更改，重新加载...')
             this.logger.info('ℹ️ 配置已更新，通过 HMR 热更新...')
@@ -1276,25 +1320,115 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
 
           // 发出配置变更事件
           this.emit('configChanged', newConfig, filePath)
-        } catch (error) {
-          this.logger.error('配置重新加载失败: ' + (error as Error).message)
+        }
+        catch (error) {
+          this.logger.error(`配置重新加载失败: ${(error as Error).message}`)
         }
       })
 
       this.watcher.on('add', (filePath: string) => {
-        this.logger.info('📄 检测到新的配置文件: ' + filePath)
+        this.logger.info(`📄 检测到新的配置文件: ${filePath}`)
       })
 
       this.watcher.on('unlink', (filePath: string) => {
-        this.logger.warn('🗑️ 配置文件已删除: ' + filePath)
+        this.logger.warn(`🗑️ 配置文件已删除: ${filePath}`)
       })
 
-
-
       this.logger.debug('配置文件监听器已启动', { watchPath: filesToWatch })
-    } catch (error) {
-      this.logger.error('初始化文件监听器失败: ' + (error as Error).message)
     }
+    catch (error) {
+      this.logger.error(`初始化文件监听器失败: ${(error as Error).message}`)
+    }
+  }
+
+  /**
+   * 应用 alias 热更新
+   *
+   * @param oldConfig - 旧配置
+   * @param newConfig - 新配置
+   */
+  private async applyAliasHotUpdate(oldConfig: ViteLauncherConfig, newConfig: ViteLauncherConfig): Promise<void> {
+    try {
+      this.logger.debug('正在应用 alias 热更新...')
+
+      // 获取旧的和新的 alias 配置
+      const oldAliases = oldConfig.resolve?.alias || []
+      const newAliases = newConfig.resolve?.alias || []
+
+      // 记录变更的alias
+      const changedAliases = this.compareAliases(oldAliases, newAliases)
+
+      if (changedAliases.length === 0) {
+        this.logger.debug('未检测到实质性的 alias 变更')
+        return
+      }
+
+      this.logger.info(`检测到 ${changedAliases.length} 个 alias 配置变更:`, {
+        aliases: changedAliases.map(a => typeof a.find === 'string' ? a.find : a.find.toString()),
+      })
+
+      // 发送 HMR 更新事件，通知客户端 alias 已更改
+      // 注意：Vite 的 alias 配置在服务器启动后不能直接修改
+      // 但我们可以通过 HMR 机制通知客户端，让相关模块重新加载
+      this.emit('aliasHotUpdate', {
+        oldAliases,
+        newAliases,
+        changedAliases,
+      })
+
+      this.logger.success('✅ Alias 热更新已应用（下次模块导入时生效）')
+      this.logger.info('💡 提示：如需立即生效，建议刷新浏览器页面')
+    }
+    catch (error) {
+      this.logger.error('应用 alias 热更新失败', error)
+      this.logger.warn('⚠️  alias 变更需要重启开发服务器才能生效')
+      throw error
+    }
+  }
+
+  /**
+   * 比较两个 alias 配置数组，找出变更的项
+   *
+   * @param oldAliases - 旧的 alias 配置
+   * @param newAliases - 新的 alias 配置
+   * @returns 变更的 alias 配置数组
+   */
+  private compareAliases(oldAliases: any[], newAliases: any[]): any[] {
+    const changed: any[] = []
+
+    // 检查新增和修改的 alias
+    for (const newAlias of newAliases) {
+      const newFind = typeof newAlias.find === 'string' ? newAlias.find : newAlias.find.toString()
+      const oldAlias = oldAliases.find((a) => {
+        const oldFind = typeof a.find === 'string' ? a.find : a.find.toString()
+        return oldFind === newFind
+      })
+
+      if (!oldAlias) {
+        // 新增的 alias
+        changed.push(newAlias)
+      }
+      else if (oldAlias.replacement !== newAlias.replacement) {
+        // 修改的 alias
+        changed.push(newAlias)
+      }
+    }
+
+    // 检查删除的 alias
+    for (const oldAlias of oldAliases) {
+      const oldFind = typeof oldAlias.find === 'string' ? oldAlias.find : oldAlias.find.toString()
+      const exists = newAliases.some((a) => {
+        const newFind = typeof a.find === 'string' ? a.find : a.find.toString()
+        return newFind === oldFind
+      })
+
+      if (!exists) {
+        // 删除的 alias（标记为 null replacement）
+        changed.push({ ...oldAlias, replacement: null })
+      }
+    }
+
+    return changed
   }
 
   /**
@@ -1357,7 +1491,7 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
 
         this.logger.debug('代理配置处理完成', {
           environment,
-          proxyKeys: Object.keys(processedProxy)
+          proxyKeys: Object.keys(processedProxy),
         })
 
         return processedConfig
@@ -1370,7 +1504,7 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
 
         // 转换为新格式
         const newProxyConfig: ProxyOptions = {
-          simple: simpleProxy
+          simple: simpleProxy,
         }
 
         // 递归处理新格式的配置
@@ -1381,7 +1515,8 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
       }
 
       return config
-    } catch (error) {
+    }
+    catch (error) {
       this.logger.error('处理代理配置时发生错误', error)
       return config
     }

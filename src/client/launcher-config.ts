@@ -7,6 +7,8 @@
 
 /// <reference types="vite/client" />
 
+/* eslint-disable no-console */
+
 import { notification } from './notification'
 
 /**
@@ -71,12 +73,16 @@ class LauncherConfigManager {
 
     if (envConfig) {
       const parsed = typeof envConfig === 'string' ? JSON.parse(envConfig) : envConfig
-      console.log('✅ 从 import.meta.env.VITE_LAUNCHER_CONFIG 加载 Launcher 配置', parsed)
+      if (import.meta.env.DEV) {
+        console.log('✅ 从 import.meta.env.VITE_LAUNCHER_CONFIG 加载 Launcher 配置', parsed)
+      }
       return parsed
     }
 
     // 使用默认配置
-    console.warn('⚠️ 未找到 Launcher 配置，使用默认配置')
+    if (import.meta.env.DEV) {
+      console.warn('⚠️ 未找到 Launcher 配置，使用默认配置')
+    }
     return this.getDefaultConfig()
   }
 
@@ -87,7 +93,7 @@ class LauncherConfigManager {
     return {
       name: 'LDesign App',
       version: '1.0.0',
-      environment: 'development'
+      environment: 'development',
     }
   }
 
@@ -95,12 +101,15 @@ class LauncherConfigManager {
    * 初始化 HMR 监听
    */
   private initHMR() {
-    if (this.hmrInitialized) return
+    if (this.hmrInitialized)
+      return
 
     if (import.meta.hot) {
       // 监听 launcher 配置更新
       import.meta.hot.on('launcher-config-updated', (newConfig: LauncherConfig) => {
-        console.log('🔄 Launcher 配置已更新:', newConfig)
+        if (import.meta.env.DEV) {
+          console.log('🔄 Launcher 配置已更新:', newConfig)
+        }
         this.config = newConfig
         this.notifyListeners()
 
@@ -108,12 +117,14 @@ class LauncherConfigManager {
         notification.info(
           '🚀 Launcher 配置已更新',
           '配置文件已重新加载，某些更改可能需要重启服务器',
-          4000
+          4000,
         )
       })
 
       this.hmrInitialized = true
-      console.log('✅ Launcher 配置 HMR 已启用')
+      if (import.meta.env.DEV) {
+        console.log('✅ Launcher 配置 HMR 已启用')
+      }
     }
   }
 
@@ -126,11 +137,16 @@ class LauncherConfigManager {
       if (response.ok) {
         const data = await response.json()
         this.config = data.config
-        console.log('✅ 从 API 加载 Launcher 配置成功:', data)
+        if (import.meta.env.DEV) {
+          console.log('✅ 从 API 加载 Launcher 配置成功:', data)
+        }
         this.notifyListeners()
       }
-    } catch (error) {
-      console.warn('⚠️ 无法从 API 获取 Launcher 配置:', error)
+    }
+    catch (error) {
+      if (import.meta.env.DEV) {
+        console.warn('⚠️ 无法从 API 获取 Launcher 配置:', error)
+      }
     }
   }
 
@@ -159,11 +175,14 @@ class LauncherConfigManager {
    * 通知所有监听器
    */
   private notifyListeners() {
-    this.listeners.forEach(listener => {
+    this.listeners.forEach((listener) => {
       try {
         listener(this.config)
-      } catch (error) {
-        console.error('Launcher 配置监听器执行失败:', error)
+      }
+      catch (error) {
+        if (import.meta.env.DEV) {
+          console.error('Launcher 配置监听器执行失败:', error)
+        }
       }
     })
   }
@@ -175,7 +194,7 @@ class LauncherConfigManager {
     return {
       mode: this.config.environment || import.meta.env.MODE || 'development',
       isDev: import.meta.env.DEV,
-      isProd: import.meta.env.PROD
+      isProd: import.meta.env.PROD,
     }
   }
 }
@@ -190,4 +209,3 @@ export { launcherConfigManager }
 export const getLauncherConfig = () => launcherConfigManager.getConfig()
 export const subscribeLauncherConfig = (listener: ConfigChangeListener) => launcherConfigManager.subscribe(listener)
 export const getLauncherEnvironment = () => launcherConfigManager.getEnvironment()
-

@@ -1,19 +1,20 @@
 /**
  * Svelte Store - appConfig
- * 
+ *
  * 使用方式：
  * ```svelte
  * <script>
  * import { appConfig, appEnvironment } from '@ldesign/launcher/client/svelte'
  * </script>
- * 
+ *
  * <div>{$appConfig.app.name}</div>
  * <div>环境: {$appEnvironment.mode}</div>
  * ```
  */
 
-import { writable, readable } from 'svelte/store'
-import { appConfigManager, AppConfig } from '../app-config'
+import type { AppConfig } from '../app-config'
+import { readable, writable } from 'svelte/store'
+import { appConfigManager } from '../app-config'
 
 // 创建可写的配置 store
 function createAppConfigStore() {
@@ -25,7 +26,7 @@ function createAppConfigStore() {
   })
 
   return {
-    subscribe
+    subscribe,
   }
 }
 
@@ -40,4 +41,3 @@ export const appEnvironment = createEnvironmentStore()
 
 // 也提供函数式 API
 export { getAppConfig, subscribeConfig } from '../app-config'
-

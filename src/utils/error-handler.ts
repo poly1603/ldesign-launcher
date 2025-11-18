@@ -1,9 +1,9 @@
 /**
  * 错误处理器 (精简版)
- * 
+ *
  * 删除了错误历史、恢复策略和统计功能
  * 保留基础的错误捕获、格式化和友好提示
- * 
+ *
  * @author LDesign Team
  * @since 2.1.0
  */
@@ -36,7 +36,7 @@ export class LauncherError extends Error {
     message: string,
     code: string = 'LAUNCHER_ERROR',
     context: ErrorContext = {},
-    originalError?: Error
+    originalError?: Error,
   ) {
     super(message)
     this.name = 'LauncherError'
@@ -60,8 +60,8 @@ export class ErrorHandler {
 
   constructor(options: ErrorHandlerOptions = {}) {
     this.logger = options.logger || new Logger('ErrorHandler')
-    this.exitOnError = options.exitOnError !== undefined 
-      ? options.exitOnError 
+    this.exitOnError = options.exitOnError !== undefined
+      ? options.exitOnError
       : process.env.NODE_ENV === 'production'
   }
 
@@ -69,8 +69,8 @@ export class ErrorHandler {
    * 处理错误
    */
   async handle(error: Error | LauncherError, context: ErrorContext = {}): Promise<void> {
-    const launcherError = error instanceof LauncherError 
-      ? error 
+    const launcherError = error instanceof LauncherError
+      ? error
       : new LauncherError(error.message, 'UNKNOWN_ERROR', context, error)
 
     // 记录错误
@@ -90,11 +90,12 @@ export class ErrorHandler {
    */
   async wrap<T>(
     fn: () => Promise<T>,
-    context: ErrorContext = {}
+    context: ErrorContext = {},
   ): Promise<T> {
     try {
       return await fn()
-    } catch (error) {
+    }
+    catch (error) {
       await this.handle(error as Error, context)
       throw error
     }
@@ -105,22 +106,22 @@ export class ErrorHandler {
    */
   private logError(error: LauncherError): void {
     const { context } = error
-    
+
     // 构建错误消息
     const parts: string[] = []
-    
+
     if (context.component) {
       parts.push(`[${context.component}]`)
     }
-    
+
     if (context.operation) {
       parts.push(`操作: ${context.operation}`)
     }
-    
+
     parts.push(error.message)
-    
+
     const message = parts.join(' ')
-    
+
     // 根据严重程度选择日志级别
     const severity = context.severity || 'medium'
     switch (severity) {
@@ -128,28 +129,28 @@ export class ErrorHandler {
       case 'high':
         this.logger.error(message, {
           code: error.code,
-          ...context.metadata
+          ...context.metadata,
         })
         break
       case 'medium':
         this.logger.warn(message, {
           code: error.code,
-          ...context.metadata
+          ...context.metadata,
         })
         break
       case 'low':
         this.logger.info(message, {
           code: error.code,
-          ...context.metadata
+          ...context.metadata,
         })
         break
     }
-    
+
     // 显示用户友好的错误信息
     if (context.userMessage) {
       this.logger.info(`💡 ${context.userMessage}`)
     }
-    
+
     // 显示解决方案
     if (context.solutions && context.solutions.length > 0) {
       this.logger.info('可能的解决方案:')
@@ -157,7 +158,7 @@ export class ErrorHandler {
         this.logger.info(`  ${index + 1}. ${solution}`)
       })
     }
-    
+
     // 在调试模式显示原始错误堆栈
     if (process.env.DEBUG || process.env.NODE_ENV === 'development') {
       if (error.originalError) {
@@ -180,7 +181,7 @@ export class ErrorHandler {
   createError(
     message: string,
     code: string,
-    context?: ErrorContext
+    context?: ErrorContext,
   ): LauncherError {
     return new LauncherError(message, code, context)
   }

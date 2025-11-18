@@ -1,8 +1,8 @@
 /**
  * 消息常量定义
- * 
+ *
  * 定义各种用户界面消息和提示文本
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
@@ -26,7 +26,7 @@ export const SUCCESS_MESSAGES = {
   /** 缓存清理成功 */
   CACHE_CLEARED: '缓存清理完成',
   /** 依赖安装成功 */
-  DEPENDENCIES_INSTALLED: '依赖安装完成'
+  DEPENDENCIES_INSTALLED: '依赖安装完成',
 } as const
 
 /**
@@ -60,7 +60,7 @@ export const ERROR_MESSAGES = {
   /** 依赖缺失 */
   MISSING_DEPENDENCY: '缺少必要的依赖',
   /** 版本不兼容 */
-  VERSION_INCOMPATIBLE: '版本不兼容'
+  VERSION_INCOMPATIBLE: '版本不兼容',
 } as const
 
 /**
@@ -86,7 +86,7 @@ export const WARNING_MESSAGES = {
   /** 缓存失效 */
   CACHE_INVALID: '缓存已失效',
   /** 依赖版本冲突 */
-  DEPENDENCY_CONFLICT: '依赖版本冲突'
+  DEPENDENCY_CONFLICT: '依赖版本冲突',
 } as const
 
 /**
@@ -114,7 +114,7 @@ export const INFO_MESSAGES = {
   /** 正在生成文件 */
   GENERATING_FILES: '正在生成文件...',
   /** 正在压缩文件 */
-  COMPRESSING: '正在压缩文件...'
+  COMPRESSING: '正在压缩文件...',
 } as const
 
 /**
@@ -354,7 +354,7 @@ AI辅助优化工具，分析项目并提供智能优化建议。
   launcher cache clear build      清理构建缓存
   launcher cache size             查看缓存大小
   launcher cache verify           验证缓存
-`
+`,
 } as const
 
 /**
@@ -376,7 +376,7 @@ export const PROGRESS_MESSAGES = {
   /** 压缩文件 */
   COMPRESSING: '正在压缩文件...',
   /** 完成 */
-  COMPLETED: '已完成'
+  COMPLETED: '已完成',
 } as const
 
 /**
@@ -400,7 +400,7 @@ export const STATUS_MESSAGES = {
   /** 错误状态 */
   ERROR: '错误',
   /** 重启中 */
-  RESTARTING: '重启中'
+  RESTARTING: '重启中',
 } as const
 
 /**
@@ -426,7 +426,7 @@ export const PROMPT_MESSAGES = {
   /** 输入插件名称 */
   INPUT_PLUGIN_NAME: '请输入插件名称:',
   /** 选择插件版本 */
-  SELECT_PLUGIN_VERSION: '请选择插件版本:'
+  SELECT_PLUGIN_VERSION: '请选择插件版本:',
 } as const
 
 /**
@@ -452,7 +452,7 @@ export const TIME_MESSAGES = {
   /** 几小时前 */
   HOURS_AGO: '小时前',
   /** 几天前 */
-  DAYS_AGO: '天前'
+  DAYS_AGO: '天前',
 } as const
 
 /**
@@ -468,5 +468,5 @@ export const SIZE_MESSAGES = {
   /** 吉字节 */
   GIGABYTES: 'GB',
   /** 太字节 */
-  TERABYTES: 'TB'
+  TERABYTES: 'TB',
 } as const

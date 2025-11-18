@@ -1,21 +1,21 @@
 /**
  * Vue 3 框架适配器
- * 
+ *
  * 提供 Vue 3 项目的自动检测、插件配置和构建支持
- * 
+ *
  * @author LDesign Team
  * @since 2.0.0
  */
 
 import type { Plugin } from 'vite'
-import type {
-  FrameworkDetectionResult,
-  FrameworkDependencies,
-  FrameworkFeatures,
-  FrameworkOptions
-} from '../../types/framework'
-import type { BuildEngine } from '../../types/engine'
 import type { ViteLauncherConfig } from '../../types/config'
+import type { BuildEngine } from '../../types/engine'
+import type {
+  FrameworkDependencies,
+  FrameworkDetectionResult,
+  FrameworkFeatures,
+  FrameworkOptions,
+} from '../../types/framework'
 import { FrameworkAdapter } from '../base/FrameworkAdapter'
 
 /**
@@ -33,7 +33,7 @@ export class Vue3Adapter extends FrameworkAdapter {
     ssr: true,
     ssg: true,
     hmr: true,
-    fastRefresh: true
+    fastRefresh: true,
   }
 
   /**
@@ -43,7 +43,7 @@ export class Vue3Adapter extends FrameworkAdapter {
     const evidence: FrameworkDetectionResult['evidence'] = {
       dependencies: [],
       files: [],
-      configFiles: []
+      configFiles: [],
     }
 
     let confidence = 0
@@ -52,7 +52,7 @@ export class Vue3Adapter extends FrameworkAdapter {
     const vueVersion = await this.getDependencyVersion(cwd, 'vue')
     if (vueVersion) {
       evidence.dependencies!.push('vue')
-      
+
       // 解析版本号
       const version = this.parseVersion(vueVersion)
       if (version.major === 3) {
@@ -70,7 +70,7 @@ export class Vue3Adapter extends FrameworkAdapter {
     const vueFiles = await this.findFiles(cwd, [
       'src/App.vue',
       'src/main.ts',
-      'src/main.js'
+      'src/main.js',
     ])
     if (vueFiles.length > 0) {
       evidence.files = vueFiles
@@ -81,7 +81,7 @@ export class Vue3Adapter extends FrameworkAdapter {
     const configFiles = await this.findFiles(cwd, [
       'vite.config.ts',
       'vite.config.js',
-      'vue.config.js'
+      'vue.config.js',
     ])
     if (configFiles.length > 0) {
       evidence.configFiles = configFiles
@@ -95,7 +95,7 @@ export class Vue3Adapter extends FrameworkAdapter {
       type: detected ? 'vue3' : undefined,
       version: vueVersion ? this.parseVersion(vueVersion) : undefined,
       confidence,
-      evidence
+      evidence,
     }
   }
 
@@ -113,9 +113,10 @@ export class Vue3Adapter extends FrameworkAdapter {
         const plugin = vue(options?.options)
         // 插件可能返回单个插件或插件数组
         if (Array.isArray(plugin)) {
-          plugins.push(...plugin)
-        } else {
-          plugins.push(plugin)
+          plugins.push(...(plugin as any as Plugin[]))
+        }
+        else {
+          plugins.push(plugin as any as Plugin)
         }
 
         // 如果启用了 JSX，添加 JSX 插件
@@ -126,14 +127,17 @@ export class Vue3Adapter extends FrameworkAdapter {
             const jsxPlugin = vueJsx()
             if (Array.isArray(jsxPlugin)) {
               plugins.push(...(jsxPlugin as any))
-            } else {
+            }
+            else {
               plugins.push(jsxPlugin as any)
             }
-          } catch (error) {
+          }
+          catch {
             this.logger.warn('未找到 @vitejs/plugin-vue-jsx，跳过 JSX 支持')
           }
         }
-      } catch (error) {
+      }
+      catch (error) {
         this.logger.error('加载 Vue 3 插件失败', error)
         throw new Error('请安装 @vitejs/plugin-vue: npm install -D @vitejs/plugin-vue')
       }
@@ -145,11 +149,11 @@ export class Vue3Adapter extends FrameworkAdapter {
   /**
    * 获取 Vue 3 特定配置
    */
-  getConfig(options?: FrameworkOptions): Partial<ViteLauncherConfig> {
+  getConfig(_options?: FrameworkOptions): Partial<ViteLauncherConfig> {
     return {
       server: {
         port: 3000,
-        open: true
+        open: true,
       },
       build: {
         outDir: 'dist',
@@ -157,23 +161,23 @@ export class Vue3Adapter extends FrameworkAdapter {
         rollupOptions: {
           output: {
             manualChunks: {
-              vue: ['vue'],
+              'vue': ['vue'],
               'vue-router': ['vue-router'],
-              'vue-vendor': ['pinia', 'axios']
-            }
-          }
-        }
+              'vue-vendor': ['pinia', 'axios'],
+            },
+          },
+        },
       },
       resolve: {
         alias: [
           { find: '@', replacement: '/src' },
-          { find: '~', replacement: '/src' }
+          { find: '~', replacement: '/src' },
         ],
-        extensions: ['.vue', '.js', '.ts', '.jsx', '.tsx', '.json']
+        extensions: ['.vue', '.js', '.ts', '.jsx', '.tsx', '.json'],
       },
       optimizeDeps: {
-        include: ['vue', 'vue-router']
-      }
+        include: ['vue', 'vue-router'],
+      },
     }
   }
 
@@ -186,13 +190,13 @@ export class Vue3Adapter extends FrameworkAdapter {
       devDependencies: [
         '@vitejs/plugin-vue',
         '@vue/compiler-sfc',
-        'vite'
+        'vite',
       ],
       optionalDependencies: [
         '@vitejs/plugin-vue-jsx',
         'vue-router',
-        'pinia'
-      ]
+        'pinia',
+      ],
     }
   }
 
@@ -201,10 +205,10 @@ export class Vue3Adapter extends FrameworkAdapter {
    */
   getScripts(): Record<string, string> {
     return {
-      dev: 'launcher dev',
-      build: 'launcher build',
-      preview: 'launcher preview',
-      'type-check': 'vue-tsc --noEmit'
+      'dev': 'launcher dev',
+      'build': 'launcher build',
+      'preview': 'launcher preview',
+      'type-check': 'vue-tsc --noEmit',
     }
   }
 
@@ -214,8 +218,7 @@ export class Vue3Adapter extends FrameworkAdapter {
   getEnvConfig(): Record<string, string> {
     return {
       VITE_APP_TITLE: 'Vue 3 App',
-      VITE_APP_VERSION: '1.0.0'
+      VITE_APP_VERSION: '1.0.0',
     }
   }
 }
-

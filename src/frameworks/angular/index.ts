@@ -14,8 +14,7 @@ export const angularAdapterFactory: FrameworkAdapterFactory = {
     const adapter = new AngularAdapter()
     const result = await adapter.detect(cwd)
     return result.detected
-  }
+  },
 }
 
 export { AngularAdapter }
-

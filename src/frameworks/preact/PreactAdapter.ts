@@ -1,21 +1,21 @@
 /**
  * Preact 框架适配器
- * 
+ *
  * 提供 Preact 项目的自动检测、插件配置和构建支持
- * 
+ *
  * @author LDesign Team
  * @since 2.0.0
  */
 
 import type { Plugin } from 'vite'
-import type {
-  FrameworkDetectionResult,
-  FrameworkDependencies,
-  FrameworkFeatures,
-  FrameworkOptions
-} from '../../types/framework'
-import type { BuildEngine } from '../../types/engine'
 import type { ViteLauncherConfig } from '../../types/config'
+import type { BuildEngine } from '../../types/engine'
+import type {
+  FrameworkDependencies,
+  FrameworkDetectionResult,
+  FrameworkFeatures,
+  FrameworkOptions,
+} from '../../types/framework'
 import { FrameworkAdapter } from '../base/FrameworkAdapter'
 
 /**
@@ -33,7 +33,7 @@ export class PreactAdapter extends FrameworkAdapter {
     ssr: true,
     ssg: true,
     hmr: true,
-    fastRefresh: true
+    fastRefresh: true,
   }
 
   /**
@@ -43,7 +43,7 @@ export class PreactAdapter extends FrameworkAdapter {
     const evidence: FrameworkDetectionResult['evidence'] = {
       dependencies: [],
       files: [],
-      configFiles: []
+      configFiles: [],
     }
 
     let confidence = 0
@@ -68,7 +68,7 @@ export class PreactAdapter extends FrameworkAdapter {
       'src/main.tsx',
       'src/main.jsx',
       'src/index.tsx',
-      'src/index.jsx'
+      'src/index.jsx',
     ])
     if (preactFiles.length > 0) {
       evidence.files = preactFiles
@@ -79,7 +79,7 @@ export class PreactAdapter extends FrameworkAdapter {
     const configFiles = await this.findFiles(cwd, [
       'vite.config.ts',
       'vite.config.js',
-      'preact.config.js'
+      'preact.config.js',
     ])
     if (configFiles.length > 0) {
       evidence.configFiles = configFiles
@@ -93,7 +93,7 @@ export class PreactAdapter extends FrameworkAdapter {
       type: detected ? 'preact' : undefined,
       version: preactVersion ? this.parseVersion(preactVersion) : undefined,
       confidence,
-      evidence
+      evidence,
     }
   }
 
@@ -111,11 +111,13 @@ export class PreactAdapter extends FrameworkAdapter {
         const plugin = preact(options?.options)
         // 插件可能返回单个插件或插件数组
         if (Array.isArray(plugin)) {
-          plugins.push(...plugin)
-        } else {
-          plugins.push(plugin)
+          plugins.push(...(plugin as any as Plugin[]))
         }
-      } catch (error) {
+        else {
+          plugins.push(plugin as any as Plugin)
+        }
+      }
+      catch (error) {
         this.logger.error('加载 Preact 插件失败', error)
         throw new Error('请安装 @preact/preset-vite: npm install -D @preact/preset-vite')
       }
@@ -127,11 +129,11 @@ export class PreactAdapter extends FrameworkAdapter {
   /**
    * 获取 Preact 特定配置
    */
-  getConfig(options?: FrameworkOptions): Partial<ViteLauncherConfig> {
+  getConfig(_options?: FrameworkOptions): Partial<ViteLauncherConfig> {
     return {
       server: {
         port: 3000,
-        open: true
+        open: true,
       },
       build: {
         outDir: 'dist',
@@ -139,29 +141,29 @@ export class PreactAdapter extends FrameworkAdapter {
         rollupOptions: {
           output: {
             manualChunks: {
-              preact: ['preact'],
-              'preact-router': ['preact-router']
-            }
-          }
-        }
+              'preact': ['preact'],
+              'preact-router': ['preact-router'],
+            },
+          },
+        },
       },
       resolve: {
         alias: [
           { find: '@', replacement: '/src' },
           { find: '~', replacement: '/src' },
           { find: 'react', replacement: 'preact/compat' },
-          { find: 'react-dom', replacement: 'preact/compat' }
+          { find: 'react-dom', replacement: 'preact/compat' },
         ],
-        extensions: ['.js', '.ts', '.jsx', '.tsx', '.json']
+        extensions: ['.js', '.ts', '.jsx', '.tsx', '.json'],
       },
       optimizeDeps: {
-        include: ['preact', 'preact/hooks']
+        include: ['preact', 'preact/hooks'],
       },
       esbuild: {
         jsxFactory: 'h',
         jsxFragment: 'Fragment',
-        jsxInject: `import { h, Fragment } from 'preact'`
-      }
+        jsxInject: `import { h, Fragment } from 'preact'`,
+      },
     }
   }
 
@@ -175,12 +177,12 @@ export class PreactAdapter extends FrameworkAdapter {
         '@preact/preset-vite',
         '@types/node',
         'typescript',
-        'vite'
+        'vite',
       ],
       optionalDependencies: [
         'preact-router',
-        'preact-render-to-string'
-      ]
+        'preact-render-to-string',
+      ],
     }
   }
 
@@ -189,10 +191,10 @@ export class PreactAdapter extends FrameworkAdapter {
    */
   getScripts(): Record<string, string> {
     return {
-      dev: 'launcher dev',
-      build: 'launcher build',
-      preview: 'launcher preview',
-      'type-check': 'tsc --noEmit'
+      'dev': 'launcher dev',
+      'build': 'launcher build',
+      'preview': 'launcher preview',
+      'type-check': 'tsc --noEmit',
     }
   }
 
@@ -202,8 +204,7 @@ export class PreactAdapter extends FrameworkAdapter {
   getEnvConfig(): Record<string, string> {
     return {
       VITE_APP_TITLE: 'Preact App',
-      VITE_APP_VERSION: '1.0.0'
+      VITE_APP_VERSION: '1.0.0',
     }
   }
 }
-

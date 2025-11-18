@@ -1,10 +1,10 @@
 /**
  * Qwik Hook - useAppConfig
- * 
+ *
  * 使用方式：
  * ```tsx
  * import { useAppConfig } from '@ldesign/launcher/client/qwik'
- * 
+ *
  * export default component$(() => {
  *   const { config, environment } = useAppConfig()
  *   return <div>{config.value.app.name}</div>
@@ -12,8 +12,10 @@
  * ```
  */
 
-import { useSignal, useVisibleTask$, Signal } from '@builder.io/qwik'
-import { appConfigManager, AppConfig } from '../app-config'
+import type { Signal } from '@builder.io/qwik'
+import type { AppConfig } from '../app-config'
+import { useSignal, useVisibleTask$ } from '@builder.io/qwik'
+import { appConfigManager } from '../app-config'
 
 export interface UseAppConfigReturn {
   config: Signal<AppConfig>
@@ -28,7 +30,6 @@ export function useAppConfig(): UseAppConfigReturn {
   const config = useSignal<AppConfig>(appConfigManager.getConfig())
   const environment = useSignal(appConfigManager.getEnvironment())
 
-  // eslint-disable-next-line qwik/no-use-visible-task
   useVisibleTask$(() => {
     // 订阅配置变化
     const unsubscribe = appConfigManager.subscribe((newConfig) => {
@@ -41,7 +42,6 @@ export function useAppConfig(): UseAppConfigReturn {
 
   return {
     config,
-    environment
+    environment,
   }
 }
-

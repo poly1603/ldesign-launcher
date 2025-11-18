@@ -1,11 +1,11 @@
 /**
  * Lit Mixin - AppConfigMixin
- * 
+ *
  * 使用方式：
  * ```ts
  * import { LitElement, html } from 'lit'
  * import { AppConfigMixin } from '@ldesign/launcher/client/lit'
- * 
+ *
  * export class MyElement extends AppConfigMixin(LitElement) {
  *   render() {
  *     return html`<div>${this.appConfig.app.name}</div>`
@@ -14,8 +14,9 @@
  * ```
  */
 
-import { ReactiveController, ReactiveControllerHost } from 'lit'
-import { appConfigManager, AppConfig } from '../app-config'
+import type { ReactiveController, ReactiveControllerHost } from 'lit'
+import type { AppConfig } from '../app-config'
+import { appConfigManager } from '../app-config'
 
 /**
  * Reactive Controller for App Config
@@ -23,7 +24,7 @@ import { appConfigManager, AppConfig } from '../app-config'
 export class AppConfigController implements ReactiveController {
   private host: ReactiveControllerHost
   private unsubscribe: (() => void) | null = null
-  
+
   config: AppConfig
   environment: {
     mode: string
@@ -58,7 +59,7 @@ export class AppConfigController implements ReactiveController {
  * Mixin for App Config (类继承方式)
  */
 export function AppConfigMixin<T extends new (...args: any[]) => ReactiveControllerHost>(
-  Base: T
+  Base: T,
 ) {
   return class extends Base {
     public _appConfigController = new AppConfigController(this)
@@ -75,4 +76,3 @@ export function AppConfigMixin<T extends new (...args: any[]) => ReactiveControl
 
 // 也提供函数式 API
 export { getAppConfig, subscribeConfig } from '../app-config'
-

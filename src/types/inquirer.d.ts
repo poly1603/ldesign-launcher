@@ -17,7 +17,7 @@ declare module 'inquirer' {
   }
 
   interface InquirerStatic {
-    prompt(questions: QuestionBase | QuestionBase[]): Promise<any>
+    prompt: (questions: QuestionBase | QuestionBase[]) => Promise<any>
   }
 
   // 仅导出具名导出，避免默认导出问题

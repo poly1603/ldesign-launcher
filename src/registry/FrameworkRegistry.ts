@@ -1,19 +1,19 @@
 /**
  * 前端框架注册中心
- * 
+ *
  * 管理所有可用的框架适配器，提供框架的注册、查询、检测和创建功能
- * 
+ *
  * @author LDesign Team
  * @since 2.0.0
  */
 
 import type {
   FrameworkAdapter,
-  FrameworkType,
   FrameworkAdapterFactory,
-  FrameworkOptions,
+  FrameworkDetectionResult,
   FrameworkMetadata,
-  FrameworkDetectionResult
+  FrameworkOptions,
+  FrameworkType,
 } from '../types/framework'
 import { Logger } from '../utils/logger'
 
@@ -23,10 +23,10 @@ import { Logger } from '../utils/logger'
 interface FrameworkRegistration {
   /** 框架元数据 */
   metadata: FrameworkMetadata
-  
+
   /** 框架适配器工厂 */
   factory: FrameworkAdapterFactory
-  
+
   /** 检测优先级（数字越大优先级越高） */
   priority: number
 }
@@ -55,7 +55,7 @@ export class FrameworkRegistry {
 
   /**
    * 注册框架适配器
-   * 
+   *
    * @param type - 框架类型
    * @param factory - 框架适配器工厂
    * @param metadata - 框架元数据
@@ -65,7 +65,7 @@ export class FrameworkRegistry {
     type: FrameworkType,
     factory: FrameworkAdapterFactory,
     metadata: FrameworkMetadata,
-    priority = 0
+    priority = 0,
   ): void {
     if (this.frameworks.has(type)) {
       this.logger.warn(`框架 "${type}" 已注册，将被覆盖`)
@@ -74,7 +74,7 @@ export class FrameworkRegistry {
     this.frameworks.set(type, {
       metadata,
       factory,
-      priority
+      priority,
     })
 
     this.logger.debug(`注册框架: ${type} (优先级: ${priority})`)
@@ -82,7 +82,7 @@ export class FrameworkRegistry {
 
   /**
    * 注销框架适配器
-   * 
+   *
    * @param type - 框架类型
    */
   unregister(type: FrameworkType): void {
@@ -97,7 +97,7 @@ export class FrameworkRegistry {
 
   /**
    * 检查框架是否已注册
-   * 
+   *
    * @param type - 框架类型
    * @returns 是否已注册
    */
@@ -107,7 +107,7 @@ export class FrameworkRegistry {
 
   /**
    * 获取框架元数据
-   * 
+   *
    * @param type - 框架类型
    * @returns 框架元数据
    */
@@ -117,7 +117,7 @@ export class FrameworkRegistry {
 
   /**
    * 获取所有已注册的框架类型
-   * 
+   *
    * @returns 框架类型列表
    */
   getRegisteredFrameworks(): FrameworkType[] {
@@ -126,7 +126,7 @@ export class FrameworkRegistry {
 
   /**
    * 获取所有框架的元数据
-   * 
+   *
    * @returns 元数据列表
    */
   getAllMetadata(): FrameworkMetadata[] {
@@ -135,19 +135,19 @@ export class FrameworkRegistry {
 
   /**
    * 创建框架适配器实例
-   * 
+   *
    * @param type - 框架类型
    * @param options - 框架选项
    * @returns 适配器实例
    */
   async createAdapter(
     type: FrameworkType,
-    options?: FrameworkOptions
+    options?: FrameworkOptions,
   ): Promise<FrameworkAdapter> {
     const registration = this.frameworks.get(type)
     if (!registration) {
       throw new Error(
-        `框架 "${type}" 未注册。已注册的框架: ${this.getRegisteredFrameworks().join(', ')}`
+        `框架 "${type}" 未注册。已注册的框架: ${this.getRegisteredFrameworks().join(', ')}`,
       )
     }
 
@@ -157,7 +157,7 @@ export class FrameworkRegistry {
 
   /**
    * 自动检测项目使用的框架
-   * 
+   *
    * @param cwd - 项目根目录
    * @returns 检测结果列表（按置信度排序）
    */
@@ -175,33 +175,35 @@ export class FrameworkRegistry {
       try {
         const adapter = await registration.factory.create()
         const result = await adapter.detect(cwd)
-        
+
         if (result.detected) {
           this.logger.debug(
-            `检测到框架: ${type} (置信度: ${result.confidence})`
+            `检测到框架: ${type} (置信度: ${result.confidence})`,
           )
           return result
         }
-      } catch (error) {
+      }
+      catch (error) {
         this.logger.warn(`检测框架 "${type}" 时出错: ${(error as Error).message}`)
       }
       return null
     })
 
     const detectionResults = await Promise.all(detectionPromises)
-    
+
     // 过滤并排序结果
     results.push(
       ...detectionResults
         .filter((r): r is FrameworkDetectionResult => r !== null && r.detected)
-        .sort((a, b) => b.confidence - a.confidence)
+        .sort((a, b) => b.confidence - a.confidence),
     )
 
     if (results.length === 0) {
       this.logger.warn('未检测到任何已注册的框架')
-    } else {
+    }
+    else {
       this.logger.info(
-        `检测到 ${results.length} 个框架: ${results.map(r => r.type).join(', ')}`
+        `检测到 ${results.length} 个框架: ${results.map(r => r.type).join(', ')}`,
       )
     }
 
@@ -210,7 +212,7 @@ export class FrameworkRegistry {
 
   /**
    * 检测最可能的框架
-   * 
+   *
    * @param cwd - 项目根目录
    * @returns 检测结果
    */
@@ -221,7 +223,7 @@ export class FrameworkRegistry {
 
   /**
    * 检查框架是否可用
-   * 
+   *
    * @param type - 框架类型
    * @param cwd - 项目根目录
    * @returns 是否可用
@@ -258,7 +260,7 @@ export function registerFramework(
   type: FrameworkType,
   factory: FrameworkAdapterFactory,
   metadata: FrameworkMetadata,
-  priority = 0
+  priority = 0,
 ): void {
   getFrameworkRegistry().register(type, factory, metadata, priority)
 }
@@ -268,7 +270,7 @@ export function registerFramework(
  */
 export async function createFrameworkAdapter(
   type: FrameworkType,
-  options?: FrameworkOptions
+  options?: FrameworkOptions,
 ): Promise<FrameworkAdapter> {
   return getFrameworkRegistry().createAdapter(type, options)
 }
@@ -279,4 +281,3 @@ export async function createFrameworkAdapter(
 export async function detectFramework(cwd: string): Promise<FrameworkDetectionResult | null> {
   return getFrameworkRegistry().detectBestFramework(cwd)
 }
-

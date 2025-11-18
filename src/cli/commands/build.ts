@@ -1,19 +1,19 @@
 /**
  * Build 命令实现
- * 
+ *
  * 执行生产构建命令
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
 
-import { Logger } from '../../utils/logger'
-import { FileSystem } from '../../utils/file-system'
-import { PathUtils } from '../../utils/path-utils'
-import { ViteLauncher } from '../../core/ViteLauncher'
 import type { CliCommandDefinition, CliContext } from '../../types'
-import { DEFAULT_OUT_DIR, DEFAULT_BUILD_TARGET } from '../../constants'
 import pc from 'picocolors'
+import { DEFAULT_BUILD_TARGET, DEFAULT_OUT_DIR } from '../../constants'
+import { ViteLauncher } from '../../core/ViteLauncher'
+import { FileSystem } from '../../utils/file-system'
+import { Logger } from '../../utils/logger'
+import { PathUtils } from '../../utils/path-utils'
 
 /**
  * Build 命令类
@@ -30,99 +30,99 @@ export class BuildCommand implements CliCommandDefinition {
       alias: 'o',
       description: '指定输出目录',
       type: 'string' as const,
-      default: DEFAULT_OUT_DIR
+      default: DEFAULT_OUT_DIR,
     },
     {
       name: 'sourcemap',
       alias: 's',
       description: '生成 sourcemap 文件',
       type: 'boolean' as const,
-      default: false
+      default: false,
     },
     {
       name: 'minify',
       alias: 'm',
       description: '压缩代码',
       type: 'boolean' as const,
-      default: true
+      default: true,
     },
     {
       name: 'watch',
       alias: 'w',
       description: '启用监听模式',
       type: 'boolean' as const,
-      default: false
+      default: false,
     },
     {
       name: 'environment',
       alias: 'e',
       description: '指定环境名称（development, production, test, staging, preview）',
-      type: 'string' as const
+      type: 'string' as const,
     },
     {
       name: 'target',
       alias: 't',
       description: '指定构建目标',
       type: 'string' as const,
-      default: DEFAULT_BUILD_TARGET
+      default: DEFAULT_BUILD_TARGET,
     },
     {
       name: 'report',
       alias: 'r',
       description: '生成构建报告',
       type: 'boolean' as const,
-      default: false
+      default: false,
     },
     {
       name: 'emptyOutDir',
       description: '构建前清空输出目录',
       type: 'boolean' as const,
-      default: true
+      default: true,
     },
     {
       name: 'ssr',
       description: '启用服务端渲染构建',
       type: 'boolean' as const,
-      default: false
+      default: false,
     },
     {
       name: 'analyze',
       description: '分析构建产物',
       type: 'boolean' as const,
-      default: false
-    }
+      default: false,
+    },
   ]
 
   examples = [
     {
       description: '执行生产构建',
-      command: 'launcher build'
+      command: 'launcher build',
     },
     {
       description: '指定输出目录',
-      command: 'launcher build --outDir build'
+      command: 'launcher build --outDir build',
     },
     {
       description: '生成 sourcemap',
-      command: 'launcher build --sourcemap'
+      command: 'launcher build --sourcemap',
     },
     {
       description: '启用监听模式',
-      command: 'launcher build --watch'
+      command: 'launcher build --watch',
     },
     {
       description: '生成构建报告',
-      command: 'launcher build --report'
+      command: 'launcher build --report',
     },
     {
       description: '分析构建产物',
-      command: 'launcher build --analyze'
-    }
+      command: 'launcher build --analyze',
+    },
   ]
 
   /**
    * 验证命令参数
-   * 
+   *
    * @param context - CLI 上下文
    * @returns 验证结果
    */
@@ -164,7 +164,7 @@ export class BuildCommand implements CliCommandDefinition {
     const logger = new Logger('build', {
       level: context.options.silent ? 'silent' : (context.options.debug ? 'debug' : 'info'),
       colors: context.terminal.supportsColor,
-      compact: !context.options.debug // 非 debug 模式使用简洁输出
+      compact: !context.options.debug, // 非 debug 模式使用简洁输出
     })
 
     try {
@@ -174,16 +174,19 @@ export class BuildCommand implements CliCommandDefinition {
       const environment = context.options.environment || context.options.mode || 'production'
 
       // 显示环境标识 - 确保在最开始就显示
-      const envLabel = environment === 'production' ? '🔴 PRODUCTION' :
-        environment === 'staging' ? '🟡 STAGING' :
-          environment === 'test' ? '🔵 TEST' : '🟢 DEVELOPMENT'
+      const envLabel = environment === 'production'
+        ? '🔴 PRODUCTION'
+        : environment === 'staging'
+          ? '🟡 STAGING'
+          : environment === 'test' ? '🔵 TEST' : '🟢 DEVELOPMENT'
 
-      // 立即输出环境标识，不依赖logger
+      // 立即输出环境标识（通过 Logger 原样输出，避免打乱布局）
       if (!context.options.silent) {
-        console.log(`\n🏗️  ${pc.cyan('LDesign Launcher')} - ${envLabel}`)
-        console.log(`📁 ${pc.gray('工作目录:')} ${context.cwd}`)
-        console.log(`⚙️  ${pc.gray('模式:')} ${context.options.mode || 'production'}`)
-        console.log('')
+        logger.raw('')
+        logger.raw(`🏗️  ${pc.cyan('LDesign Launcher')} - ${envLabel}`)
+        logger.raw(`📁 ${pc.gray('工作目录:')} ${context.cwd}`)
+        logger.raw(`⚙️  ${pc.gray('模式:')} ${context.options.mode || 'production'}`)
+        logger.raw('')
       }
 
       // 🎯 零配置特性：自动检测框架
@@ -202,16 +205,18 @@ export class BuildCommand implements CliCommandDefinition {
             const frameworkName = detectedFramework.type?.toUpperCase() || 'UNKNOWN'
             const confidencePercent = (detectedFramework.confidence * 100).toFixed(0)
             logger.success(
-              `✓ 检测到 ${pc.bold(pc.green(frameworkName))} 框架 ` +
-              `(置信度: ${pc.cyan(confidencePercent + '%')})`
+              `✓ 检测到 ${pc.bold(pc.green(frameworkName))} 框架 `
+              + `(置信度: ${pc.cyan(`${confidencePercent}%`)})`,
             )
           }
-        } else {
+        }
+        else {
           if (!context.options.silent) {
             logger.warn('⚠ 未检测到已知框架，将使用默认配置')
           }
         }
-      } catch (error) {
+      }
+      catch (error) {
         if (context.options.debug) {
           logger.warn(`框架检测失败: ${(error as Error).message}`)
         }
@@ -243,20 +248,20 @@ export class BuildCommand implements CliCommandDefinition {
             emptyOutDir: context.options.emptyOutDir !== false,
             reportCompressedSize: context.options.report || false,
             ssr: context.options.ssr || false,
-            watch: context.options.watch ? {} : undefined
+            watch: context.options.watch ? {} : undefined,
           },
           launcher: {
             logLevel: context.options.debug ? 'debug' : 'info',
             mode: context.options.mode || 'production',
             debug: context.options.debug || false,
             // 关键修复：将 CLI --config 映射到 launcher.configFile，供 ConfigManager 使用
-            configFile: context.configFile
-          }
-        }
+            configFile: context.configFile,
+          },
+        },
       })
 
       // 设置事件监听器
-      launcher.on('buildStart', (data) => {
+      launcher.on('buildStart', () => {
         logger.info('构建开始')
       })
 
@@ -283,7 +288,7 @@ export class BuildCommand implements CliCommandDefinition {
       })
 
       launcher.onError((error) => {
-        logger.error('构建错误: ' + error.message)
+        logger.error(`构建错误: ${error.message}`)
       })
 
       // 处理监听模式的退出
@@ -294,7 +299,8 @@ export class BuildCommand implements CliCommandDefinition {
             await launcher.destroy()
             logger.success('监听模式已停止')
             process.exit(0)
-          } catch (error) {
+          }
+          catch (error) {
             logger.error('停止监听模式失败', { error: (error as Error).message })
             process.exit(1)
           }
@@ -305,7 +311,8 @@ export class BuildCommand implements CliCommandDefinition {
           try {
             await launcher.destroy()
             process.exit(0)
-          } catch (error) {
+          }
+          catch (error) {
             logger.error('停止监听模式失败', { error: (error as Error).message })
             process.exit(1)
           }
@@ -321,7 +328,8 @@ export class BuildCommand implements CliCommandDefinition {
 
         // 保持进程运行
         await new Promise(() => { })
-      } else {
+      }
+      else {
         const result = await launcher.build()
 
         const duration = Date.now() - startTime
@@ -353,12 +361,14 @@ export class BuildCommand implements CliCommandDefinition {
           }, 100)
         }
       }
-
-    } catch (error) {
+    }
+    catch (error) {
       logger.error('构建失败', { error: (error as Error).message })
 
       if (context.options.debug) {
-        console.error((error as Error).stack)
+        logger.error('构建失败 - 堆栈信息', {
+          stack: (error as Error).stack,
+        })
       }
 
       // 提供一些常见错误的解决建议
@@ -395,7 +405,7 @@ export class BuildCommand implements CliCommandDefinition {
 
 /**
  * 格式化文件大小
- * 
+ *
  * @param bytes - 字节数
  * @returns 格式化后的大小
  */
@@ -414,7 +424,7 @@ function formatFileSize(bytes: number): string {
 
 /**
  * 获取目录大小
- * 
+ *
  * @param dirPath - 目录路径
  * @returns 目录大小（字节）
  */
@@ -429,20 +439,22 @@ async function getDirectorySize(dirPath: string): Promise<number> {
 
       if (stats.isDirectory()) {
         totalSize += await getDirectorySize(filePath)
-      } else {
+      }
+      else {
         totalSize += stats.size
       }
     }
 
     return totalSize
-  } catch (error) {
+  }
+  catch {
     return 0
   }
 }
 
 /**
  * 生成构建分析报告
- * 
+ *
  * @param result - 构建结果
  * @param outDir - 输出目录
  * @param logger - 日志记录器
@@ -455,14 +467,14 @@ async function generateAnalysisReport(result: any, outDir: string, logger: Logge
     const reportPath = PathUtils.join(outDir, 'build-report.json')
     const report = {
       timestamp: new Date().toISOString(),
-      files: [] as Array<{ fileName: any; size: any; type: string }>,
+      files: [] as Array<{ fileName: any, size: any, type: string }>,
       summary: {
         totalFiles: 0,
         totalSize: 0,
         jsFiles: 0,
         cssFiles: 0,
-        assetFiles: 0
-      }
+        assetFiles: 0,
+      },
     }
 
     // 分析输出文件
@@ -471,7 +483,7 @@ async function generateAnalysisReport(result: any, outDir: string, logger: Logge
         const fileInfo = {
           fileName: file.fileName,
           size: file.source ? file.source.length : 0,
-          type: getFileType(file.fileName)
+          type: getFileType(file.fileName),
         }
 
         report.files.push(fileInfo)
@@ -480,9 +492,11 @@ async function generateAnalysisReport(result: any, outDir: string, logger: Logge
 
         if (fileInfo.type === 'js') {
           report.summary.jsFiles++
-        } else if (fileInfo.type === 'css') {
+        }
+        else if (fileInfo.type === 'css') {
           report.summary.cssFiles++
-        } else {
+        }
+        else {
           report.summary.assetFiles++
         }
       }
@@ -492,15 +506,15 @@ async function generateAnalysisReport(result: any, outDir: string, logger: Logge
     await FileSystem.writeFile(reportPath, JSON.stringify(report, null, 2))
 
     logger.success('构建分析报告已生成', { path: reportPath })
-
-  } catch (error) {
+  }
+  catch (error) {
     logger.warn('生成构建分析报告失败', { error: (error as Error).message })
   }
 }
 
 /**
  * 获取文件类型
- * 
+ *
  * @param fileName - 文件名
  * @returns 文件类型
  */
@@ -509,13 +523,17 @@ function getFileType(fileName: string): string {
 
   if (['.js', '.mjs', '.cjs'].includes(ext)) {
     return 'js'
-  } else if (ext === '.css') {
+  }
+  else if (ext === '.css') {
     return 'css'
-  } else if (['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'].includes(ext)) {
+  }
+  else if (['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'].includes(ext)) {
     return 'image'
-  } else if (['.woff', '.woff2', '.ttf', '.eot'].includes(ext)) {
+  }
+  else if (['.woff', '.woff2', '.ttf', '.eot'].includes(ext)) {
     return 'font'
-  } else {
+  }
+  else {
     return 'asset'
   }
 }

@@ -1,21 +1,21 @@
 /**
  * Lit 框架适配器
- * 
+ *
  * 提供 Lit 项目的自动检测、插件配置和构建支持
- * 
+ *
  * @author LDesign Team
  * @since 2.0.0
  */
 
 import type { Plugin } from 'vite'
-import type {
-  FrameworkDetectionResult,
-  FrameworkDependencies,
-  FrameworkFeatures,
-  FrameworkOptions
-} from '../../types/framework'
-import type { BuildEngine } from '../../types/engine'
 import type { ViteLauncherConfig } from '../../types/config'
+import type { BuildEngine } from '../../types/engine'
+import type {
+  FrameworkDependencies,
+  FrameworkDetectionResult,
+  FrameworkFeatures,
+  FrameworkOptions,
+} from '../../types/framework'
 import { FrameworkAdapter } from '../base/FrameworkAdapter'
 
 /**
@@ -33,7 +33,7 @@ export class LitAdapter extends FrameworkAdapter {
     ssr: true,
     ssg: true,
     hmr: true,
-    fastRefresh: false
+    fastRefresh: false,
   }
 
   /**
@@ -43,7 +43,7 @@ export class LitAdapter extends FrameworkAdapter {
     const evidence: FrameworkDetectionResult['evidence'] = {
       dependencies: [],
       files: [],
-      configFiles: []
+      configFiles: [],
     }
 
     let confidence = 0
@@ -72,7 +72,7 @@ export class LitAdapter extends FrameworkAdapter {
       'src/my-element.ts',
       'src/my-element.js',
       'src/index.ts',
-      'src/index.js'
+      'src/index.js',
     ])
     if (litFiles.length > 0) {
       evidence.files = litFiles
@@ -83,7 +83,7 @@ export class LitAdapter extends FrameworkAdapter {
     const configFiles = await this.findFiles(cwd, [
       'vite.config.ts',
       'vite.config.js',
-      'web-dev-server.config.js'
+      'web-dev-server.config.js',
     ])
     if (configFiles.length > 0) {
       evidence.configFiles = configFiles
@@ -97,17 +97,17 @@ export class LitAdapter extends FrameworkAdapter {
       type: detected ? 'lit' : undefined,
       version: litVersion ? this.parseVersion(litVersion) : undefined,
       confidence,
-      evidence
+      evidence,
     }
   }
 
   /**
    * 获取 Lit 所需的插件
-   * 
+   *
    * Lit 使用原生 Web Components，Vite 原生支持，不需要额外插件
    * 但可以添加一些优化插件
    */
-  async getPlugins(engine: BuildEngine, options?: FrameworkOptions): Promise<Plugin[]> {
+  async getPlugins(engine: BuildEngine, _options?: FrameworkOptions): Promise<Plugin[]> {
     const plugins: Plugin[] = []
 
     // Vite 原生支持 Lit，但可以添加一些优化插件
@@ -120,10 +120,12 @@ export class LitAdapter extends FrameworkAdapter {
         // 插件可能返回单个插件或插件数组
         if (Array.isArray(cssPlugin)) {
           plugins.push(...cssPlugin)
-        } else {
+        }
+        else {
           plugins.push(cssPlugin)
         }
-      } catch (error) {
+      }
+      catch {
         // lit-css 插件是可选的
         this.logger.debug('vite-plugin-lit-css 未安装，使用默认配置')
       }
@@ -135,36 +137,36 @@ export class LitAdapter extends FrameworkAdapter {
   /**
    * 获取 Lit 特定配置
    */
-  getConfig(options?: FrameworkOptions): Partial<ViteLauncherConfig> {
+  getConfig(_options?: FrameworkOptions): Partial<ViteLauncherConfig> {
     return {
       server: {
         port: 3000,
-        open: true
+        open: true,
       },
       build: {
         outDir: 'dist',
         assetsDir: 'assets',
         lib: {
           entry: 'src/index.ts',
-          formats: ['es']
+          formats: ['es'],
         },
         rollupOptions: {
           external: /^lit/,
           output: {
-            manualChunks: undefined
-          }
-        }
+            manualChunks: undefined,
+          },
+        },
       },
       resolve: {
         alias: [
           { find: '@', replacement: '/src' },
-          { find: '~', replacement: '/src' }
+          { find: '~', replacement: '/src' },
         ],
-        extensions: ['.js', '.ts', '.json']
+        extensions: ['.js', '.ts', '.json'],
       },
       optimizeDeps: {
-        include: ['lit', 'lit/decorators.js', 'lit/directives/class-map.js']
-      }
+        include: ['lit', 'lit/decorators.js', 'lit/directives/class-map.js'],
+      },
     }
   }
 
@@ -177,13 +179,13 @@ export class LitAdapter extends FrameworkAdapter {
       devDependencies: [
         '@types/node',
         'typescript',
-        'vite'
+        'vite',
       ],
       optionalDependencies: [
         'vite-plugin-lit-css',
         '@lit/reactive-element',
-        '@lit/localize'
-      ]
+        '@lit/localize',
+      ],
     }
   }
 
@@ -192,10 +194,10 @@ export class LitAdapter extends FrameworkAdapter {
    */
   getScripts(): Record<string, string> {
     return {
-      dev: 'launcher dev',
-      build: 'launcher build',
-      preview: 'launcher preview',
-      'type-check': 'tsc --noEmit'
+      'dev': 'launcher dev',
+      'build': 'launcher build',
+      'preview': 'launcher preview',
+      'type-check': 'tsc --noEmit',
     }
   }
 
@@ -205,8 +207,7 @@ export class LitAdapter extends FrameworkAdapter {
   getEnvConfig(): Record<string, string> {
     return {
       VITE_APP_TITLE: 'Lit App',
-      VITE_APP_VERSION: '1.0.0'
+      VITE_APP_VERSION: '1.0.0',
     }
   }
 }
-

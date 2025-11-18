@@ -1,7 +1,7 @@
 /**
  * 配置合并工具
  * 提供统一、可扩展的配置合并策略
- * 
+ *
  * @author LDesign Team
  * @since 2.1.0
  */
@@ -35,7 +35,7 @@ export interface MergeOptions {
 export class ConfigMerger {
   /**
    * 深度合并配置对象
-   * 
+   *
    * @param target - 目标配置
    * @param source - 源配置
    * @param options - 合并选项
@@ -44,19 +44,23 @@ export class ConfigMerger {
   static deepMerge<T extends Record<string, any>>(
     target: T,
     source: Partial<T>,
-    options: MergeOptions = {}
+    options: MergeOptions = {},
   ): T {
     const {
       arrayMergeStrategy = 'replace',
       customMergers = {},
-      deep = true
+      deep = true,
     } = options
 
     // 处理特殊情况
-    if (!target) return (source || {}) as T
-    if (!source) return target
-    if (typeof source !== 'object' || source === null) return source as T
-    if (typeof target !== 'object' || target === null) return source as T
+    if (!target)
+      return (source || {}) as T
+    if (!source)
+      return target
+    if (typeof source !== 'object' || source === null)
+      return source as T
+    if (typeof target !== 'object' || target === null)
+      return source as T
 
     const result = { ...target } as T
 
@@ -80,7 +84,7 @@ export class ConfigMerger {
           Array.isArray(targetValue) ? targetValue : [],
           sourceValue,
           arrayMergeStrategy,
-          key
+          key,
         ) as any
         continue
       }
@@ -89,7 +93,8 @@ export class ConfigMerger {
       if (deep && this.isPlainObject(sourceValue)) {
         if (this.isPlainObject(targetValue)) {
           result[key] = this.deepMerge(targetValue, sourceValue, options) as any
-        } else {
+        }
+        else {
           result[key] = sourceValue as any
         }
         continue
@@ -104,7 +109,7 @@ export class ConfigMerger {
 
   /**
    * 合并数组
-   * 
+   *
    * @param target - 目标数组
    * @param source - 源数组
    * @param strategy - 合并策略
@@ -115,7 +120,7 @@ export class ConfigMerger {
     target: any[],
     source: any[],
     strategy: ArrayMergeStrategy,
-    key?: string
+    key?: string,
   ): any[] {
     // 特殊处理：resolve.alias 始终使用 concat 策略
     if (key === 'alias') {
@@ -149,28 +154,28 @@ export class ConfigMerger {
 
   /**
    * 浅合并
-   * 
+   *
    * @param target - 目标配置
    * @param source - 源配置
    * @returns 合并后的配置
    */
   static shallowMerge<T extends Record<string, any>>(
     target: T,
-    source: Partial<T>
+    source: Partial<T>,
   ): T {
     return this.deepMerge(target, source, { deep: false })
   }
 
   /**
    * 合并多个配置对象
-   * 
+   *
    * @param configs - 配置对象数组
    * @param options - 合并选项
    * @returns 合并后的配置
    */
   static mergeAll<T extends Record<string, any>>(
     configs: Partial<T>[],
-    options: MergeOptions = {}
+    options: MergeOptions = {},
   ): T {
     if (!configs || configs.length === 0) {
       return {} as T
@@ -192,13 +197,13 @@ export class ConfigMerger {
         customMergers: {
           plugins: (target: any[], source: any[]) => [...(target || []), ...(source || [])],
           alias: (target: any[], source: any[]) => [...(target || []), ...(source || [])],
-          external: (target: any[], source: any[]) => [...new Set([...(target || []), ...(source || [])])]
-        }
+          external: (target: any[], source: any[]) => [...new Set([...(target || []), ...(source || [])])],
+        },
       },
       launcher: {
         arrayMergeStrategy: 'replace' as ArrayMergeStrategy,
-        customMergers: {}
-      }
+        customMergers: {},
+      },
     }
 
     const options = presets[preset]
@@ -215,7 +220,7 @@ export class ConfigMerger {
 export function deepMerge<T extends Record<string, any>>(
   target: T,
   source: Partial<T>,
-  options?: MergeOptions
+  options?: MergeOptions,
 ): T {
   return ConfigMerger.deepMerge(target, source, options)
 }
@@ -225,7 +230,7 @@ export function deepMerge<T extends Record<string, any>>(
  */
 export function shallowMerge<T extends Record<string, any>>(
   target: T,
-  source: Partial<T>
+  source: Partial<T>,
 ): T {
   return ConfigMerger.shallowMerge(target, source)
 }

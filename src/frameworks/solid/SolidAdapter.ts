@@ -1,19 +1,19 @@
 /**
  * Solid.js 框架适配器
- * 
+ *
  * @author LDesign Team
  * @since 2.0.0
  */
 
 import type { Plugin } from 'vite'
-import type {
-  FrameworkDetectionResult,
-  FrameworkDependencies,
-  FrameworkFeatures,
-  FrameworkOptions
-} from '../../types/framework'
-import type { BuildEngine } from '../../types/engine'
 import type { ViteLauncherConfig } from '../../types/config'
+import type { BuildEngine } from '../../types/engine'
+import type {
+  FrameworkDependencies,
+  FrameworkDetectionResult,
+  FrameworkFeatures,
+  FrameworkOptions,
+} from '../../types/framework'
 import { FrameworkAdapter } from '../base/FrameworkAdapter'
 
 export class SolidAdapter extends FrameworkAdapter {
@@ -28,14 +28,14 @@ export class SolidAdapter extends FrameworkAdapter {
     ssr: true,
     ssg: true,
     hmr: true,
-    fastRefresh: true
+    fastRefresh: true,
   }
 
   async detect(cwd: string): Promise<FrameworkDetectionResult> {
     const evidence: FrameworkDetectionResult['evidence'] = {
       dependencies: [],
       files: [],
-      configFiles: []
+      configFiles: [],
     }
 
     let confidence = 0
@@ -64,7 +64,7 @@ export class SolidAdapter extends FrameworkAdapter {
       type: detected ? 'solid' : undefined,
       version: version ? this.parseVersion(version) : undefined,
       confidence,
-      evidence
+      evidence,
     }
   }
 
@@ -78,19 +78,20 @@ export class SolidAdapter extends FrameworkAdapter {
           : undefined
         const plugin = solid(solidOptions)
         // 插件可能返回单个插件或插件数组
-        return Array.isArray(plugin) ? plugin : [plugin]
-      } catch (error) {
+        return (Array.isArray(plugin) ? plugin : [plugin]) as any as Plugin[]
+      }
+      catch {
         throw new Error('请安装 vite-plugin-solid')
       }
     }
     return []
   }
 
-  getConfig(options?: FrameworkOptions): Partial<ViteLauncherConfig> {
+  getConfig(_options?: FrameworkOptions): Partial<ViteLauncherConfig> {
     return {
       server: {
         port: 3000,
-        open: true
+        open: true,
       },
       build: {
         outDir: 'dist',
@@ -99,21 +100,21 @@ export class SolidAdapter extends FrameworkAdapter {
         rollupOptions: {
           output: {
             manualChunks: {
-              solid: ['solid-js']
-            }
-          }
-        }
+              solid: ['solid-js'],
+            },
+          },
+        },
       },
       resolve: {
         alias: [
           { find: '@', replacement: '/src' },
-          { find: '~', replacement: '/src' }
+          { find: '~', replacement: '/src' },
         ],
-        extensions: ['.js', '.ts', '.jsx', '.tsx', '.json']
+        extensions: ['.js', '.ts', '.jsx', '.tsx', '.json'],
       },
       optimizeDeps: {
-        include: ['solid-js', 'solid-js/web']
-      }
+        include: ['solid-js', 'solid-js/web'],
+      },
     }
   }
 
@@ -123,11 +124,11 @@ export class SolidAdapter extends FrameworkAdapter {
       devDependencies: [
         'vite-plugin-solid',
         'typescript',
-        'vite'
+        'vite',
       ],
       optionalDependencies: [
-        '@solidjs/router'
-      ]
+        '@solidjs/router',
+      ],
     }
   }
 
@@ -136,10 +137,10 @@ export class SolidAdapter extends FrameworkAdapter {
    */
   getScripts(): Record<string, string> {
     return {
-      dev: 'launcher dev',
-      build: 'launcher build',
-      preview: 'launcher preview',
-      'type-check': 'tsc --noEmit'
+      'dev': 'launcher dev',
+      'build': 'launcher build',
+      'preview': 'launcher preview',
+      'type-check': 'tsc --noEmit',
     }
   }
 
@@ -149,8 +150,7 @@ export class SolidAdapter extends FrameworkAdapter {
   getEnvConfig(): Record<string, string> {
     return {
       VITE_APP_TITLE: 'Solid App',
-      VITE_APP_VERSION: '1.0.0'
+      VITE_APP_VERSION: '1.0.0',
     }
   }
 }
-

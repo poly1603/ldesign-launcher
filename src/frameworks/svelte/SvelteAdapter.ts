@@ -1,19 +1,19 @@
 /**
  * Svelte 框架适配器
- * 
+ *
  * @author LDesign Team
  * @since 2.0.0
  */
 
 import type { Plugin } from 'vite'
-import type {
-  FrameworkDetectionResult,
-  FrameworkDependencies,
-  FrameworkFeatures,
-  FrameworkOptions
-} from '../../types/framework'
-import type { BuildEngine } from '../../types/engine'
 import type { ViteLauncherConfig } from '../../types/config'
+import type { BuildEngine } from '../../types/engine'
+import type {
+  FrameworkDependencies,
+  FrameworkDetectionResult,
+  FrameworkFeatures,
+  FrameworkOptions,
+} from '../../types/framework'
 import { FrameworkAdapter } from '../base/FrameworkAdapter'
 
 export class SvelteAdapter extends FrameworkAdapter {
@@ -28,14 +28,14 @@ export class SvelteAdapter extends FrameworkAdapter {
     ssr: true,
     ssg: true,
     hmr: true,
-    fastRefresh: true
+    fastRefresh: true,
   }
 
   async detect(cwd: string): Promise<FrameworkDetectionResult> {
     const evidence: FrameworkDetectionResult['evidence'] = {
       dependencies: [],
       files: [],
-      configFiles: []
+      configFiles: [],
     }
 
     let confidence = 0
@@ -64,7 +64,7 @@ export class SvelteAdapter extends FrameworkAdapter {
       type: detected ? 'svelte' : undefined,
       version: version ? this.parseVersion(version) : undefined,
       confidence,
-      evidence
+      evidence,
     }
   }
 
@@ -75,7 +75,8 @@ export class SvelteAdapter extends FrameworkAdapter {
         // svelte() function is the named export, not default
         const { svelte } = sveltePlugin as any
         return svelte(options?.options || {})
-      } catch (error) {
+      }
+      catch (error) {
         this.logger.error('加载 Svelte 插件失败', error)
         throw new Error('请安装 @sveltejs/vite-plugin-svelte: npm install -D @sveltejs/vite-plugin-svelte')
       }
@@ -83,11 +84,11 @@ export class SvelteAdapter extends FrameworkAdapter {
     return []
   }
 
-  getConfig(options?: FrameworkOptions): Partial<ViteLauncherConfig> {
+  getConfig(_options?: FrameworkOptions): Partial<ViteLauncherConfig> {
     return {
       server: {
         port: 5173,
-        open: true
+        open: true,
       },
       build: {
         outDir: 'dist',
@@ -95,21 +96,21 @@ export class SvelteAdapter extends FrameworkAdapter {
         rollupOptions: {
           output: {
             manualChunks: {
-              svelte: ['svelte']
-            }
-          }
-        }
+              svelte: ['svelte'],
+            },
+          },
+        },
       },
       resolve: {
         alias: [
           { find: '@', replacement: '/src' },
-          { find: '~', replacement: '/src' }
+          { find: '~', replacement: '/src' },
         ],
-        extensions: ['.svelte', '.js', '.ts', '.json']
+        extensions: ['.svelte', '.js', '.ts', '.json'],
       },
       optimizeDeps: {
-        include: ['svelte']
-      }
+        include: ['svelte'],
+      },
     }
   }
 
@@ -119,11 +120,11 @@ export class SvelteAdapter extends FrameworkAdapter {
       devDependencies: [
         '@sveltejs/vite-plugin-svelte',
         'svelte-check',
-        'vite'
+        'vite',
       ],
       optionalDependencies: [
-        '@sveltejs/kit'
-      ]
+        '@sveltejs/kit',
+      ],
     }
   }
 
@@ -135,7 +136,7 @@ export class SvelteAdapter extends FrameworkAdapter {
       dev: 'launcher dev',
       build: 'launcher build',
       preview: 'launcher preview',
-      check: 'svelte-check --tsconfig ./tsconfig.json'
+      check: 'svelte-check --tsconfig ./tsconfig.json',
     }
   }
 
@@ -145,8 +146,7 @@ export class SvelteAdapter extends FrameworkAdapter {
   getEnvConfig(): Record<string, string> {
     return {
       VITE_APP_TITLE: 'Svelte App',
-      VITE_APP_VERSION: '1.0.0'
+      VITE_APP_VERSION: '1.0.0',
     }
   }
 }
-

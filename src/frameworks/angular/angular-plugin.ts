@@ -1,7 +1,7 @@
 /**
  * 简单的 Angular Vite 插件
  * 用于替代 @analogjs/vite-plugin-angular (不兼容 Vite 7)
- * 
+ *
  * 功能:
  * - 处理 Angular 组件的 TypeScript 编译
  * - 支持 Angular 装饰器
@@ -9,6 +9,9 @@
  */
 
 import type { Plugin } from 'vite'
+import { Logger } from '../../utils/logger'
+
+const angularLogger = new Logger('AngularPlugin')
 
 export interface AngularPluginOptions {
   /**
@@ -20,7 +23,7 @@ export interface AngularPluginOptions {
 /**
  * 创建 Angular Vite 插件
  */
-export function angularPlugin(options: AngularPluginOptions = {}): Plugin {
+export function angularPlugin(_options: AngularPluginOptions = {}): Plugin {
   return {
     name: 'vite-plugin-angular',
 
@@ -56,10 +59,9 @@ export function angularPlugin(options: AngularPluginOptions = {}): Plugin {
       }
     },
 
-    configResolved(config) {
-      console.log('[AngularPlugin] Angular 插件已加载')
-      console.log('[AngularPlugin] 装饰器支持已启用')
+    configResolved(_config) {
+      angularLogger.info('[AngularPlugin] Angular 插件已加载')
+      angularLogger.info('[AngularPlugin] 装饰器支持已启用')
     },
   }
 }
-

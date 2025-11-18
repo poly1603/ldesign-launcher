@@ -1,18 +1,18 @@
 /**
  * 构建引擎注册中心
- * 
+ *
  * 管理所有可用的构建引擎，提供引擎的注册、查询和创建功能
- * 
+ *
  * @author LDesign Team
  * @since 2.0.0
  */
 
-import type { 
-  BuildEngine, 
-  BuildEngineType, 
+import type {
+  BuildEngine,
   BuildEngineFactory,
   BuildEngineOptions,
-  EngineMetadata 
+  BuildEngineType,
+  EngineMetadata,
 } from '../types/engine'
 import { Logger } from '../utils/logger'
 
@@ -22,10 +22,10 @@ import { Logger } from '../utils/logger'
 interface EngineRegistration {
   /** 引擎元数据 */
   metadata: EngineMetadata
-  
+
   /** 引擎工厂 */
   factory: BuildEngineFactory
-  
+
   /** 是否为默认引擎 */
   isDefault: boolean
 }
@@ -55,7 +55,7 @@ export class EngineRegistry {
 
   /**
    * 注册构建引擎
-   * 
+   *
    * @param type - 引擎类型
    * @param factory - 引擎工厂
    * @param metadata - 引擎元数据
@@ -65,7 +65,7 @@ export class EngineRegistry {
     type: BuildEngineType,
     factory: BuildEngineFactory,
     metadata: EngineMetadata,
-    isDefault = false
+    isDefault = false,
   ): void {
     if (this.engines.has(type)) {
       this.logger.warn(`引擎 "${type}" 已注册，将被覆盖`)
@@ -74,7 +74,7 @@ export class EngineRegistry {
     this.engines.set(type, {
       metadata,
       factory,
-      isDefault
+      isDefault,
     })
 
     if (isDefault) {
@@ -87,7 +87,7 @@ export class EngineRegistry {
 
   /**
    * 注销构建引擎
-   * 
+   *
    * @param type - 引擎类型
    */
   unregister(type: BuildEngineType): void {
@@ -111,7 +111,7 @@ export class EngineRegistry {
 
   /**
    * 检查引擎是否已注册
-   * 
+   *
    * @param type - 引擎类型
    * @returns 是否已注册
    */
@@ -121,7 +121,7 @@ export class EngineRegistry {
 
   /**
    * 获取引擎元数据
-   * 
+   *
    * @param type - 引擎类型
    * @returns 引擎元数据
    */
@@ -131,7 +131,7 @@ export class EngineRegistry {
 
   /**
    * 获取所有已注册的引擎类型
-   * 
+   *
    * @returns 引擎类型列表
    */
   getRegisteredEngines(): BuildEngineType[] {
@@ -140,7 +140,7 @@ export class EngineRegistry {
 
   /**
    * 获取所有引擎的元数据
-   * 
+   *
    * @returns 元数据列表
    */
   getAllMetadata(): EngineMetadata[] {
@@ -149,7 +149,7 @@ export class EngineRegistry {
 
   /**
    * 获取默认引擎类型
-   * 
+   *
    * @returns 默认引擎类型
    */
   getDefaultEngine(): BuildEngineType {
@@ -158,7 +158,7 @@ export class EngineRegistry {
 
   /**
    * 设置默认引擎
-   * 
+   *
    * @param type - 引擎类型
    */
   setDefaultEngine(type: BuildEngineType): void {
@@ -172,21 +172,21 @@ export class EngineRegistry {
 
   /**
    * 创建引擎实例
-   * 
+   *
    * @param type - 引擎类型（可选，默认使用默认引擎）
    * @param options - 引擎选项
    * @returns 引擎实例
    */
   async createEngine(
     type?: BuildEngineType,
-    options?: BuildEngineOptions
+    options?: BuildEngineOptions,
   ): Promise<BuildEngine> {
     const engineType = type || this.defaultEngine
 
     const registration = this.engines.get(engineType)
     if (!registration) {
       throw new Error(
-        `引擎 "${engineType}" 未注册。已注册的引擎: ${this.getRegisteredEngines().join(', ')}`
+        `引擎 "${engineType}" 未注册。已注册的引擎: ${this.getRegisteredEngines().join(', ')}`,
       )
     }
 
@@ -194,7 +194,7 @@ export class EngineRegistry {
     const isAvailable = await registration.factory.isAvailable()
     if (!isAvailable) {
       throw new Error(
-        `引擎 "${engineType}" 不可用。请确保已安装所需依赖: ${registration.metadata.dependencies.join(', ')}`
+        `引擎 "${engineType}" 不可用。请确保已安装所需依赖: ${registration.metadata.dependencies.join(', ')}`,
       )
     }
 
@@ -204,7 +204,7 @@ export class EngineRegistry {
 
   /**
    * 检查引擎是否可用
-   * 
+   *
    * @param type - 引擎类型
    * @returns 是否可用
    */
@@ -240,7 +240,7 @@ export function registerEngine(
   type: BuildEngineType,
   factory: BuildEngineFactory,
   metadata: EngineMetadata,
-  isDefault = false
+  isDefault = false,
 ): void {
   getEngineRegistry().register(type, factory, metadata, isDefault)
 }
@@ -250,8 +250,7 @@ export function registerEngine(
  */
 export async function createEngine(
   type?: BuildEngineType,
-  options?: BuildEngineOptions
+  options?: BuildEngineOptions,
 ): Promise<BuildEngine> {
   return getEngineRegistry().createEngine(type, options)
 }
-

@@ -1,6 +1,6 @@
 /**
  * Lit 框架适配器导出
- * 
+ *
  * @author LDesign Team
  * @since 2.0.0
  */
@@ -12,7 +12,7 @@ import { LitAdapter } from './LitAdapter'
  * Lit 适配器工厂
  */
 export const litAdapterFactory: FrameworkAdapterFactory = {
-  async create(options) {
+  async create(_options) {
     const adapter = new LitAdapter()
     await adapter.initialize()
     return adapter
@@ -22,8 +22,7 @@ export const litAdapterFactory: FrameworkAdapterFactory = {
     const adapter = new LitAdapter()
     const result = await adapter.detect(cwd)
     return result.detected
-  }
+  },
 }
 
 export { LitAdapter }
-

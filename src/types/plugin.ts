@@ -1,16 +1,16 @@
 /**
  * 插件系统类型定义（为后续 plugin 包预留）
- * 
+ *
  * 定义插件系统的接口和类型，为后续的 @ldesign/plugin 包预留扩展空间
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
 
 import type { Plugin as VitePlugin } from 'vite'
+import type { AsyncResult, ValidationResult } from './common'
 import type { ViteLauncherConfig } from './config'
 import type { IViteLauncher } from './launcher'
-import type { ValidationResult, AsyncResult } from './common'
 
 /**
  * Launcher 插件接口
@@ -27,13 +27,13 @@ export interface LauncherPlugin extends Omit<VitePlugin, 'config'> {
   hooks?: PluginHooks
 
   /** 插件初始化方法 */
-  init?(launcher: IViteLauncher): Promise<void> | void
+  init?: (launcher: IViteLauncher) => Promise<void> | void
 
   /** 插件销毁方法 */
-  destroy?(): Promise<void> | void
+  destroy?: () => Promise<void> | void
 
   /** 插件配置验证方法 */
-  validateConfig?(config: any): ValidationResult
+  validateConfig?: (config: any) => ValidationResult
 }
 
 /**
@@ -102,34 +102,34 @@ export interface PluginConfig {
  */
 export interface PluginHooks {
   /** 插件加载前钩子 */
-  beforeLoad?(): Promise<void> | void
+  beforeLoad?: () => Promise<void> | void
 
   /** 插件加载后钩子 */
-  afterLoad?(): Promise<void> | void
+  afterLoad?: () => Promise<void> | void
 
   /** 配置解析前钩子 */
-  beforeConfigResolved?(config: ViteLauncherConfig): Promise<ViteLauncherConfig> | ViteLauncherConfig
+  beforeConfigResolved?: (config: ViteLauncherConfig) => Promise<ViteLauncherConfig> | ViteLauncherConfig
 
   /** 配置解析后钩子 */
-  afterConfigResolved?(config: ViteLauncherConfig): Promise<void> | void
+  afterConfigResolved?: (config: ViteLauncherConfig) => Promise<void> | void
 
   /** 服务器启动前钩子 */
-  beforeServerStart?(): Promise<void> | void
+  beforeServerStart?: () => Promise<void> | void
 
   /** 服务器启动后钩子 */
-  afterServerStart?(): Promise<void> | void
+  afterServerStart?: () => Promise<void> | void
 
   /** 构建开始前钩子 */
-  beforeBuildStart?(): Promise<void> | void
+  beforeBuildStart?: () => Promise<void> | void
 
   /** 构建完成后钩子 */
-  afterBuildEnd?(): Promise<void> | void
+  afterBuildEnd?: () => Promise<void> | void
 
   /** 插件卸载前钩子 */
-  beforeUnload?(): Promise<void> | void
+  beforeUnload?: () => Promise<void> | void
 
   /** 插件卸载后钩子 */
-  afterUnload?(): Promise<void> | void
+  afterUnload?: () => Promise<void> | void
 }
 
 /**
@@ -138,34 +138,34 @@ export interface PluginHooks {
  */
 export interface IPluginManager {
   /** 注册插件 */
-  register(plugin: LauncherPlugin): Promise<AsyncResult>
+  register: (plugin: LauncherPlugin) => Promise<AsyncResult>
 
   /** 卸载插件 */
-  unregister(pluginName: string): Promise<AsyncResult>
+  unregister: (pluginName: string) => Promise<AsyncResult>
 
   /** 启用插件 */
-  enable(pluginName: string): Promise<AsyncResult>
+  enable: (pluginName: string) => Promise<AsyncResult>
 
   /** 禁用插件 */
-  disable(pluginName: string): Promise<AsyncResult>
+  disable: (pluginName: string) => Promise<AsyncResult>
 
   /** 获取插件列表 */
-  getPlugins(): LauncherPlugin[]
+  getPlugins: () => LauncherPlugin[]
 
   /** 获取已启用的插件列表 */
-  getEnabledPlugins(): LauncherPlugin[]
+  getEnabledPlugins: () => LauncherPlugin[]
 
   /** 获取插件信息 */
-  getPluginInfo(pluginName: string): PluginInfo | null
+  getPluginInfo: (pluginName: string) => PluginInfo | null
 
   /** 验证插件 */
-  validatePlugin(plugin: LauncherPlugin): ValidationResult
+  validatePlugin: (plugin: LauncherPlugin) => ValidationResult
 
   /** 解析插件依赖 */
-  resolveDependencies(): Promise<AsyncResult>
+  resolveDependencies: () => Promise<AsyncResult>
 
   /** 清理插件缓存 */
-  clearCache(): Promise<void>
+  clearCache: () => Promise<void>
 }
 
 /**
@@ -276,7 +276,7 @@ export enum PluginStatus {
   /** 损坏 */
   CORRUPTED = 'corrupted',
   /** 错误状态 */
-  ERROR = 'error'
+  ERROR = 'error',
 }
 
 /**
@@ -324,19 +324,19 @@ export interface PluginRegistrationOptions {
  */
 export interface IPluginLoader {
   /** 从文件加载插件 */
-  loadFromFile(filePath: string): Promise<LauncherPlugin>
+  loadFromFile: (filePath: string) => Promise<LauncherPlugin>
 
   /** 从模块加载插件 */
-  loadFromModule(moduleName: string): Promise<LauncherPlugin>
+  loadFromModule: (moduleName: string) => Promise<LauncherPlugin>
 
   /** 从配置加载插件 */
-  loadFromConfig(config: PluginConfig): Promise<LauncherPlugin>
+  loadFromConfig: (config: PluginConfig) => Promise<LauncherPlugin>
 
   /** 批量加载插件 */
-  loadBatch(sources: (string | PluginConfig)[]): Promise<LauncherPlugin[]>
+  loadBatch: (sources: (string | PluginConfig)[]) => Promise<LauncherPlugin[]>
 
   /** 验证插件文件 */
-  validatePluginFile(filePath: string): ValidationResult
+  validatePluginFile: (filePath: string) => ValidationResult
 }
 
 /**
@@ -355,7 +355,7 @@ export enum PluginEvent {
   /** 插件错误事件 */
   PLUGIN_ERROR = 'pluginError',
   /** 插件加载事件 */
-  PLUGIN_LOADED = 'pluginLoaded'
+  PLUGIN_LOADED = 'pluginLoaded',
 }
 
 /**

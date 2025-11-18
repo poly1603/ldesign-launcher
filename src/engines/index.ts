@@ -1,18 +1,18 @@
 /**
  * 构建引擎模块统一导出
- * 
+ *
  * @author LDesign Team
  * @since 2.0.0
  */
 
 // 导出基类
+// 导出引擎元数据
+import type { EngineMetadata } from '../types/engine'
+
 export * from './base'
 
 // 导出 Vite 引擎
 export * from './vite'
-
-// 导出引擎元数据
-import type { EngineMetadata } from '../types/engine'
 
 /**
  * Vite 引擎元数据
@@ -27,8 +27,8 @@ export const VITE_ENGINE_METADATA: EngineMetadata = {
     hmr: true,
     ssr: true,
     codeSplitting: true,
-    treeShaking: true
-  }
+    treeShaking: true,
+  },
 }
 
 /**
@@ -43,7 +43,6 @@ export async function registerAllEngines(): Promise<void> {
     'vite',
     createViteEngineFactory(),
     VITE_ENGINE_METADATA,
-    true // 设为默认引擎
+    true, // 设为默认引擎
   )
 }
-

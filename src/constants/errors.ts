@@ -1,8 +1,8 @@
 /**
  * 错误常量定义
- * 
+ *
  * 定义各种错误代码和错误类型
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
@@ -230,7 +230,7 @@ export enum ErrorCode {
   /** 版本信息获取失败 */
   VERSION_INFO_FAILED = 1908,
   /** CLI 初始化失败 */
-  CLI_INIT_FAILED = 1909
+  CLI_INIT_FAILED = 1909,
 }
 
 /**
@@ -291,7 +291,7 @@ export const ERROR_TYPES = {
   [ErrorCode.PLUGIN_CONFLICT]: 'PluginConflictError',
   [ErrorCode.PLUGIN_NOT_FOUND]: 'PluginNotFoundError',
   [ErrorCode.PLUGIN_PERMISSION_ERROR]: 'PluginPermissionError',
-  [ErrorCode.PLUGIN_UNLOAD_FAILED]: 'PluginUnloadError'
+  [ErrorCode.PLUGIN_UNLOAD_FAILED]: 'PluginUnloadError',
 } as const
 
 /**
@@ -305,7 +305,7 @@ export enum ErrorSeverity {
   /** 高级别 - 影响核心功能 */
   HIGH = 'high',
   /** 严重级别 - 系统无法正常运行 */
-  CRITICAL = 'critical'
+  CRITICAL = 'critical',
 }
 
 /**
@@ -329,7 +329,7 @@ export enum ErrorCategory {
   /** 构建错误 */
   BUILD = 'build',
   /** 性能错误 */
-  PERFORMANCE = 'performance'
+  PERFORMANCE = 'performance',
 }
 
 /**
@@ -347,5 +347,5 @@ export enum ErrorRecoveryStrategy {
   /** 用户干预 */
   USER_INTERVENTION = 'user_intervention',
   /** 系统重置 */
-  SYSTEM_RESET = 'system_reset'
+  SYSTEM_RESET = 'system_reset',
 }

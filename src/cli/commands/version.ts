@@ -1,17 +1,17 @@
 /**
  * Version 命令实现
- * 
+ *
  * 显示版本信息命令
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
 
-import { Logger } from '../../utils/logger'
-import { FileSystem } from '../../utils/file-system'
-import { PathUtils } from '../../utils/path-utils'
 import type { CliCommandDefinition, CliContext } from '../../types'
 import os from 'node:os'
+import { FileSystem } from '../../utils/file-system'
+import { Logger } from '../../utils/logger'
+import { PathUtils } from '../../utils/path-utils'
 
 /**
  * Version 命令类
@@ -28,55 +28,57 @@ export class VersionCommand implements CliCommandDefinition {
       alias: 'j',
       description: '以 JSON 格式输出版本信息',
       type: 'boolean' as const,
-      default: false
+      default: false,
     },
     {
       name: 'verbose',
       alias: 'V',
       description: '显示详细的版本信息',
       type: 'boolean' as const,
-      default: false
-    }
+      default: false,
+    },
   ]
 
   examples = [
     {
       description: '显示版本号',
-      command: 'launcher version'
+      command: 'launcher version',
     },
     {
       description: '显示详细版本信息',
-      command: 'launcher version --verbose'
+      command: 'launcher version --verbose',
     },
     {
       description: '以 JSON 格式输出版本信息',
-      command: 'launcher version --json'
-    }
+      command: 'launcher version --json',
+    },
   ]
 
   /**
    * 执行命令
-   * 
+   *
    * @param context - CLI 上下文
    */
   async handler(context: CliContext): Promise<void> {
     const logger = new Logger('version', {
       level: 'info',
-      colors: context.terminal.supportsColor && !context.options.json
+      colors: context.terminal.supportsColor && !context.options.json,
     })
 
     try {
       const versionInfo = await this.getVersionInfo(context.cwd)
 
       if (context.options.json) {
-        console.log(JSON.stringify(versionInfo, null, 2))
-      } else if (context.options.verbose) {
+        logger.raw(JSON.stringify(versionInfo, null, 2))
+      }
+      else if (context.options.verbose) {
         this.showVerboseVersion(versionInfo, logger)
-      } else {
+      }
+      else {
         this.showSimpleVersion(versionInfo, logger)
       }
-
-    } catch (error) {
+    }
+    catch (error) {
       logger.error('获取版本信息失败', { error: (error as Error).message })
       process.exit(1)
     }
@@ -90,7 +92,7 @@ export class VersionCommand implements CliCommandDefinition {
       launcher: '1.0.0',
       node: process.version,
       platform: process.platform,
-      arch: process.arch
+      arch: process.arch,
     }
 
     try {
@@ -100,7 +102,8 @@ export class VersionCommand implements CliCommandDefinition {
         const packageJson = JSON.parse(await FileSystem.readFile(packageJsonPath, { encoding: 'utf-8' }))
         versionInfo.launcher = packageJson.version || '1.0.0'
       }
-    } catch (error) {
+    }
+    catch {
       // 忽略错误，使用默认版本
     }
 
@@ -111,7 +114,8 @@ export class VersionCommand implements CliCommandDefinition {
         const vitePackage = JSON.parse(await FileSystem.readFile(vitePackagePath, { encoding: 'utf-8' }))
         versionInfo.vite = vitePackage.version
       }
-    } catch (error) {
+    }
+    catch {
       // Vite 可能未安装
     }
 
@@ -128,7 +132,8 @@ export class VersionCommand implements CliCommandDefinition {
       if (process.env.YARN_VERSION) {
         versionInfo.yarn = process.env.YARN_VERSION
       }
-    } catch (error) {
+    }
+    catch {
       // 忽略错误
     }
 
@@ -139,9 +144,10 @@ export class VersionCommand implements CliCommandDefinition {
         arch: process.arch,
         release: os.release(),
         cpus: os.cpus().length,
-        memory: Math.round(os.totalmem() / 1024 / 1024 / 1024) + 'GB'
+        memory: `${Math.round(os.totalmem() / 1024 / 1024 / 1024)}GB`,
       }
-    } catch (error) {
+    }
+    catch {
       // 忽略错误
     }
 
@@ -172,10 +178,10 @@ export class VersionCommand implements CliCommandDefinition {
 
     // 核心版本
     logger.info(this.colorize('核心版本:', 'yellow'))
-    logger.info(`  launcher: ${this.colorize('v' + versionInfo.launcher, 'green')}`)
+    logger.info(`  launcher: ${this.colorize(`v${versionInfo.launcher}`, 'green')}`)
 
     if (versionInfo.vite) {
-      logger.info(`  vite:     ${this.colorize('v' + versionInfo.vite, 'green')}`)
+      logger.info(`  vite:     ${this.colorize(`v${versionInfo.vite}`, 'green')}`)
     }
 
     logger.info(`  node:     ${this.colorize(versionInfo.node, 'green')}`)
@@ -185,15 +191,15 @@ export class VersionCommand implements CliCommandDefinition {
     logger.info(this.colorize('包管理器:', 'yellow'))
 
     if (versionInfo.npm) {
-      logger.info(`  npm:      ${this.colorize('v' + versionInfo.npm, 'green')}`)
+      logger.info(`  npm:      ${this.colorize(`v${versionInfo.npm}`, 'green')}`)
     }
 
     if (versionInfo.pnpm) {
-      logger.info(`  pnpm:     ${this.colorize('v' + versionInfo.pnpm, 'green')}`)
+      logger.info(`  pnpm:     ${this.colorize(`v${versionInfo.pnpm}`, 'green')}`)
     }
 
     if (versionInfo.yarn) {
-      logger.info(`  yarn:     ${this.colorize('v' + versionInfo.yarn, 'green')}`)
+      logger.info(`  yarn:     ${this.colorize(`v${versionInfo.yarn}`, 'green')}`)
     }
 
     if (!versionInfo.npm && !versionInfo.pnpm && !versionInfo.yarn) {
@@ -208,7 +214,7 @@ export class VersionCommand implements CliCommandDefinition {
       logger.info(`  平台:     ${this.colorize(versionInfo.system.platform, 'green')}`)
       logger.info(`  架构:     ${this.colorize(versionInfo.system.arch, 'green')}`)
       logger.info(`  版本:     ${this.colorize(versionInfo.system.release, 'green')}`)
-      logger.info(`  CPU:      ${this.colorize(versionInfo.system.cpus + ' 核', 'green')}`)
+      logger.info(`  CPU:      ${this.colorize(`${versionInfo.system.cpus} 核`, 'green')}`)
       logger.info(`  内存:     ${this.colorize(versionInfo.system.memory, 'green')}`)
       logger.info('')
     }
@@ -237,15 +243,15 @@ export class VersionCommand implements CliCommandDefinition {
   private colorize(text: string, color: string): string {
     // 简单的颜色映射
     const colors: Record<string, string> = {
-      red: '\x1b[31m',
-      green: '\x1b[32m',
-      yellow: '\x1b[33m',
-      blue: '\x1b[34m',
-      magenta: '\x1b[35m',
-      cyan: '\x1b[36m',
-      white: '\x1b[37m',
-      gray: '\x1b[90m',
-      reset: '\x1b[0m'
+      red: '\x1B[31m',
+      green: '\x1B[32m',
+      yellow: '\x1B[33m',
+      blue: '\x1B[34m',
+      magenta: '\x1B[35m',
+      cyan: '\x1B[36m',
+      white: '\x1B[37m',
+      gray: '\x1B[90m',
+      reset: '\x1B[0m',
     }
 
     const colorCode = colors[color] || colors.white

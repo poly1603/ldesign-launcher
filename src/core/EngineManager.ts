@@ -1,22 +1,22 @@
 /**
  * 构建引擎管理器
- * 
+ *
  * 支持多引擎抽象，当前实现 Vite 引擎
- * 
+ *
  * @author LDesign Team
  * @since 1.1.0
  */
 
 import type { RollupOutput, RollupWatcher } from 'rollup'
-import type { Logger } from '../utils/logger'
 import type { ViteLauncherConfig } from '../types'
+import type { Logger } from '../utils/logger'
 
 export type BuildEngineType = 'vite' | 'webpack' | 'rollup'
 
 export interface BuildEngine {
   type: BuildEngineType
-  build(config: any): Promise<RollupOutput | any>
-  buildWatch?(config: any): Promise<RollupWatcher | any>
+  build: (config: any) => Promise<RollupOutput | any>
+  buildWatch?: (config: any) => Promise<RollupWatcher | any>
 }
 
 export interface EngineManagerOptions {
@@ -26,7 +26,7 @@ export interface EngineManagerOptions {
 
 /**
  * 构建引擎管理器
- * 
+ *
  * 管理不同的构建引擎（Vite, Webpack, Rollup等）
  */
 export class EngineManager {
@@ -57,15 +57,15 @@ export class EngineManager {
       buildWatch: async (config: ViteLauncherConfig): Promise<RollupWatcher> => {
         this.logger.info('正在启动 Vite 监听模式构建...')
         const { build } = viteModule
-        
+
         // 启用监听模式
         if (!config.build) {
           config.build = {}
         }
         config.build.watch = {}
-        
+
         return await build(config) as RollupWatcher
-      }
+      },
     }
 
     this.currentEngine = engine
@@ -142,18 +142,18 @@ export class EngineManager {
 
 /**
  * 未来可扩展的其他引擎实现示例
- * 
+ *
  * export class WebpackEngine implements BuildEngine {
  *   type: BuildEngineType = 'webpack'
- *   
+ *
  *   async build(config: any): Promise<any> {
  *     // Webpack 构建逻辑
  *   }
  * }
- * 
+ *
  * export class RollupEngine implements BuildEngine {
  *   type: BuildEngineType = 'rollup'
- *   
+ *
  *   async build(config: any): Promise<any> {
  *     // Rollup 构建逻辑
  *   }

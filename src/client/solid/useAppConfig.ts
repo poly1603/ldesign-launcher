@@ -1,10 +1,10 @@
 /**
  * Solid.js Hook - useAppConfig
- * 
+ *
  * 使用方式：
  * ```tsx
  * import { useAppConfig } from '@ldesign/launcher/client/solid'
- * 
+ *
  * function MyComponent() {
  *   const { config, environment } = useAppConfig()
  *   return <div>{config().app.name}</div>
@@ -12,18 +12,20 @@
  * ```
  */
 
-import { createSignal, onMount, onCleanup, Accessor } from 'solid-js'
-import { appConfigManager, AppConfig } from '../app-config'
+import type { Accessor } from 'solid-js'
+import type { AppConfig } from '../app-config'
+import { createSignal, onCleanup, onMount } from 'solid-js'
+import { appConfigManager } from '../app-config'
 
 /**
  * useAppConfig Hook 返回值类型
- * 
+ *
  * @interface UseAppConfigReturn
  */
 export interface UseAppConfigReturn {
   /** 应用配置对象（Signal） */
   config: Accessor<AppConfig>
-  
+
   /** 环境信息（Signal） */
   environment: Accessor<{
     /** 当前运行模式 (development/production/test) */
@@ -37,9 +39,9 @@ export interface UseAppConfigReturn {
 
 /**
  * Solid.js Hook 获取应用配置
- * 
+ *
  * 提供响应式的应用配置访问，当配置更新时自动触发组件更新。
- * 
+ *
  * @returns {UseAppConfigReturn} Signal 配置对象和环境信息
  */
 export function useAppConfig(): UseAppConfigReturn {
@@ -58,7 +60,6 @@ export function useAppConfig(): UseAppConfigReturn {
 
   return {
     config,
-    environment
+    environment,
   }
 }
-

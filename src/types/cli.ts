@@ -1,13 +1,13 @@
 /**
  * CLI 相关类型定义
- * 
+ *
  * 定义命令行工具的相关类型和接口
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
 
-import type { LogLevel, Mode, FilePath, Host, Port } from './common'
+import type { FilePath, Host, LogLevel, Mode, Port } from './common'
 
 /**
  * CLI 命令枚举
@@ -25,7 +25,7 @@ export enum CliCommand {
   /** 显示帮助信息 */
   HELP = 'help',
   /** 显示版本信息 */
-  VERSION = 'version'
+  VERSION = 'version',
 }
 
 /**
@@ -34,139 +34,139 @@ export enum CliCommand {
  */
 export interface CliOptions {
   /** 配置文件路径 */
-  config?: FilePath
+  'config'?: FilePath
 
   /** 运行模式 */
-  mode?: Mode
+  'mode'?: Mode
 
   /** 环境名称 */
-  environment?: string
+  'environment'?: string
 
   /** 端口号 */
-  port?: Port
+  'port'?: Port
 
   /** 主机地址 */
-  host?: Host
+  'host'?: Host
 
   /** 是否自动打开浏览器 */
-  open?: boolean | string
+  'open'?: boolean | string
 
   /** 是否强制重新构建依赖 */
-  force?: boolean
+  'force'?: boolean
 
   /** 是否启用调试模式 */
-  debug?: boolean
+  'debug'?: boolean
 
   /** 是否启用静默模式 */
-  silent?: boolean
+  'silent'?: boolean
 
   /** 日志级别 */
-  logLevel?: LogLevel
+  'logLevel'?: LogLevel
 
   /** 输出目录 */
-  outDir?: FilePath
+  'outDir'?: FilePath
 
   /** 是否生成 sourcemap */
-  sourcemap?: boolean
+  'sourcemap'?: boolean
 
   /** 是否压缩代码 */
-  minify?: boolean
+  'minify'?: boolean
 
   /** 是否启用监听模式 */
-  watch?: boolean
+  'watch'?: boolean
 
   /** 是否清空输出目录 */
-  emptyOutDir?: boolean
+  'emptyOutDir'?: boolean
 
   /** 构建目标 */
-  target?: string
+  'target'?: string
 
   /** 是否生成构建报告 */
-  report?: boolean
+  'report'?: boolean
 
   /** 是否启用 HTTPS */
-  https?: boolean
+  'https'?: boolean
 
   /** 工作目录 */
-  cwd?: FilePath
+  'cwd'?: FilePath
 
   /** 环境变量 */
-  env?: Record<string, string>
+  'env'?: Record<string, string>
 
   /** 是否启用 CORS */
-  cors?: boolean
+  'cors'?: boolean
 
   /** 是否严格端口模式 */
-  strictPort?: boolean
+  'strictPort'?: boolean
 
   /** 是否输出 JSON 格式 */
-  json?: boolean
+  'json'?: boolean
 
   /** 是否显示详细信息 */
-  verbose?: boolean
+  'verbose'?: boolean
 
   /** 是否启用 SSR 模式 */
-  ssr?: boolean
+  'ssr'?: boolean
 
   /** 是否分析构建产物 */
-  analyze?: boolean
+  'analyze'?: boolean
 
   /** 是否显示所有信息 */
-  all?: boolean
+  'all'?: boolean
 
   /** 是否美化输出格式 */
-  pretty?: boolean
+  'pretty'?: boolean
 
   /** 是否清除屏幕 */
-  clearScreen?: boolean
+  'clearScreen'?: boolean
 
   /** 插件类别过滤 */
-  category?: string
+  'category'?: string
 
   /** 插件类型过滤 */
-  type?: string
+  'type'?: string
 
   /** 是否只显示官方插件 */
-  official?: boolean
+  'official'?: boolean
 
   /** 是否只显示已安装插件 */
-  installed?: boolean
+  'installed'?: boolean
 
   /** 排序方式 */
-  sort?: string
+  'sort'?: string
 
   /** 排序顺序 */
-  order?: 'asc' | 'desc'
+  'order'?: 'asc' | 'desc'
 
   /** 限制数量 */
-  limit?: string
+  'limit'?: string
 
   /** 指定版本 */
-  version?: string
+  'version'?: string
 
   /** 开发依赖模式 */
-  dev?: boolean
+  'dev'?: boolean
 
   /** 包管理器 */
-  pm?: 'npm' | 'pnpm' | 'yarn'
+  'pm'?: 'npm' | 'pnpm' | 'yarn'
 
   /** 跳过依赖安装 */
   'skip-deps'?: boolean
 
   /** 是否检查过期 */
-  outdated?: boolean
+  'outdated'?: boolean
 
   /** 服务端端口 (UI命令) */
   'server-port'?: number
 
   /** 服务端端口别名 */
-  sp?: number
+  'sp'?: number
 
   /** Web前端端口 (UI命令) */
   'web-port'?: number
 
   /** Web前端端口别名 */
-  wp?: number
+  'wp'?: number
 
   /** 不打开浏览器 */
   'no-open'?: boolean
@@ -548,7 +548,7 @@ export enum CliEvent {
   /** 输出事件 */
   OUTPUT = 'output',
   /** 进度更新事件 */
-  PROGRESS_UPDATE = 'progressUpdate'
+  PROGRESS_UPDATE = 'progressUpdate',
 }
 
 /**

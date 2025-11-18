@@ -1,8 +1,8 @@
 /**
  * Launcher 引导模块
- * 
+ *
  * 负责初始化和注册所有引擎和框架
- * 
+ *
  * @author LDesign Team
  * @since 2.0.0
  */
@@ -16,7 +16,7 @@ let initialized = false
 
 /**
  * 初始化 Launcher 系统
- * 
+ *
  * 注册所有可用的构建引擎和框架适配器
  */
 export async function bootstrap(): Promise<void> {
@@ -40,7 +40,8 @@ export async function bootstrap(): Promise<void> {
 
     initialized = true
     logger.debug('Launcher 系统初始化完成')
-  } catch (error) {
+  }
+  catch (error) {
     logger.error('Launcher 系统初始化失败', error)
     throw error
   }
@@ -59,4 +60,3 @@ export function resetBootstrap(): void {
 export function isBootstrapped(): boolean {
   return initialized
 }
-

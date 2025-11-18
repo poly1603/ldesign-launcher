@@ -1,11 +1,11 @@
 /**
  * Vue 2 Mixin - useAppConfig
- * 
+ *
  * 使用方式：
  * ```vue
  * <script>
  * import { appConfigMixin } from '@ldesign/launcher/client/vue2'
- * 
+ *
  * export default {
  *   mixins: [appConfigMixin],
  *   mounted() {
@@ -13,14 +13,15 @@
  *   }
  * }
  * </script>
- * 
+ *
  * <template>
  *   <div>{{ appConfig.app.name }}</div>
  * </template>
  * ```
  */
 
-import { appConfigManager, AppConfig } from '../app-config'
+import type { AppConfig } from '../app-config'
+import { appConfigManager } from '../app-config'
 
 export interface AppConfigData {
   appConfig: AppConfig
@@ -37,7 +38,7 @@ export const appConfigMixin = {
     return {
       appConfig: appConfigManager.getConfig(),
       appEnvironment: appConfigManager.getEnvironment(),
-      _unsubscribeAppConfig: null
+      _unsubscribeAppConfig: null,
     }
   },
 
@@ -53,7 +54,7 @@ export const appConfigMixin = {
     if (this._unsubscribeAppConfig) {
       this._unsubscribeAppConfig()
     }
-  }
+  },
 }
 
 // 也提供函数式 API（需要手动管理订阅）
@@ -64,4 +65,3 @@ export function getAppConfig() {
 export function subscribeAppConfig(callback: (config: AppConfig) => void) {
   return appConfigManager.subscribe(callback)
 }
-

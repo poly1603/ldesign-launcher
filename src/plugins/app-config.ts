@@ -1,19 +1,19 @@
 /**
  * App Config Plugin
- * 
+ *
  * 注入 import.meta.env.appConfig 并支持热更新
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
 
 import type { Plugin, ResolvedConfig, ViteDevServer } from 'vite'
-import { resolve, join } from 'path'
+import { existsSync, readFile } from 'node:fs'
+import { resolve } from 'node:path'
+import { promisify } from 'node:util'
 import chokidar from 'chokidar'
-import { existsSync, readFile } from 'fs'
-import { promisify } from 'util'
+import { getEnvironmentAppConfigFiles } from '../constants'
 import { Logger } from '../utils/logger'
-import { DEFAULT_APP_CONFIG_FILES, getEnvironmentAppConfigFiles } from '../constants'
 
 const readFileAsync = promisify(readFile)
 
@@ -21,7 +21,7 @@ const readFileAsync = promisify(readFile)
  * 虚拟模块 ID
  */
 const VIRTUAL_MODULE_ID = 'virtual:app-config'
-const RESOLVED_VIRTUAL_MODULE_ID = '\0' + VIRTUAL_MODULE_ID
+const RESOLVED_VIRTUAL_MODULE_ID = `\0${VIRTUAL_MODULE_ID}`
 
 interface AppConfigPluginOptions {
   cwd?: string
@@ -36,7 +36,8 @@ interface AppConfigPluginOptions {
 async function findAppConfigFile(cwd: string, customFile?: string, environment?: string): Promise<string | null> {
   if (customFile) {
     const fullPath = resolve(cwd, customFile)
-    if (existsSync(fullPath)) return fullPath
+    if (existsSync(fullPath))
+      return fullPath
     return null
   }
 
@@ -45,7 +46,8 @@ async function findAppConfigFile(cwd: string, customFile?: string, environment?:
 
   for (const fileName of configFiles) {
     const fullPath = resolve(cwd, fileName)
-    if (existsSync(fullPath)) return fullPath
+    if (existsSync(fullPath))
+      return fullPath
   }
 
   return null
@@ -79,10 +81,11 @@ async function loadAppConfig(filePath: string, logger: Logger): Promise<any> {
           moduleCache: false,
           // 支持 workspace 依赖解析
           alias: {
-            '@ldesign/app': resolve(process.cwd(), 'src/index.ts')
-          }
+            '@ldesign/app': resolve(process.cwd(), 'src/index.ts'),
+          },
         })
-      } catch (e) {
+      }
+      catch (e) {
         logger.warn('缺少依赖: jiti，返回空配置', { error: (e as Error).message })
         return {}
       }
@@ -105,7 +108,8 @@ async function loadAppConfig(filePath: string, logger: Logger): Promise<any> {
         let module
         try {
           module = jitiLoader(filePath)
-        } finally {
+        }
+        finally {
           // 恢复原始的 emitWarning
           process.emitWarning = originalEmitWarning
         }
@@ -120,23 +124,25 @@ async function loadAppConfig(filePath: string, logger: Logger): Promise<any> {
         const result = module?.default || module || {}
         logger.debug('jiti 加载配置成功', { file: filePath, keys: Object.keys(result || {}) })
         return result
-      } catch (error) {
+      }
+      catch (error) {
         logger.warn('jiti 加载配置文件失败，尝试其他方法', {
           file: filePath,
           error: (error as Error).message,
-          stack: (error as Error).stack
+          stack: (error as Error).stack,
         })
 
         // 如果 jiti 失败，尝试简单的动态导入（仅适用于 ESM）
         try {
-          const module = await import(filePath + '?t=' + Date.now())
+          const module = await import(`${filePath}?t=${Date.now()}`)
           const result = module?.default || module || {}
           logger.debug('动态导入配置成功', { file: filePath, keys: Object.keys(result || {}) })
           return result
-        } catch (importError) {
+        }
+        catch (importError) {
           logger.warn('动态导入也失败', {
             file: filePath,
-            error: (importError as Error).message
+            error: (importError as Error).message,
           })
           return {}
         }
@@ -144,11 +150,12 @@ async function loadAppConfig(filePath: string, logger: Logger): Promise<any> {
     }
 
     return {}
-  } catch (error) {
+  }
+  catch (error) {
     logger.warn('加载应用配置失败', {
       file: filePath,
       error: (error as Error).message,
-      stack: (error as Error).stack
+      stack: (error as Error).stack,
     })
     return {}
   }
@@ -162,7 +169,7 @@ export function createAppConfigPlugin(options: AppConfigPluginOptions = {}): Plu
     cwd = process.cwd(),
     configFile,
     environment,
-    logger = new Logger('AppConfigPlugin', { compact: true })
+    logger = new Logger('AppConfigPlugin', { compact: true }),
   } = options
 
   let config: ResolvedConfig
@@ -174,7 +181,7 @@ export function createAppConfigPlugin(options: AppConfigPluginOptions = {}): Plu
   return {
     name: 'vite-plugin-app-config',
 
-    async config(config, { command }) {
+    async config(config, { command: _command }) {
       // 查找配置文件（支持环境特定配置）
       configFilePath = await findAppConfigFile(cwd, configFile, environment)
 
@@ -187,16 +194,18 @@ export function createAppConfigPlugin(options: AppConfigPluginOptions = {}): Plu
         // 验证配置是否成功加载
         if (!appConfig || Object.keys(appConfig).length === 0) {
           logger.warn('⚠️ 配置文件加载为空，使用默认配置', { file: configFilePath })
-        } else {
+        }
+        else {
           logger.info(`✅ 配置加载成功，包含 ${Object.keys(appConfig).length} 个顶级键`, {
-            keys: Object.keys(appConfig)
+            keys: Object.keys(appConfig),
           })
         }
-      } else {
+      }
+      else {
         logger.warn('⚠️ 未找到应用配置文件', {
           environment,
           cwd,
-          searchedFiles: getEnvironmentAppConfigFiles(environment).map(f => resolve(cwd, f))
+          searchedFiles: getEnvironmentAppConfigFiles(environment).map(f => resolve(cwd, f)),
         })
       }
 
@@ -208,7 +217,7 @@ export function createAppConfigPlugin(options: AppConfigPluginOptions = {}): Plu
       if (!config.define[appConfigKey]) {
         config.define[appConfigKey] = JSON.stringify(appConfig)
         logger.debug('✅ 已将配置注入到 import.meta.env.appConfig', {
-          configSize: JSON.stringify(appConfig).length
+          configSize: JSON.stringify(appConfig).length,
         })
       }
     },
@@ -227,7 +236,7 @@ export function createAppConfigPlugin(options: AppConfigPluginOptions = {}): Plu
       // 监听所有可能的配置文件变化
       watcher = chokidar.watch(watchPaths, {
         persistent: true,
-        ignoreInitial: true
+        ignoreInitial: true,
       })
 
       // 处理配置文件变化的通用函数
@@ -260,7 +269,7 @@ export function createAppConfigPlugin(options: AppConfigPluginOptions = {}): Plu
           server!.ws.send({
             type: 'custom',
             event: 'app-config-updated',
-            data: appConfig
+            data: appConfig,
           })
 
           // 配置已更新，通过 HMR 热更新（无需重启服务器）
@@ -276,8 +285,8 @@ export function createAppConfigPlugin(options: AppConfigPluginOptions = {}): Plu
                 type: 'js-update',
                 path: RESOLVED_VIRTUAL_MODULE_ID,
                 acceptedPath: RESOLVED_VIRTUAL_MODULE_ID,
-                timestamp: Date.now()
-              }]
+                timestamp: Date.now(),
+              }],
             })
           }
         }
@@ -299,13 +308,14 @@ export function createAppConfigPlugin(options: AppConfigPluginOptions = {}): Plu
         if (newConfigFilePath) {
           // 还有其他配置文件可用
           await handleConfigChange(newConfigFilePath)
-        } else {
+        }
+        else {
           // 没有配置文件了
           appConfig = {}
           configFilePath = null
           server!.ws.send({
             type: 'full-reload',
-            path: '*'
+            path: '*',
           })
         }
       })
@@ -343,7 +353,7 @@ export function createAppConfigPlugin(options: AppConfigPluginOptions = {}): Plu
         watcher.close()
         watcher = null
       }
-    }
+    },
   }
 }
 

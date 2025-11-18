@@ -1,14 +1,15 @@
 /**
  * 文件系统工具
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
 
-import { promises as fs, constants, Stats } from 'fs'
-import { join, dirname } from 'path'
-import { createReadStream, createWriteStream } from 'fs'
-import { pipeline } from 'stream/promises'
+import type { Stats } from 'node:fs'
+import { constants, createReadStream, createWriteStream, promises as fs } from 'node:fs'
+
+import { dirname, join } from 'node:path'
+import { pipeline } from 'node:stream/promises'
 
 export interface CopyOptions {
   overwrite?: boolean
@@ -35,7 +36,8 @@ export class FileSystem {
     try {
       await fs.access(path, constants.F_OK)
       return true
-    } catch {
+    }
+    catch {
       return false
     }
   }
@@ -47,7 +49,8 @@ export class FileSystem {
     try {
       await fs.access(path, constants.R_OK)
       return true
-    } catch {
+    }
+    catch {
       return false
     }
   }
@@ -59,7 +62,8 @@ export class FileSystem {
     try {
       await fs.access(path, constants.W_OK)
       return true
-    } catch {
+    }
+    catch {
       return false
     }
   }
@@ -78,7 +82,8 @@ export class FileSystem {
     try {
       const stats = await fs.stat(path)
       return stats.isFile()
-    } catch {
+    }
+    catch {
       return false
     }
   }
@@ -90,7 +95,8 @@ export class FileSystem {
     try {
       const stats = await fs.stat(path)
       return stats.isDirectory()
-    } catch {
+    }
+    catch {
       return false
     }
   }
@@ -122,13 +128,13 @@ export class FileSystem {
       const uint8Data = new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
       return fs.writeFile(path, uint8Data, {
         mode: options.mode,
-        flag: options.flag
+        flag: options.flag,
       })
     }
     return fs.writeFile(path, data, {
       encoding: options.encoding || 'utf8',
       mode: options.mode,
-      flag: options.flag
+      flag: options.flag,
     })
   }
 
@@ -144,13 +150,13 @@ export class FileSystem {
       const uint8Data = new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
       return fs.appendFile(path, uint8Data, {
         mode: options.mode,
-        flag: options.flag
+        flag: options.flag,
       })
     }
     return fs.appendFile(path, data, {
       encoding: options.encoding || 'utf8',
       mode: options.mode,
-      flag: options.flag
+      flag: options.flag,
     })
   }
 
@@ -162,10 +168,12 @@ export class FileSystem {
       const stats = await fs.stat(path)
       if (stats.isDirectory()) {
         await fs.rmdir(path, { recursive: true })
-      } else {
+      }
+      else {
         await fs.unlink(path)
       }
-    } catch (error) {
+    }
+    catch (error) {
       // 如果文件不存在，忽略错误
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
         throw error
@@ -179,7 +187,8 @@ export class FileSystem {
   static async ensureDir(path: string): Promise<void> {
     try {
       await fs.mkdir(path, { recursive: true })
-    } catch (error) {
+    }
+    catch (error) {
       // 如果目录已存在，忽略错误
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
         throw error
@@ -214,7 +223,7 @@ export class FileSystem {
     // 复制文件
     await pipeline(
       createReadStream(src),
-      createWriteStream(dest)
+      createWriteStream(dest),
     )
 
     // 保持时间戳
@@ -250,7 +259,8 @@ export class FileSystem {
 
       if (entry.isDirectory()) {
         await this.copyDir(srcPath, destPath, options)
-      } else {
+      }
+      else {
         await this.copyFile(srcPath, destPath, options)
       }
     }
@@ -262,17 +272,20 @@ export class FileSystem {
   static async move(src: string, dest: string): Promise<void> {
     try {
       await fs.rename(src, dest)
-    } catch (error) {
+    }
+    catch (error) {
       // 如果跨设备移动失败，则复制后删除
       if ((error as NodeJS.ErrnoException).code === 'EXDEV') {
         const stats = await fs.stat(src)
         if (stats.isDirectory()) {
           await this.copyDir(src, dest)
-        } else {
+        }
+        else {
           await this.copyFile(src, dest)
         }
         await this.remove(src)
-      } else {
+      }
+      else {
         throw error
       }
     }
@@ -316,7 +329,7 @@ export class FileSystem {
 
     const entries = await fs.readdir(path)
     await Promise.all(
-      entries.map(entry => this.remove(join(path, entry)))
+      entries.map(entry => this.remove(join(path, entry))),
     )
   }
 }
@@ -342,5 +355,5 @@ export const {
   getSize,
   getMtime,
   createTempFile,
-  emptyDir
+  emptyDir,
 } = FileSystem

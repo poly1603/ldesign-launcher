@@ -15,7 +15,7 @@ export { Vue2Adapter, Vue3Adapter }
  * Vue 2 适配器工厂
  */
 export const vue2AdapterFactory: FrameworkAdapterFactory = {
-  async create(options?: FrameworkOptions) {
+  async create(_options?: FrameworkOptions) {
     const adapter = new Vue2Adapter()
     await adapter.initialize()
     return adapter
@@ -25,14 +25,14 @@ export const vue2AdapterFactory: FrameworkAdapterFactory = {
     const adapter = new Vue2Adapter()
     const result = await adapter.detect(cwd)
     return result.detected
-  }
+  },
 }
 
 /**
  * Vue 3 适配器工厂
  */
 export const vue3AdapterFactory: FrameworkAdapterFactory = {
-  async create(options?: FrameworkOptions) {
+  async create(_options?: FrameworkOptions) {
     const adapter = new Vue3Adapter()
     await adapter.initialize()
     return adapter
@@ -42,6 +42,5 @@ export const vue3AdapterFactory: FrameworkAdapterFactory = {
     const adapter = new Vue3Adapter()
     const result = await adapter.detect(cwd)
     return result.detected
-  }
+  },
 }
-

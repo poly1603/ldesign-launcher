@@ -1,8 +1,8 @@
 /**
  * 构建相关类型定义
- * 
+ *
  * 定义构建过程的相关类型和接口
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
@@ -23,7 +23,7 @@ export enum BuildType {
   /** 监听模式构建 */
   WATCH = 'watch',
   /** 分析模式构建 */
-  ANALYZE = 'analyze'
+  ANALYZE = 'analyze',
 }
 
 /**
@@ -42,7 +42,7 @@ export enum BuildStatus {
   /** 构建失败 */
   FAILED = 'failed',
   /** 已取消 */
-  CANCELLED = 'cancelled'
+  CANCELLED = 'cancelled',
 }
 
 /**
@@ -118,7 +118,7 @@ export enum OutputFormat {
   /** AMD */
   AMD = 'amd',
   /** SystemJS */
-  SYSTEM = 'system'
+  SYSTEM = 'system',
 }
 
 /**
@@ -133,7 +133,7 @@ export enum ChunkStrategy {
   /** 按依赖拆分 */
   VENDOR = 'vendor',
   /** 自定义拆分 */
-  CUSTOM = 'custom'
+  CUSTOM = 'custom',
 }
 
 /**
@@ -313,7 +313,7 @@ export enum ArtifactType {
   /** 其他资源文件 */
   ASSET = 'asset',
   /** 源映射文件 */
-  SOURCEMAP = 'sourcemap'
+  SOURCEMAP = 'sourcemap',
 }
 
 /**
@@ -361,7 +361,7 @@ export enum BuildPhase {
   /** 写入文件 */
   WRITING = 'writing',
   /** 完成 */
-  FINISHED = 'finished'
+  FINISHED = 'finished',
 }
 
 /**
@@ -380,7 +380,7 @@ export enum BuildEvent {
   /** 文件变更事件 */
   FILE_CHANGE = 'fileChange',
   /** 构建警告事件 */
-  BUILD_WARNING = 'buildWarning'
+  BUILD_WARNING = 'buildWarning',
 }
 
 /**
@@ -429,28 +429,28 @@ export interface BuildEventData {
  */
 export interface IBuildManager {
   /** 执行构建 */
-  build(config?: ViteLauncherConfig): Promise<AsyncResult<BuildResult>>
+  build: (config?: ViteLauncherConfig) => Promise<AsyncResult<BuildResult>>
 
   /** 启动监听模式构建 */
-  watch(config?: ViteLauncherConfig): Promise<AsyncResult<RollupWatcher>>
+  watch: (config?: ViteLauncherConfig) => Promise<AsyncResult<RollupWatcher>>
 
   /** 停止构建 */
-  stop(): Promise<AsyncResult>
+  stop: () => Promise<AsyncResult>
 
   /** 获取构建状态 */
-  getStatus(): BuildStatus
+  getStatus: () => BuildStatus
 
   /** 获取构建结果 */
-  getResult(): BuildResult | null
+  getResult: () => BuildResult | null
 
   /** 清理构建产物 */
-  clean(outDir?: string): Promise<AsyncResult>
+  clean: (outDir?: string) => Promise<AsyncResult>
 
   /** 分析构建产物 */
-  analyze(result: BuildResult): Promise<AsyncResult<BuildAnalysis>>
+  analyze: (result: BuildResult) => Promise<AsyncResult<BuildAnalysis>>
 
   /** 验证构建配置 */
-  validateConfig(config: BuildConfig): AsyncResult
+  validateConfig: (config: BuildConfig) => AsyncResult
 }
 
 /**

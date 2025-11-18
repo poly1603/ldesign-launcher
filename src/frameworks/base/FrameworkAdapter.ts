@@ -1,25 +1,25 @@
 /**
  * 框架适配器基类
- * 
+ *
  * 提供框架适配器的抽象基类，所有具体框架实现都应继承此类
- * 
+ *
  * @author LDesign Team
  * @since 2.0.0
  */
 
 import type { Plugin } from 'vite'
-import type {
-  FrameworkAdapter as IFrameworkAdapter,
-  FrameworkType,
-  FrameworkDetectionResult,
-  FrameworkDependencies,
-  FrameworkFeatures,
-  FrameworkOptions
-} from '../../types/framework'
-import type { BuildEngine } from '../../types/engine'
 import type { ViteLauncherConfig } from '../../types/config'
-import { Logger } from '../../utils/logger'
+import type { BuildEngine } from '../../types/engine'
+import type {
+  FrameworkDependencies,
+  FrameworkDetectionResult,
+  FrameworkFeatures,
+  FrameworkOptions,
+  FrameworkType,
+  FrameworkAdapter as IFrameworkAdapter,
+} from '../../types/framework'
 import { FileSystem } from '../../utils/file-system'
+import { Logger } from '../../utils/logger'
 import { PathUtils } from '../../utils/path-utils'
 
 /**
@@ -28,19 +28,19 @@ import { PathUtils } from '../../utils/path-utils'
 export abstract class FrameworkAdapter implements IFrameworkAdapter {
   /** 框架名称 */
   abstract readonly name: FrameworkType
-  
+
   /** 框架版本 */
   abstract readonly version?: string
-  
+
   /** 框架描述 */
   abstract readonly description?: string
-  
+
   /** 框架特性 */
   abstract readonly features: FrameworkFeatures
-  
+
   /** 日志记录器 */
   protected logger: Logger
-  
+
   /** 是否已初始化 */
   protected initialized = false
 
@@ -76,7 +76,7 @@ export abstract class FrameworkAdapter implements IFrameworkAdapter {
     return {
       dev: 'launcher dev',
       build: 'launcher build',
-      preview: 'launcher preview'
+      preview: 'launcher preview',
     }
   }
 
@@ -90,7 +90,7 @@ export abstract class FrameworkAdapter implements IFrameworkAdapter {
   /**
    * 验证框架配置
    */
-  validateConfig(config: ViteLauncherConfig): boolean {
+  validateConfig(_config: ViteLauncherConfig): boolean {
     // 默认实现：总是返回 true
     return true
   }
@@ -139,7 +139,7 @@ export abstract class FrameworkAdapter implements IFrameworkAdapter {
    */
   protected async readPackageJson(cwd: string): Promise<any> {
     const pkgPath = PathUtils.join(cwd, 'package.json')
-    
+
     if (!await FileSystem.exists(pkgPath)) {
       return {}
     }
@@ -147,7 +147,8 @@ export abstract class FrameworkAdapter implements IFrameworkAdapter {
     try {
       const content = await FileSystem.readFile(pkgPath, { encoding: 'utf-8' })
       return JSON.parse(content)
-    } catch (error) {
+    }
+    catch (error) {
       this.logger.warn(`读取 package.json 失败: ${(error as Error).message}`)
       return {}
     }
@@ -159,9 +160,9 @@ export abstract class FrameworkAdapter implements IFrameworkAdapter {
   protected async hasDependency(cwd: string, packageName: string): Promise<boolean> {
     const pkg = await this.readPackageJson(cwd)
     return !!(
-      pkg.dependencies?.[packageName] ||
-      pkg.devDependencies?.[packageName] ||
-      pkg.peerDependencies?.[packageName]
+      pkg.dependencies?.[packageName]
+      || pkg.devDependencies?.[packageName]
+      || pkg.peerDependencies?.[packageName]
     )
   }
 
@@ -171,10 +172,10 @@ export abstract class FrameworkAdapter implements IFrameworkAdapter {
   protected async getDependencyVersion(cwd: string, packageName: string): Promise<string | null> {
     const pkg = await this.readPackageJson(cwd)
     return (
-      pkg.dependencies?.[packageName] ||
-      pkg.devDependencies?.[packageName] ||
-      pkg.peerDependencies?.[packageName] ||
-      null
+      pkg.dependencies?.[packageName]
+      || pkg.devDependencies?.[packageName]
+      || pkg.peerDependencies?.[packageName]
+      || null
     )
   }
 
@@ -191,30 +192,30 @@ export abstract class FrameworkAdapter implements IFrameworkAdapter {
    */
   protected async findFiles(cwd: string, patterns: string[]): Promise<string[]> {
     const foundFiles: string[] = []
-    
+
     for (const pattern of patterns) {
       const filePath = PathUtils.join(cwd, pattern)
       if (await FileSystem.exists(filePath)) {
         foundFiles.push(pattern)
       }
     }
-    
+
     return foundFiles
   }
 
   /**
    * 辅助方法：解析版本号
    */
-  protected parseVersion(versionString: string): { major: number; minor: number; patch: number; full: string } {
+  protected parseVersion(versionString: string): { major: number, minor: number, patch: number, full: string } {
     // 移除版本前缀（^, ~, >=, 等）
     const cleanVersion = versionString.replace(/^[\^~>=<]+/, '')
     const parts = cleanVersion.split('.')
 
     return {
-      major: parseInt(parts[0] || '0', 10),
-      minor: parseInt(parts[1] || '0', 10),
-      patch: parseInt(parts[2] || '0', 10),
-      full: cleanVersion
+      major: Number.parseInt(parts[0] || '0', 10),
+      minor: Number.parseInt(parts[1] || '0', 10),
+      patch: Number.parseInt(parts[2] || '0', 10),
+      full: cleanVersion,
     }
   }
 
@@ -230,7 +231,8 @@ export abstract class FrameworkAdapter implements IFrameworkAdapter {
 
     try {
       return await FileSystem.readFile(fullPath, { encoding: 'utf-8' })
-    } catch (error) {
+    }
+    catch (error) {
       this.logger.warn(`读取文件 ${filePath} 失败: ${(error as Error).message}`)
       return null
     }
@@ -242,7 +244,7 @@ export abstract class FrameworkAdapter implements IFrameworkAdapter {
   protected async fileContainsPattern(
     cwd: string,
     filePath: string,
-    pattern: RegExp | string
+    pattern: RegExp | string,
   ): Promise<boolean> {
     const content = await this.readFileContent(cwd, filePath)
     if (!content) {
@@ -267,7 +269,7 @@ export abstract class FrameworkAdapter implements IFrameworkAdapter {
   protected async findImportsInFile(
     cwd: string,
     filePath: string,
-    packageNames: string[]
+    packageNames: string[],
   ): Promise<string[]> {
     const content = await this.readFileContent(cwd, filePath)
     if (!content) {
@@ -302,7 +304,7 @@ export abstract class FrameworkAdapter implements IFrameworkAdapter {
    */
   protected async checkProjectStructure(
     cwd: string,
-    patterns: string[]
+    patterns: string[],
   ): Promise<number> {
     let matchCount = 0
 
@@ -337,10 +339,9 @@ export abstract class FrameworkAdapter implements IFrameworkAdapter {
       'src/App.vue',
       'src/app.ts',
       'src/app.js',
-      'index.html'
+      'index.html',
     ]
 
     return this.findFiles(cwd, commonEntryPatterns)
   }
 }
-

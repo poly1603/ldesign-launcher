@@ -1,11 +1,15 @@
 /**
  * 统一错误处理系统
- * 
+ *
  * 提供完整的错误类型层级和错误处理机制
- * 
+ *
  * @author LDesign Team
  * @since 2.0.0
  */
+
+import { Logger } from './logger'
+
+const errorLogger = new Logger('ErrorHandler')
 
 /**
  * 错误码枚举
@@ -16,48 +20,48 @@ export enum ErrorCode {
   CONFIG_INVALID = 1001,
   CONFIG_PARSE_ERROR = 1002,
   CONFIG_VALIDATION_ERROR = 1003,
-  
+
   // 框架相关错误 (2000-2999)
   FRAMEWORK_NOT_FOUND = 2000,
   FRAMEWORK_DETECTION_FAILED = 2001,
   FRAMEWORK_PLUGIN_ERROR = 2002,
   FRAMEWORK_INCOMPATIBLE = 2003,
-  
+
   // 引擎相关错误 (3000-3999)
   ENGINE_NOT_FOUND = 3000,
   ENGINE_INIT_FAILED = 3001,
   ENGINE_BUILD_FAILED = 3002,
   ENGINE_DEV_FAILED = 3003,
-  
+
   // 插件相关错误 (4000-4999)
   PLUGIN_NOT_FOUND = 4000,
   PLUGIN_LOAD_FAILED = 4001,
   PLUGIN_INCOMPATIBLE = 4002,
   PLUGIN_INSTALL_FAILED = 4003,
-  
+
   // 文件系统错误 (5000-5999)
   FILE_NOT_FOUND = 5000,
   FILE_READ_ERROR = 5001,
   FILE_WRITE_ERROR = 5002,
   DIRECTORY_NOT_FOUND = 5003,
-  
+
   // 网络相关错误 (6000-6999)
   NETWORK_ERROR = 6000,
   PORT_IN_USE = 6001,
   CONNECTION_FAILED = 6002,
-  
+
   // 依赖相关错误 (7000-7999)
   DEPENDENCY_NOT_FOUND = 7000,
   DEPENDENCY_VERSION_MISMATCH = 7001,
   DEPENDENCY_INSTALL_FAILED = 7002,
-  
+
   // 运行时错误 (8000-8999)
   RUNTIME_ERROR = 8000,
   TIMEOUT_ERROR = 8001,
   MEMORY_ERROR = 8002,
-  
+
   // 未知错误
-  UNKNOWN_ERROR = 9999
+  UNKNOWN_ERROR = 9999,
 }
 
 /**
@@ -71,7 +75,7 @@ export enum ErrorSeverity {
   /** 警告 - 可能影响功能 */
   WARNING = 'warning',
   /** 信息 - 不影响功能 */
-  INFO = 'info'
+  INFO = 'info',
 }
 
 /**
@@ -80,19 +84,19 @@ export enum ErrorSeverity {
 export class LauncherError extends Error {
   /** 错误码 */
   code: ErrorCode
-  
+
   /** 错误严重级别 */
   severity: ErrorSeverity
-  
+
   /** 错误上下文 */
   context?: Record<string, any>
-  
+
   /** 错误发生时间 */
   timestamp: number
-  
+
   /** 错误堆栈 */
   stack?: string
-  
+
   /** 原始错误 */
   cause?: Error
 
@@ -101,7 +105,7 @@ export class LauncherError extends Error {
     code: ErrorCode = ErrorCode.UNKNOWN_ERROR,
     severity: ErrorSeverity = ErrorSeverity.ERROR,
     context?: Record<string, any>,
-    cause?: Error
+    cause?: Error,
   ) {
     super(message)
     this.name = 'LauncherError'
@@ -110,7 +114,7 @@ export class LauncherError extends Error {
     this.context = context
     this.timestamp = Date.now()
     this.cause = cause
-    
+
     // 保持正确的堆栈跟踪
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, this.constructor)
@@ -129,7 +133,7 @@ export class LauncherError extends Error {
       context: this.context,
       timestamp: this.timestamp,
       stack: this.stack,
-      cause: this.cause?.message
+      cause: this.cause?.message,
     }
   }
 
@@ -217,10 +221,10 @@ export class DependencyError extends LauncherError {
 export interface RecoveryStrategy {
   /** 策略名称 */
   name: string
-  
+
   /** 策略描述 */
   description: string
-  
+
   /** 执行恢复 */
   execute: () => Promise<void>
 }
@@ -256,10 +260,10 @@ export class ErrorHandler {
   async handle(error: Error | LauncherError): Promise<void> {
     // 标准化错误
     const launcherError = this.normalizeError(error)
-    
+
     // 记录错误
     this.logError(launcherError)
-    
+
     // 尝试恢复
     if (launcherError.code !== ErrorCode.UNKNOWN_ERROR) {
       await this.tryRecover(launcherError)
@@ -273,12 +277,12 @@ export class ErrorHandler {
     if (error instanceof LauncherError) {
       return error
     }
-    
+
     return new LauncherError(
       error.message,
       ErrorCode.UNKNOWN_ERROR,
       ErrorSeverity.ERROR,
-      { originalError: error.name }
+      { originalError: error.name },
     )
   }
 
@@ -293,10 +297,10 @@ export class ErrorHandler {
       severity: error.severity,
       message: error.message,
       context: error.context,
-      stack: error.stack
+      stack: error.stack,
     }
 
-    console.error('[LauncherError]', JSON.stringify(errorInfo, null, 2))
+    errorLogger.error('[LauncherError]', errorInfo)
   }
 
   /**
@@ -304,19 +308,20 @@ export class ErrorHandler {
    */
   private async tryRecover(error: LauncherError): Promise<void> {
     const strategies = this.recoveryStrategies.get(error.code)
-    
+
     if (!strategies || strategies.length === 0) {
       return
     }
 
     for (const strategy of strategies) {
       try {
-        console.log(`尝试恢复策略: ${strategy.name}`)
+        errorLogger.info(`尝试恢复策略: ${strategy.name}`)
         await strategy.execute()
-        console.log('恢复成功')
+        errorLogger.success('恢复成功')
         return
-      } catch (recoveryError) {
-        console.error(`恢复策略失败: ${strategy.name}`, recoveryError)
+      }
+      catch (recoveryError) {
+        errorLogger.error(`恢复策略失败: ${strategy.name}`, recoveryError)
       }
     }
   }
@@ -364,7 +369,7 @@ export function createConfigError(
   message: string,
   code: ErrorCode = ErrorCode.CONFIG_INVALID,
   context?: Record<string, any>,
-  cause?: Error
+  cause?: Error,
 ): ConfigError {
   return new ConfigError(message, code, context, cause)
 }
@@ -376,7 +381,7 @@ export function createFrameworkError(
   message: string,
   code: ErrorCode = ErrorCode.FRAMEWORK_NOT_FOUND,
   context?: Record<string, any>,
-  cause?: Error
+  cause?: Error,
 ): FrameworkError {
   return new FrameworkError(message, code, context, cause)
 }
@@ -388,7 +393,7 @@ export function createEngineError(
   message: string,
   code: ErrorCode = ErrorCode.ENGINE_BUILD_FAILED,
   context?: Record<string, any>,
-  cause?: Error
+  cause?: Error,
 ): EngineError {
   return new EngineError(message, code, context, cause)
 }
@@ -400,7 +405,7 @@ export function createPluginError(
   message: string,
   code: ErrorCode = ErrorCode.PLUGIN_LOAD_FAILED,
   context?: Record<string, any>,
-  cause?: Error
+  cause?: Error,
 ): PluginError {
   return new PluginError(message, code, context, cause)
 }
