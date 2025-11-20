@@ -122,6 +122,9 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
   /** 配置变更定时器 */
   private configChangeTimer?: NodeJS.Timeout
 
+  /** 重启中标志，防止并发重启 */
+  private isRestarting: boolean = false
+
   /**
    * 构造函数
    *
@@ -129,6 +132,9 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
    */
   constructor(options: LauncherOptions = {}) {
     super()
+
+    // 设置 EventEmitter 最大监听器数量，避免内存泄漏警告
+    this.setMaxListeners(20)
 
     // 设置工作目录
     this.cwd = options.cwd || process.cwd()
@@ -181,16 +187,27 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
       watch: shouldWatch,
       logger: configLogger,
       onConfigChange: (newConfig) => {
+        // 检查是否正在重启中，防止并发重启
+        if (this.isRestarting) {
+          this.logger.warn('服务器正在重启中，忽略本次配置变更')
+          return
+        }
+
         // 使用防抖处理配置变更
         if (this.configChangeTimer) {
           clearTimeout(this.configChangeTimer)
         }
         const debounceTime = this.config.launcher?.configChangeDebounce || 200
-        this.configChangeTimer = setTimeout(() => {
-          this.restartDevWithConfig(newConfig).catch((error) => {
+        this.configChangeTimer = setTimeout(async () => {
+          this.isRestarting = true
+          try {
+            await this.restartDevWithConfig(newConfig)
+          } catch (error) {
             this.logger.error('自动重启失败', error)
-          })
-          this.configChangeTimer = undefined
+          } finally {
+            this.isRestarting = false
+            this.configChangeTimer = undefined
+          }
         }, debounceTime)
       },
     })
@@ -296,9 +313,30 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
 
   /**
    * 启动开发服务器
+   * 
+   * 该方法会自动完成以下操作：
+   * 1. 加载并合并配置文件
+   * 2. 查找可用端口（如果指定端口被占用）
+   * 3. 应用路径别名配置
+   * 4. 注入智能检测的插件
+   * 5. 处理 HTTPS 配置
+   * 6. 启动 Vite 开发服务器
    *
-   * @param config - 可选的配置覆盖
-   * @returns 开发服务器实例
+   * @param config - 可选的配置覆盖，会与默认配置合并
+   * @returns Promise<ViteDevServer> - Vite 开发服务器实例
+   * @throws {Error} 当服务器启动失败时抛出错误
+   * 
+   * @example
+   * ```typescript
+   * const launcher = new ViteLauncher({ cwd: './my-project' })
+   * const server = await launcher.startDev({
+   *   server: { port: 3000 }
+   * })
+   * console.log('Dev server running at:', server.resolvedUrls)
+   * ```
+   * 
+   * @see {@link ViteDevServer}
+   * @see {@link ViteLauncherConfig}
    */
   async startDev(config?: ViteLauncherConfig): Promise<ViteDevServer> {
     try {
@@ -1892,6 +1930,76 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
     }
     catch (error) {
       this.logger.warn('输出预览服务器信息失败', { error: (error as Error).message })
+    }
+  }
+
+  /**
+   * 清理所有资源，防止内存泄漏
+   * 
+   * 该方法会完整清理以下资源：
+   * - 配置变更定时器
+   * - 开发服务器
+   * - 预览服务器
+   * - 构建监听器
+   * - 配置管理器
+   * - 所有事件监听器
+   * 
+   * 建议在应用退出或不再需要 launcher 实例时调用此方法。
+   *
+   * @returns Promise<void>
+   * @throws {Error} 如果清理过程中发生错误
+   * 
+   * @example
+   * ```typescript
+   * const launcher = new ViteLauncher()
+   * try {
+   *   await launcher.startDev()
+   *   // ... 使用服务器
+   * } finally {
+   *   await launcher.dispose() // 确保资源被清理
+   * }
+   * ```
+   */
+  async dispose(): Promise<void> {
+    try {
+      this.logger.info('正在清理 ViteLauncher 资源...')
+
+      // 清理配置变更定时器
+      if (this.configChangeTimer) {
+        clearTimeout(this.configChangeTimer)
+        this.configChangeTimer = undefined
+      }
+
+      // 停止开发服务器
+      if (this.devServer) {
+        await this.stopDev()
+      }
+
+      // 停止预览服务器
+      if (this.previewServer) {
+        await this.previewServer.close()
+        this.previewServer = null
+      }
+
+      // 停止构建监听器
+      if (this.buildWatcher) {
+        this.buildWatcher.close()
+        this.buildWatcher = null
+      }
+
+      // 销毁配置管理器
+      if (this.configManager) {
+        await this.configManager.destroy()
+      }
+
+      // 清理所有事件监听器
+      this.removeAllListeners()
+
+      this.logger.info('ViteLauncher 资源清理完成')
+    }
+    catch (error) {
+      this.logger.error('清理资源时发生错误', error)
+      throw error
     }
   }
 }

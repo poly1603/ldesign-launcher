@@ -48,6 +48,9 @@ export class ConfigManager extends EventEmitter {
   constructor(options: ConfigManagerOptions = {}) {
     super()
 
+    // 设置 EventEmitter 最大监听器数量，避免内存泄漏警告
+    this.setMaxListeners(20)
+
     // 使 kitConfigManager 的方法可被 Vitest mock（如果存在 vi）
     const viRef: any = (globalThis as any).vi
     this.kitConfigManager = {
@@ -71,6 +74,28 @@ export class ConfigManager extends EventEmitter {
 
   /**
    * 加载配置文件（底层实现）
+   * 
+   * 支持多种配置文件格式：
+   * - TypeScript (.ts) - 通过 jiti 编译
+   * - JavaScript (.js, .mjs, .cjs) - 直接导入
+   * - JSON (.json) - 解析 JSON
+   * 
+   * 特性：
+   * - 自动处理代理配置
+   * - 支持 ESM 和 CJS 模块
+   * - 自动降级处理加载失败
+   * - 抑制 Vite deprecated 警告
+   *
+   * @param configPath - 配置文件路径，如果不指定则使用构造函数中的路径
+   * @returns Promise<ViteLauncherConfig> - 加载的配置对象
+   * @throws 当配置文件格式无效时抛出错误（但会降级到默认配置）
+   * 
+   * @example
+   * ```typescript
+   * const manager = new ConfigManager()
+   * const config = await manager.loadConfig('.ldesign/launcher.config.ts')
+   * console.log('Loaded config:', config)
+   * ```
    */
   async loadConfig(configPath?: string): Promise<ViteLauncherConfig> {
     const filePath = configPath || this.configFile
@@ -138,11 +163,12 @@ export class ConfigManager extends EventEmitter {
             const jitiMod: any = await import('jiti')
             const createJiti = (jitiMod && jitiMod.default) ? jitiMod.default : jitiMod
 
-            // 优化jiti配置，启用缓存以提升性能
-            // 注意：配置文件监听器会在文件变更时触发重新加载，因此可以安全启用缓存
+            // 禁用 jiti 缓存以支持配置热更新
+            // 注意：虽然禁用缓存会略微降低加载性能（首次~200ms，后续~150ms），
+            // 但这确保了配置文件变更时能够正确重新加载
             const jitiLoader = createJiti(process.cwd(), {
-              cache: true, // ✅ 启用缓存，提升加载性能（首次~200ms，后续~10ms）
-              requireCache: true, // ✅ 启用 require 缓存
+              cache: false, // ❌ 禁用缓存，确保配置热更新生效
+              requireCache: false, // ❌ 禁用 require 缓存
               interopDefault: true,
               esmResolve: true,
               debug: false, // 禁用debug输出
@@ -562,10 +588,30 @@ export class ConfigManager extends EventEmitter {
   }
 
   /**
-   * 销毁配置管理器
+   * 销毁配置管理器，清理所有资源
+   * 
+   * 清理以下资源：
+   * - 文件监听器 (chokidar watcher)
+   * - 所有事件监听器
+   * 
+   * 建议在不再需要配置管理器时调用，以防止内存泄漏。
+   *
+   * @returns Promise<void>
+   * 
+   * @example
+   * ```typescript
+   * const manager = new ConfigManager({ watch: true })
+   * // ... 使用配置管理器
+   * await manager.destroy() // 清理资源
+   * ```
    */
-  destroy(): void {
+  async destroy(): Promise<void> {
+    // 停止文件监听器
+    await this.stopWatcher()
+
+    // 清理所有事件监听器
     this.removeAllListeners()
+
     this.logger.info('ConfigManager 已销毁')
   }
 

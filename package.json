@@ -141,6 +141,7 @@
     "test:run": "vitest run",
     "test:unit": "vitest run -c vitest.unit.config.ts",
     "test:all": "vitest run",
+    "bench": "vitest bench",
     "lint": "eslint \"src/**/*.ts\"",
     "lint:fix": "eslint \"src/**/*.ts\" --fix",
     "typecheck": "tsc --noEmit",

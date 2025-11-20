@@ -84,26 +84,53 @@ export class PerformanceMonitor {
   }
 
   /**
-   * 设置垃圾回收监控
+   * GC 性能观察器
+   */
+  private gcObserver?: any
+
+  /**
+   * 设置垃圾回收监控（使用 PerformanceObserver API）
+   * 
+   * 优先使用 PerformanceObserver API，这是更标准和安全的方式，
+   * 不会篡改全局 gc 函数，避免副作用。
    */
   private setupGCMonitoring(): void {
     try {
-      // 尝试启用 GC 监控（需要 --expose-gc 标志）
-      const g: any = globalThis as any
-      if (g.gc) {
-        const originalGC = g.gc
-        g.gc = () => {
-          const start = Date.now()
-          originalGC()
-          const duration = Date.now() - start
+      // 尝试使用 PerformanceObserver API（Node.js 16+）
+      const { PerformanceObserver } = require('node:perf_hooks')
 
-          this.gcStats.count++
-          this.gcStats.totalTime += duration
+      this.gcObserver = new PerformanceObserver((list: any) => {
+        const entries = list.getEntries()
+        for (const entry of entries) {
+          if (entry.entryType === 'gc') {
+            this.gcStats.count++
+            this.gcStats.totalTime += entry.duration
+          }
         }
-      }
+      })
+
+      this.gcObserver.observe({ entryTypes: ['gc'] })
     }
     catch {
-      // GC 监控不可用
+      // 如果 PerformanceObserver 不可用，回退到旧方法
+      try {
+        const g: any = globalThis as any
+        if (g.gc && !g.__gcHooked) {
+          const originalGC = g.gc
+          g.gc = () => {
+            const start = Date.now()
+            originalGC()
+            const duration = Date.now() - start
+
+            this.gcStats.count++
+            this.gcStats.totalTime += duration
+          }
+          g.__gcHooked = true // 标记已hook，避免重复
+        }
+      }
+      catch {
+        // GC 监控完全不可用
+      }
     }
   }
 
@@ -113,6 +140,9 @@ export class PerformanceMonitor {
    * @param interval - 监控间隔（毫秒）
    */
   start(interval: number = 1000): void {
+    // 先停止旧的监控，避免重复调用导致定时器累积
+    this.stop()
+
     // 内存监控
     const memoryInterval = setInterval(() => {
       this.updateMemoryMetrics()
@@ -132,11 +162,23 @@ export class PerformanceMonitor {
   }
 
   /**
-   * 停止监控
+   * 停止监控并清理所有资源
    */
   stop(): void {
+    // 清理所有定时器
     this.intervals.forEach(interval => clearInterval(interval))
     this.intervals = []
+
+    // 清理 GC 观察器
+    if (this.gcObserver) {
+      try {
+        this.gcObserver.disconnect()
+      }
+      catch {
+        // 忽略清理错误
+      }
+      this.gcObserver = undefined
+    }
   }
 
   /**

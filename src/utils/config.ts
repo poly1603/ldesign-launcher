@@ -74,10 +74,14 @@ export async function loadConfigFile(configPath: string): Promise<ViteLauncherCo
       // 使用动态导入加载模块
       const absolutePath = PathUtils.resolve(configPath)
 
-      // 清除模块缓存以支持热重载
-      delete require.cache[absolutePath]
+      // 将文件路径转换为 file:// URL（跨平台兼容）
+      const { pathToFileURL } = await import('node:url')
+      const fileUrl = pathToFileURL(absolutePath).href
 
-      const module = await import(absolutePath)
+      // 添加时间戳参数破坏缓存，确保热重载生效
+      const moduleUrl = `${fileUrl}?t=${Date.now()}`
+
+      const module = await import(moduleUrl)
       config = module.default || module
     }
 

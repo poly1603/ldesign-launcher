@@ -279,7 +279,9 @@ export const MARKO_FRAMEWORK_METADATA: FrameworkMetadata = {
 }
 
 /**
- * 初始化并注册所有框架
+ * 初始化并注册所有框架（立即加载版本）
+ * 
+ * @deprecated 推荐使用 registerAllLazyFrameworks() 以获得更好的启动性能
  */
 export async function registerAllFrameworks(): Promise<void> {
   const { registerFramework } = await import('../registry/FrameworkRegistry')
@@ -306,3 +308,6 @@ export async function registerAllFrameworks(): Promise<void> {
   registerFramework('lit', litAdapterFactory, LIT_FRAMEWORK_METADATA, 7)
   registerFramework('marko', markoAdapterFactory, MARKO_FRAMEWORK_METADATA, 7)
 }
+
+// 导出懒加载工具
+export * from './lazy-loader'

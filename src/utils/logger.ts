@@ -56,18 +56,46 @@ export class Logger {
   }
 
   /**
-   * 格式化消息
+   * 时间戳缓存（每秒更新一次，避免频繁格式化）
+   */
+  private timestampCache: { value: string, expires: number } | null = null
+
+  /**
+   * 获取格式化的时间戳（带缓存）
+   */
+  private getFormattedTimestamp(): string {
+    const now = Date.now()
+
+    // 检查缓存是否有效（1秒内）
+    if (this.timestampCache && now < this.timestampCache.expires) {
+      return this.timestampCache.value
+    }
+
+    // 重新生成时间戳
+    const date = new Date(now)
+    const timeStr = date.toTimeString().slice(0, 8) // HH:MM:SS
+    const msStr = String(date.getMilliseconds()).padStart(3, '0')
+    const fullTimeStr = `${timeStr}.${msStr}`
+    const formatted = this.colors ? picocolors.gray(`[${fullTimeStr}]`) : `[${fullTimeStr}]`
+
+    // 缓存结果（1秒过期）
+    this.timestampCache = {
+      value: formatted,
+      expires: now + 1000,
+    }
+
+    return formatted
+  }
+
+  /**
+   * 格式化消息（优化版）
    */
   private formatMessage(level: LogLevel, message: string, data?: any): string {
     let formatted = ''
 
-    // 添加时间戳
+    // 添加时间戳（使用缓存）
     if (this.timestamp) {
-      const now = new Date()
-      const timeStr = now.toTimeString().slice(0, 8) // HH:MM:SS
-      const msStr = String(now.getMilliseconds()).padStart(3, '0')
-      const fullTimeStr = `${timeStr}.${msStr}`
-      formatted += this.colors ? picocolors.gray(`[${fullTimeStr}]`) : `[${fullTimeStr}]`
+      formatted += this.getFormattedTimestamp()
       formatted += ' '
     }
 
