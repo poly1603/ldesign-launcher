@@ -1,8 +1,8 @@
 /**
  * 键盘快捷键监听工具
- * 
+ *
  * 用于监听终端键盘输入,实现交互式快捷键功能
- * 
+ *
  * @author LDesign Team
  * @since 2.1.0
  */
@@ -125,7 +125,8 @@ export class KeyboardManager {
     if (shortcut) {
       try {
         await shortcut.handler()
-      } catch (error) {
+      }
+      catch (error) {
         this.logger.error(`执行快捷键 "${key}" 失败: ${(error as Error).message}`)
       }
     }
@@ -140,11 +141,11 @@ export class KeyboardManager {
     }
 
     this.logger.raw(chalk.gray('\n快捷键:'))
-    
+
     this.shortcuts.forEach((shortcut) => {
       this.logger.raw(chalk.gray(`  ${chalk.bold(shortcut.key)} - ${shortcut.description}`))
     })
-    
+
     this.logger.raw('')
   }
 

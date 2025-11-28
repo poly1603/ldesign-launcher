@@ -206,9 +206,11 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
           this.isRestarting = true
           try {
             await this.restartDevWithConfig(newConfig)
-          } catch (error) {
+          }
+          catch (error) {
             this.logger.error('自动重启失败', error)
-          } finally {
+          }
+          finally {
             this.isRestarting = false
             this.configChangeTimer = undefined
           }
@@ -338,7 +340,7 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
 
   /**
    * 启动开发服务器
-   * 
+   *
    * 该方法会自动完成以下操作：
    * 1. 加载并合并配置文件
    * 2. 查找可用端口（如果指定端口被占用）
@@ -350,7 +352,7 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
    * @param config - 可选的配置覆盖，会与默认配置合并
    * @returns Promise<ViteDevServer> - Vite 开发服务器实例
    * @throws {Error} 当服务器启动失败时抛出错误
-   * 
+   *
    * @example
    * ```typescript
    * const launcher = new ViteLauncher({ cwd: './my-project' })
@@ -359,7 +361,7 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
    * })
    * console.log('Dev server running at:', server.resolvedUrls)
    * ```
-   * 
+   *
    * @see {@link ViteDevServer}
    * @see {@link ViteLauncherConfig}
    */
@@ -482,7 +484,7 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
       }
       catch (appConfigError) {
         this.logger.debug('app-config 插件导入失败（可忽略）', {
-          error: (appConfigError as Error).message
+          error: (appConfigError as Error).message,
         })
       }
 
@@ -642,7 +644,7 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
       }
       catch (pluginListError) {
         this.logger.debug('插件列表生成失败', {
-          error: (pluginListError as Error).message
+          error: (pluginListError as Error).message,
         })
       }
 
@@ -688,7 +690,7 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
       }
       catch (appConfigCheckError) {
         this.logger.debug('app.config 检查失败', {
-          error: (appConfigCheckError as Error).message
+          error: (appConfigCheckError as Error).message,
         })
       }
 
@@ -1355,9 +1357,9 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
     // 监听未处理的 Promise 拒绝
     process.on('unhandledRejection', unhandledRejectionHandler)
 
-      // 保存处理函数引用以便清理
-      ; (this as any)._uncaughtExceptionHandler = uncaughtExceptionHandler
-      ; (this as any)._unhandledRejectionHandler = unhandledRejectionHandler
+    // 保存处理函数引用以便清理
+    ; (this as any)._uncaughtExceptionHandler = uncaughtExceptionHandler
+    ; (this as any)._unhandledRejectionHandler = unhandledRejectionHandler
   }
 
   /**

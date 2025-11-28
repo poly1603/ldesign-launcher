@@ -180,12 +180,12 @@ export class ServerManager {
    */
   printServerInfo(server: DevServer | PreviewServer | ViteDevServer | VitePreviewServer, _type: 'dev' | 'preview', framework?: string, options?: { showQRCode?: boolean, startTime?: number }): void {
     const { showQRCode = true, startTime } = options || {}
-    
+
     // 获取服务器地址信息
     let localUrl: string
     let port: number
     let https = false
-    
+
     // 处理通用 Server 接口（来自 BuildEngine）
     if ('type' in server && 'url' in server && 'port' in server) {
       localUrl = server.url
@@ -208,10 +208,10 @@ export class ServerManager {
     const bannerInfo = Banner.renderStartupInfo({
       title: 'Launcher',
       version: '2.0.0',
-      framework: framework,
+      framework,
       engine: 'Vite 5.0',
       nodeVersion: process.version,
-      startTime: startTime,
+      startTime,
       useGradient: true,
     })
     this.logger.raw(bannerInfo)
@@ -243,13 +243,12 @@ export class ServerManager {
     this.logger.raw(shortcuts)
 
     // 复制地址到剪贴板
-    NetworkInfo.copyToClipboard(localUrl).then(success => {
+    NetworkInfo.copyToClipboard(localUrl).then((success) => {
       if (success) {
         this.logger.raw('\n')
       }
     })
   }
-
 
   /**
    * 打印简化的服务器信息（用于重启）
@@ -260,17 +259,17 @@ export class ServerManager {
       const info = this.getServerInfo(this.devServer)
       const banner = Banner.renderSuccess(
         '服务器已重启',
-        [`访问地址: ${info.url}`]
+        [`访问地址: ${info.url}`],
       )
-      this.logger.raw('\n' + banner)
+      this.logger.raw(`\n${banner}`)
     }
     else if (this.previewServer) {
       const info = this.getServerInfo(this.previewServer)
       const banner = Banner.renderSuccess(
         '预览服务器已重启',
-        [`访问地址: ${info.url}`]
+        [`访问地址: ${info.url}`],
       )
-      this.logger.raw('\n' + banner)
+      this.logger.raw(`\n${banner}`)
     }
   }
 
@@ -281,7 +280,8 @@ export class ServerManager {
     try {
       const port = await NetworkInfo.findAvailablePort(desiredPort)
       return port
-    } catch {
+    }
+    catch {
       return null
     }
   }

@@ -1,8 +1,8 @@
 /**
  * Spinner 加载动画组件
- * 
+ *
  * 基于 ora 实现的加载动画效果
- * 
+ *
  * @author LDesign Team
  * @since 2.1.0
  */

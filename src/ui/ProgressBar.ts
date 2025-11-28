@@ -1,13 +1,13 @@
 /**
  * 进度条组件
- * 
+ *
  * 基于 cli-progress 实现的通用进度条功能
- * 
+ *
  * @author LDesign Team
  * @since 2.1.0
  */
 
-import { SingleBar, Presets } from 'cli-progress'
+import { Presets, SingleBar } from 'cli-progress'
 import picocolors from 'picocolors'
 
 export interface ProgressBarOptions {
@@ -38,13 +38,13 @@ export class ProgressBar {
     if (!format) {
       const message = options.message || '进度'
       const barColorFn = this.getColorFunction(options.barColor || 'cyan')
-      
+
       format = `${message} ${barColorFn('{bar}')} {percentage}%`
-      
+
       if (options.showETA !== false) {
         format += ' | ETA: {eta_formatted}'
       }
-      
+
       format += ' | {value}/{total}'
     }
 

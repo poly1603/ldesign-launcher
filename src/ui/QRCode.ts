@@ -1,8 +1,8 @@
 /**
  * QRCode 二维码组件
- * 
+ *
  * 用于在终端中显示二维码,方便移动设备扫码访问
- * 
+ *
  * @author LDesign Team
  * @since 2.1.0
  */
@@ -35,7 +35,8 @@ export class QRCode {
       qrcodeTerminal.generate(url, {
         small: options.small ?? true,
       })
-    } catch (error) {
+    }
+    catch (error) {
       console.error(chalk.red('二维码生成失败:'), error)
     }
   }
@@ -62,7 +63,7 @@ export class QRCode {
       const networkUrls = Array.isArray(network) ? network : [network]
       if (networkUrls.length > 0) {
         console.log(chalk.gray('\n局域网地址:'))
-        networkUrls.forEach(url => {
+        networkUrls.forEach((url) => {
           console.log(chalk.cyan(url))
         })
       }
@@ -80,7 +81,8 @@ export class QRCode {
         // 使用 qrcode 库生成字符串（如果可用）
         // 这里暂时返回提示信息
         resolve(`QR Code for: ${url}`)
-      } catch (error) {
+      }
+      catch (error) {
         reject(error)
       }
     }) as any
@@ -112,7 +114,7 @@ export class QRCode {
       console.log(chalk.gray(`\n${label}:`))
     }
     this.generate(url, { small: true })
-    console.log(chalk.cyan(url) + '\n')
+    console.log(`${chalk.cyan(url)}\n`)
   }
 }
 

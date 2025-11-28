@@ -166,7 +166,7 @@ export class PreviewCommand implements CliCommandDefinition {
       // 检测框架
       let detectedFramework = null
       let spinner: Spinner | null = null
-      
+
       if (!context.options.silent) {
         spinner = new Spinner({
           text: '正在检测项目框架...',
@@ -186,12 +186,14 @@ export class PreviewCommand implements CliCommandDefinition {
           if (spinner) {
             spinner.succeed(`检测到 ${pc.bold(pc.green(frameworkName))} 框架 (置信度: ${pc.cyan(`${confidencePercent}%`)})`)
           }
-        } else {
+        }
+        else {
           if (spinner) {
             spinner.warn('未检测到已知框架，将使用默认配置')
           }
         }
-      } catch (error) {
+      }
+      catch (error) {
         if (spinner) {
           spinner.fail('框架检测失败')
         }
@@ -335,7 +337,8 @@ export class PreviewCommand implements CliCommandDefinition {
               network: addresses.network,
               showUrl: false,
             })
-          } catch (error) {
+          }
+          catch (error) {
             logger.debug(`二维码显示失败: ${(error as Error).message}`)
           }
         }

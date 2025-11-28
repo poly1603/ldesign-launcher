@@ -11,9 +11,17 @@
 // 导出常量
 export * from './constants'
 
-// 导出别名管理器
+// 导出别名管理器和相关类型
 export { AliasManager, createAliasManager } from './core/AliasManager'
-export type { BuildStage as AliasStage } from './core/AliasManager'
+export type {
+  AliasConfig,
+  AliasEntry,
+  AliasStage,
+  BuildStage,
+  CreateAliasOptions,
+  SimpleAliasConfig,
+  ViteAliasEntry,
+} from './core/AliasManager'
 // 导出核心启动类
 export { bootstrap, isBootstrapped } from './core/bootstrap'
 
@@ -80,15 +88,17 @@ export {
   validateConfigValue,
 } from './types/ui-config'
 
-// 导出别名相关类型定义和工具函数
-export type { AliasEntry, BuildStage } from './utils/aliases'
-
+// 导出别名工具函数（类型已在上方从 AliasManager 导出）
 export {
   createAlias,
   createBasicAliases,
   createBuildAlias,
   createDevAlias,
   createUniversalAlias,
+  normalizeAliasEntry,
+  parseAliasConfig,
+  parseSimpleAliasConfig,
+  stageToStages,
 } from './utils/aliases'
 export {
   analyzeBuildResult,

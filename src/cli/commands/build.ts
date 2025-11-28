@@ -9,11 +9,12 @@
 
 import type { OutputAsset, OutputChunk, RollupOutput } from 'rollup'
 import type { CliCommandDefinition, CliContext } from '../../types'
+import type { ChartData } from '../../ui/Chart'
 import pc from 'picocolors'
 import { DEFAULT_BUILD_TARGET, DEFAULT_OUT_DIR } from '../../constants'
 import { ViteLauncher } from '../../core/ViteLauncher'
 import { Banner } from '../../ui/Banner'
-import { Chart, type ChartData } from '../../ui/Chart'
+import { Chart } from '../../ui/Chart'
 import { Spinner } from '../../ui/Spinner'
 import { FileSystem } from '../../utils/file-system'
 import { Logger } from '../../utils/logger'
@@ -221,10 +222,10 @@ export class BuildCommand implements CliCommandDefinition {
         if (detectedFramework && detectedFramework.detected) {
           const frameworkName = detectedFramework.type?.toUpperCase() || 'UNKNOWN'
           const confidencePercent = (detectedFramework.confidence * 100).toFixed(0)
-          
+
           if (spinner) {
             spinner.succeed(
-              `检测到 ${pc.bold(pc.green(frameworkName))} 框架 (置信度: ${pc.cyan(`${confidencePercent}%`)})`
+              `检测到 ${pc.bold(pc.green(frameworkName))} 框架 (置信度: ${pc.cyan(`${confidencePercent}%`)})`,
             )
           }
         }
@@ -379,7 +380,7 @@ export class BuildCommand implements CliCommandDefinition {
         // 分析构建产物并生成统计图表
         if (result && 'output' in result && Array.isArray(result.output)) {
           const output = result.output as Array<OutputAsset | OutputChunk>
-          
+
           // 按类型统计文件
           const fileStats = {
             js: { count: 0, size: 0 },
@@ -556,7 +557,6 @@ export class BuildCommand implements CliCommandDefinition {
     }
   }
 }
-
 
 /**
  * 生成构建分析报告

@@ -98,7 +98,7 @@ export class ViteEngine extends BuildEngine {
         { resolvedUrls: this.devServerInstance.resolvedUrls } as any,
         serverInfo.host,
         port,
-        https
+        https,
       )
 
       const devServer: DevServer = {
@@ -191,7 +191,7 @@ export class ViteEngine extends BuildEngine {
         { resolvedUrls: this.previewServerInstance.resolvedUrls } as any,
         serverInfo.host,
         port,
-        https
+        https,
       )
 
       const previewServer: PreviewServer = {

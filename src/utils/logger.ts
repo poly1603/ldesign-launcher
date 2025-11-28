@@ -208,7 +208,6 @@ export class Logger {
     }
   }
 
-
   /**
    * Debug 级别日志
    */
@@ -424,14 +423,14 @@ export class Logger {
       return
 
     // 使用 \r 回到行首，然后清除行内容
-    process.stdout.write(`\r\x1b[K${message}`)
+    process.stdout.write(`\r\x1B[K${message}`)
   }
 
   /**
    * 清除当前行
    */
   clearLine(): void {
-    process.stdout.write('\r\x1b[K')
+    process.stdout.write('\r\x1B[K')
   }
 
   /**
@@ -507,7 +506,8 @@ export class Logger {
   cursorTo(x: number, y?: number): void {
     if (y !== undefined) {
       process.stdout.write(ansiEscapes.cursorTo(x, y))
-    } else {
+    }
+    else {
       process.stdout.write(ansiEscapes.cursorTo(x))
     }
   }
@@ -516,8 +516,9 @@ export class Logger {
    * 输出彩色文本（使用chalk）
    */
   color(text: string, color: string): string {
-    if (!this.colors) return text
-    
+    if (!this.colors)
+      return text
+
     // 支持链式调用，如 'bold.green'
     const parts = color.split('.')
     let result: any = chalk

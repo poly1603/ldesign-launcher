@@ -1,8 +1,8 @@
 /**
  * 友好错误处理工具
- * 
+ *
  * 提供友好的错误提示和解决方案建议
- * 
+ *
  * @author LDesign Team
  * @since 2.1.0
  */
@@ -142,10 +142,10 @@ export class FriendlyErrorHandler {
 
     // 显示错误标题
     const errorIcon = useColors ? chalk.red('✖') : '✖'
-    const errorTitle = useColors 
+    const errorTitle = useColors
       ? chalk.bold.red(`错误${context ? ` (${context})` : ''}`)
       : `错误${context ? ` (${context})` : ''}`
-    
+
     this.logger.raw('')
     this.logger.raw(`${errorIcon} ${errorTitle}`)
     this.logger.raw('')
@@ -157,7 +157,7 @@ export class FriendlyErrorHandler {
 
     // 查找匹配的解决方案
     const solution = this.findSolution(error)
-    
+
     if (solution) {
       this.displaySolution(solution, useColors)
     }
@@ -166,7 +166,7 @@ export class FriendlyErrorHandler {
     if (this.options.showStack && error.stack) {
       this.logger.raw(chalk.gray('\n堆栈信息:'))
       const stackLines = error.stack.split('\n').slice(1, 5) // 只显示前4行
-      stackLines.forEach(line => {
+      stackLines.forEach((line) => {
         this.logger.raw(chalk.gray(`  ${line.trim()}`))
       })
       this.logger.raw('')
@@ -226,21 +226,21 @@ export class FriendlyErrorHandler {
   private displaySolution(solution: ErrorSolution, useColors: boolean): void {
     // 问题描述
     const problemIcon = useColors ? chalk.yellow('⚠') : '⚠'
-    const problemText = useColors 
+    const problemText = useColors
       ? chalk.bold.yellow(solution.problem)
       : solution.problem
-    
+
     this.logger.raw(`${problemIcon} ${problemText}`)
     this.logger.raw('')
 
     // 解决方案
     const solutionIcon = useColors ? chalk.cyan('💡') : '💡'
-    const solutionTitle = useColors 
+    const solutionTitle = useColors
       ? chalk.bold.cyan('可能的解决方案:')
       : '可能的解决方案:'
-    
+
     this.logger.raw(`${solutionIcon} ${solutionTitle}`)
-    
+
     solution.solutions.forEach((sol, index) => {
       const number = useColors ? chalk.cyan(`${index + 1}.`) : `${index + 1}.`
       this.logger.raw(`  ${number} ${sol}`)
@@ -250,10 +250,10 @@ export class FriendlyErrorHandler {
     // 文档链接
     if (solution.docs) {
       const docsIcon = useColors ? chalk.blue('📚') : '📚'
-      const docsText = useColors 
+      const docsText = useColors
         ? `相关文档: ${chalk.underline.blue(solution.docs)}`
         : `相关文档: ${solution.docs}`
-      
+
       this.logger.raw(`${docsIcon} ${docsText}`)
       this.logger.raw('')
     }

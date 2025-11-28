@@ -90,7 +90,7 @@ export class PerformanceMonitor {
 
   /**
    * 设置垃圾回收监控（使用 PerformanceObserver API）
-   * 
+   *
    * 优先使用 PerformanceObserver API，这是更标准和安全的方式，
    * 不会篡改全局 gc 函数，避免副作用。
    */

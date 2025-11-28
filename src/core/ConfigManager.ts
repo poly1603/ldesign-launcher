@@ -75,12 +75,12 @@ export class ConfigManager extends EventEmitter {
 
   /**
    * 加载配置文件（底层实现）
-   * 
+   *
    * 支持多种配置文件格式：
    * - TypeScript (.ts) - 通过 jiti 编译
    * - JavaScript (.js, .mjs, .cjs) - 直接导入
    * - JSON (.json) - 解析 JSON
-   * 
+   *
    * 特性：
    * - 自动处理代理配置
    * - 支持 ESM 和 CJS 模块
@@ -90,7 +90,7 @@ export class ConfigManager extends EventEmitter {
    * @param configPath - 配置文件路径，如果不指定则使用构造函数中的路径
    * @returns Promise<ViteLauncherConfig> - 加载的配置对象
    * @throws 当配置文件格式无效时抛出错误（但会降级到默认配置）
-   * 
+   *
    * @example
    * ```typescript
    * const manager = new ConfigManager()
@@ -454,7 +454,7 @@ export class ConfigManager extends EventEmitter {
     }
     catch (mergeError) {
       this.logger.warn('深度合并失败，使用浅合并', {
-        error: (mergeError as Error).message
+        error: (mergeError as Error).message,
       })
       return { ...base, ...override }
     }
@@ -598,15 +598,15 @@ export class ConfigManager extends EventEmitter {
 
   /**
    * 销毁配置管理器，清理所有资源
-   * 
+   *
    * 清理以下资源：
    * - 文件监听器 (chokidar watcher)
    * - 所有事件监听器
-   * 
+   *
    * 建议在不再需要配置管理器时调用，以防止内存泄漏。
    *
    * @returns Promise<void>
-   * 
+   *
    * @example
    * ```typescript
    * const manager = new ConfigManager({ watch: true })
@@ -932,7 +932,7 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
           catch (pathCheckError) {
             // 简单兜底：基于正则的绝对路径判断
             this.logger.debug('路径检查失败，使用正则判断', {
-              error: (pathCheckError as Error).message
+              error: (pathCheckError as Error).message,
             })
             if (!/^(?:[a-z]:\\|\\\\|\/)/i.test(outDir)) {
               warnings.push('建议使用绝对路径作为输出目录')
@@ -1111,7 +1111,7 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
     catch (tsImportError) {
       // 如果没有 typescript，直接抛出错误给上层兜底
       this.logger.warn('TypeScript 依赖未安装', {
-        error: (tsImportError as Error).message
+        error: (tsImportError as Error).message,
       })
       throw new Error('缺少依赖: typescript')
     }

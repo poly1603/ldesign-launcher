@@ -138,7 +138,7 @@ export class Banner {
    */
   static renderSuccess(message: string, details?: string[]): string {
     const lines: string[] = []
-    lines.push(picocolors.bold(picocolors.green('✔ ' + message)))
+    lines.push(picocolors.bold(picocolors.green(`✔ ${message}`)))
 
     if (details && details.length > 0) {
       lines.push('')
@@ -159,7 +159,7 @@ export class Banner {
    */
   static renderError(message: string, details?: string[]): string {
     const lines: string[] = []
-    lines.push(picocolors.bold(picocolors.red('✖ ' + message)))
+    lines.push(picocolors.bold(picocolors.red(`✖ ${message}`)))
 
     if (details && details.length > 0) {
       lines.push('')
@@ -180,7 +180,7 @@ export class Banner {
    */
   static renderWarning(message: string, details?: string[]): string {
     const lines: string[] = []
-    lines.push(picocolors.bold(picocolors.yellow('⚠ ' + message)))
+    lines.push(picocolors.bold(picocolors.yellow(`⚠ ${message}`)))
 
     if (details && details.length > 0) {
       lines.push('')
@@ -250,7 +250,7 @@ export class Banner {
   static renderAsciiTitle(title: string, useGradient: boolean = true): string {
     // 简化的ASCII艺术字生成（使用大号字母）
     const asciiArt = this.generateSimpleAscii(title)
-    
+
     if (useGradient) {
       return gradient.pastel.multiline(asciiArt)
     }
@@ -263,7 +263,7 @@ export class Banner {
   private static generateSimpleAscii(text: string): string {
     // 为了简化，这里使用一个简单的大号字母实现
     // 实际项目中可以使用 figlet 等库生成更复杂的ASCII艺术字
-    const lines = ['', '  ' + text.toUpperCase(), '']
+    const lines = ['', `  ${text.toUpperCase()}`, '']
     return lines.join('\n')
   }
 
@@ -286,7 +286,7 @@ export class Banner {
     const rocket = figures.play
     const titleLine = `${rocket} ${options.title}${options.version ? ` v${options.version}` : ''}`
     lines.push(useGradient ? gradient.pastel(titleLine) : chalk.bold.cyan(titleLine))
-    
+
     // 子标题
     lines.push(chalk.gray('⚡ Lightning Fast Development Tool'))
     lines.push('')
@@ -354,7 +354,7 @@ export class Banner {
    */
   static renderShortcuts(shortcuts: Array<{ key: string, description: string }>): string {
     const lines: string[] = []
-    
+
     lines.push(chalk.gray('\nShortcuts:'))
     shortcuts.forEach(({ key, description }) => {
       lines.push(chalk.gray(`  ${key} ${chalk.dim('-')} ${description}`))
@@ -375,15 +375,15 @@ export class Banner {
     const lines: string[] = []
 
     lines.push(chalk.bold.cyan('\n📊 Build Statistics\n'))
-    
+
     const duration = stats.duration < 1000
       ? `${stats.duration}ms`
       : `${(stats.duration / 1000).toFixed(2)}s`
-    
+
     lines.push(`${chalk.gray('Duration:')} ${chalk.green(duration)}`)
     lines.push(`${chalk.gray('Files:')} ${chalk.cyan(stats.fileCount.toString())}`)
     lines.push(`${chalk.gray('Total Size:')} ${chalk.cyan(this.formatSize(stats.totalSize))}`)
-    
+
     if (stats.gzipSize) {
       lines.push(`${chalk.gray('Gzipped:')} ${chalk.cyan(this.formatSize(stats.gzipSize))}`)
     }
@@ -400,11 +400,12 @@ export class Banner {
    * 格式化文件大小
    */
   private static formatSize(bytes: number): string {
-    if (bytes === 0) return '0 B'
+    if (bytes === 0)
+      return '0 B'
     const k = 1024
     const sizes = ['B', 'KB', 'MB', 'GB']
     const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
+    return `${(bytes / k ** i).toFixed(2)} ${sizes[i]}`
   }
 }
 

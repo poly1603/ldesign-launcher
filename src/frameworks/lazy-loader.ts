@@ -1,8 +1,8 @@
 /**
  * 框架适配器懒加载器
- * 
+ *
  * 优化启动性能，只在需要时才加载特定的框架适配器
- * 
+ *
  * @author LDesign Team
  * @since 2.0.0
  */
@@ -33,12 +33,12 @@ const adapterLoaders = new Map<string, AdapterLoaderConfig>()
 
 /**
  * 注册框架适配器（懒加载版本）
- * 
+ *
  * @param name - 框架名称
  * @param loader - 适配器加载器函数
  * @param metadata - 框架元数据
  * @param priority - 优先级（默认5）
- * 
+ *
  * @example
  * ```ts
  * registerLazyFramework(
@@ -64,12 +64,12 @@ export function registerLazyFramework(
 
 /**
  * 加载框架适配器（带缓存）
- * 
+ *
  * @param name - 框架名称
  * @param options - 适配器选项
  * @returns 框架适配器实例
  * @throws 如果框架未注册或加载失败
- * 
+ *
  * @example
  * ```ts
  * const adapter = await loadFrameworkAdapter('react', { jsx: true })
@@ -118,7 +118,7 @@ export async function loadFrameworkAdapter(
 
 /**
  * 获取所有已注册的框架名称
- * 
+ *
  * @returns 框架名称数组
  */
 export function getRegisteredFrameworks(): string[] {
@@ -127,7 +127,7 @@ export function getRegisteredFrameworks(): string[] {
 
 /**
  * 获取框架元数据（不加载适配器）
- * 
+ *
  * @param name - 框架名称
  * @returns 框架元数据，如果未注册返回 undefined
  */
@@ -137,7 +137,7 @@ export function getFrameworkMetadata(name: string): FrameworkMetadata | undefine
 
 /**
  * 获取所有框架的元数据（按优先级排序）
- * 
+ *
  * @returns 框架元数据数组
  */
 export function getAllFrameworkMetadata(): Array<FrameworkMetadata & { frameworkName: string, priority: number }> {
@@ -152,7 +152,7 @@ export function getAllFrameworkMetadata(): Array<FrameworkMetadata & { framework
 
 /**
  * 清除适配器缓存
- * 
+ *
  * @param name - 框架名称，如果不指定则清除所有缓存
  */
 export function clearAdapterCache(name?: string): void {
@@ -166,14 +166,14 @@ export function clearAdapterCache(name?: string): void {
 
 /**
  * 预加载框架适配器
- * 
+ *
  * 在空闲时预加载常用框架适配器，提升后续使用性能
- * 
+ *
  * @param names - 要预加载的框架名称数组
  */
 export async function preloadFrameworkAdapters(names: string[]): Promise<void> {
   const promises = names.map(name =>
-    loadFrameworkAdapter(name).catch(error => {
+    loadFrameworkAdapter(name).catch((error) => {
       console.warn(`预加载框架适配器失败: ${name}`, error)
     }),
   )
@@ -183,7 +183,7 @@ export async function preloadFrameworkAdapters(names: string[]): Promise<void> {
 
 /**
  * 初始化并注册所有框架（懒加载版本）
- * 
+ *
  * 只注册框架元数据和加载器，不实际加载适配器代码
  */
 export function registerAllLazyFrameworks(): void {

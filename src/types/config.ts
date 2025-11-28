@@ -8,8 +8,12 @@
  */
 
 import type { Plugin, UserConfig } from 'vite'
-import type { AliasEntry } from '../utils/aliases'
+import type { AliasConfig, AliasEntry } from '../utils/aliases'
 import type { FilePath, Host, LifecycleHook, LogLevel, Mode, Port, ValidationResult } from './common'
+
+// 重新导出别名相关类型，方便外部使用
+export type { AliasConfig, AliasEntry }
+export type { AliasStage, BuildStage, CreateAliasOptions, SimpleAliasConfig } from '../utils/aliases'
 
 /**
  * ViteLauncher 扩展配置接口
@@ -40,9 +44,33 @@ export interface ViteLauncherConfig extends Omit<UserConfig, 'resolve'> {
     [key: string]: any
   }
 
-  /** 扩展的 resolve 配置，支持阶段化别名 */
+  /**
+   * 扩展的 resolve 配置，支持阶段化别名
+   *
+   * @example
+   * ```ts
+   * resolve: {
+   *   alias: [
+   *     // 使用 stage 简化配置（推荐）
+   *     { find: '@ldesign/core', replacement: './packages/core/src', stage: 'dev' },
+   *
+   *     // 所有阶段生效
+   *     { find: '@', replacement: './src', stage: 'all' },
+   *
+   *     // 仅构建时生效
+   *     { find: 'lodash', replacement: 'lodash-es', stage: 'build' },
+   *
+   *     // 支持正则表达式
+   *     { find: /^@ldesign\/core\/(.+)$/, replacement: './packages/core/src/$1', stage: 'dev' },
+   *
+   *     // 兼容旧的 stages 数组形式
+   *     { find: '@utils', replacement: './src/utils', stages: ['dev', 'build'] },
+   *   ]
+   * }
+   * ```
+   */
   resolve?: UserConfig['resolve'] & {
-    alias?: AliasEntry[]
+    alias?: AliasConfig[]
   }
 }
 

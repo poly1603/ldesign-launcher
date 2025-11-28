@@ -12,6 +12,8 @@ import type { FrameworkMetadata } from '../types/framework'
 export * from './angular'
 
 export * from './base'
+// 导出懒加载工具
+export * from './lazy-loader'
 export * from './lit'
 export * from './marko'
 export * from './preact'
@@ -19,8 +21,6 @@ export * from './qwik'
 export * from './react'
 export * from './solid'
 export * from './svelte'
-// 导出各框架适配器
-export * from './vue'
 
 /**
  * Vue 2 框架元数据
@@ -280,7 +280,7 @@ export const MARKO_FRAMEWORK_METADATA: FrameworkMetadata = {
 
 /**
  * 初始化并注册所有框架（立即加载版本）
- * 
+ *
  * @deprecated 推荐使用 registerAllLazyFrameworks() 以获得更好的启动性能
  */
 export async function registerAllFrameworks(): Promise<void> {
@@ -309,5 +309,5 @@ export async function registerAllFrameworks(): Promise<void> {
   registerFramework('marko', markoAdapterFactory, MARKO_FRAMEWORK_METADATA, 7)
 }
 
-// 导出懒加载工具
-export * from './lazy-loader'
+// 导出各框架适配器
+export * from './vue'

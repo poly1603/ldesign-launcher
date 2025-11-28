@@ -7,8 +7,8 @@
  * @since 2.1.0
  */
 
-export * from './ProgressBar'
-export * from './Spinner'
-export * from './Chart'
 export * from './Banner'
+export * from './Chart'
+export * from './ProgressBar'
 export * from './QRCode'
+export * from './Spinner'

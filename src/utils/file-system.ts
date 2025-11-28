@@ -31,7 +31,7 @@ export interface WriteOptions {
 export class FileSystem {
   /**
    * 检查文件或目录是否存在
-   * 
+   *
    * @param path - 文件或目录路径
    * @returns 如果存在返回 true，不存在返回 false
    * @throws 如果是权限错误等非 ENOENT 错误，会抛出异常

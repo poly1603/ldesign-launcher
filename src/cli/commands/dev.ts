@@ -161,7 +161,7 @@ export class DevCommand implements CliCommandDefinition {
    */
   async handler(context: CliContext): Promise<void> {
     const startTime = Date.now()
-    
+
     // 抑制 Node.js 的实验性功能警告
     const originalEmitWarning = process.emitWarning
     process.emitWarning = (warning, ...args: any[]) => {
@@ -205,10 +205,10 @@ export class DevCommand implements CliCommandDefinition {
         if (detectedFramework && detectedFramework.detected) {
           const frameworkName = detectedFramework.type?.toUpperCase() || 'UNKNOWN'
           const confidencePercent = (detectedFramework.confidence * 100).toFixed(0)
-          
+
           if (spinner) {
             spinner.succeed(
-              `检测到 ${pc.bold(pc.green(frameworkName))} 框架 (置信度: ${pc.cyan(`${confidencePercent}%`)})`
+              `检测到 ${pc.bold(pc.green(frameworkName))} 框架 (置信度: ${pc.cyan(`${confidencePercent}%`)})`,
             )
           }
 
@@ -398,7 +398,8 @@ export class DevCommand implements CliCommandDefinition {
               network: addresses.network,
               showUrl: false,
             })
-          } catch (error) {
+          }
+          catch (error) {
             logger.debug(`二维码显示失败: ${(error as Error).message}`)
           }
         }

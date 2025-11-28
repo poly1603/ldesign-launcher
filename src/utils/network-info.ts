@@ -1,8 +1,8 @@
 /**
  * 网络信息工具
- * 
+ *
  * 用于获取本地和局域网IP地址,检测端口,复制地址到剪贴板等
- * 
+ *
  * @author LDesign Team
  * @since 2.1.0
  */
@@ -39,7 +39,7 @@ export class NetworkInfo {
     const result: NetworkInterfaceInfo[] = []
 
     Object.entries(interfaces).forEach(([name, nets]) => {
-      nets?.forEach(net => {
+      nets?.forEach((net) => {
         result.push({
           name,
           address: net.address,
@@ -59,8 +59,8 @@ export class NetworkInfo {
     const interfaces = networkInterfaces()
     const addresses: string[] = []
 
-    Object.values(interfaces).forEach(nets => {
-      nets?.forEach(net => {
+    Object.values(interfaces).forEach((nets) => {
+      nets?.forEach((net) => {
         // 只获取IPv4且非内部地址
         if (net.family === 'IPv4' && !net.internal) {
           addresses.push(net.address)
@@ -76,12 +76,12 @@ export class NetworkInfo {
    */
   static getPrimaryAddress(): string | null {
     const addresses = this.getLocalAddresses()
-    
+
     // 优先返回192.168.x.x或10.x.x.x段的地址
-    const preferred = addresses.find(addr => 
-      addr.startsWith('192.168.') || addr.startsWith('10.')
+    const preferred = addresses.find(addr =>
+      addr.startsWith('192.168.') || addr.startsWith('10.'),
     )
-    
+
     return preferred || addresses[0] || null
   }
 
@@ -92,7 +92,8 @@ export class NetworkInfo {
     try {
       const availablePort = await detectPort(port)
       return availablePort === port
-    } catch {
+    }
+    catch {
       return false
     }
   }
@@ -102,11 +103,12 @@ export class NetworkInfo {
    */
   static async findAvailablePort(
     preferredPort: number,
-    _host: string = '0.0.0.0'
+    _host: string = '0.0.0.0',
   ): Promise<number> {
     try {
       return await detectPort(preferredPort)
-    } catch {
+    }
+    catch {
       // 如果detectPort失败,返回原端口
       return preferredPort
     }
@@ -118,7 +120,7 @@ export class NetworkInfo {
   static formatUrls(
     _host: string,
     port: number,
-    protocol: 'http' | 'https' = 'http'
+    protocol: 'http' | 'https' = 'http',
   ): NetworkAddress {
     const local = `${protocol}://localhost:${port}`
     const addresses = this.getLocalAddresses()
@@ -134,7 +136,8 @@ export class NetworkInfo {
     try {
       await clipboardy.write(text)
       return true
-    } catch (error) {
+    }
+    catch (error) {
       // 静默失败
       return false
     }
@@ -152,9 +155,9 @@ export class NetworkInfo {
 
     // 本地地址
     console.log(
-      chalk.gray('➜ ') + 
-      chalk.bold('Local:   ') + 
-      chalk.cyan(addresses.local)
+      chalk.gray('➜ ')
+      + chalk.bold('Local:   ')
+      + chalk.cyan(addresses.local),
     )
 
     // 网络地址
@@ -162,16 +165,16 @@ export class NetworkInfo {
       addresses.network.forEach((addr, index) => {
         const label = index === 0 ? 'Network: ' : '         '
         console.log(
-          chalk.gray('➜ ') + 
-          chalk.bold(label) + 
-          chalk.cyan(addr)
+          chalk.gray('➜ ')
+          + chalk.bold(label)
+          + chalk.cyan(addr),
         )
       })
     }
 
     // 复制提示
     if (showCopyHint) {
-      this.copyToClipboard(addresses.local).then(success => {
+      this.copyToClipboard(addresses.local).then((success) => {
         if (success) {
           console.log(chalk.gray('\n✓ Local address copied to clipboard'))
         }
@@ -189,7 +192,7 @@ export class NetworkInfo {
     external: number
   } {
     const interfaces = this.getAllInterfaces()
-    
+
     return {
       total: interfaces.length,
       ipv4: interfaces.filter(i => i.family === 'IPv4').length,
@@ -216,11 +219,12 @@ export class NetworkInfo {
    * 格式化文件大小
    */
   static formatSize(bytes: number): string {
-    if (bytes === 0) return '0 B'
+    if (bytes === 0)
+      return '0 B'
     const k = 1024
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
     const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
+    return `${(bytes / k ** i).toFixed(2)} ${sizes[i]}`
   }
 
   /**

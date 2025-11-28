@@ -1,8 +1,8 @@
 /**
  * ASCII 图表生成器
- * 
+ *
  * 用于在终端中显示柱状图、饼图等可视化图表
- * 
+ *
  * @author LDesign Team
  * @since 2.1.0
  */
