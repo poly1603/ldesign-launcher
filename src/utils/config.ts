@@ -336,11 +336,50 @@ export function createPathResolver(cwd?: string) {
 }
 
 /**
- * 定义配置的辅助函数
- * 提供类型安全和智能提示
+ * 定义 Launcher 配置的辅助函数
  *
- * @param config - 配置对象
- * @returns 配置对象
+ * 提供完整的 TypeScript 类型安全和智能提示，类似于 Vite 的 defineConfig。
+ * 用于配置开发服务器、构建选项、预览服务器等。
+ *
+ * @param config - Launcher 配置对象
+ * @returns 配置对象（原样返回，用于类型推断）
+ *
+ * @example
+ * ```typescript
+ * // launcher.config.ts
+ * import { defineConfig } from '@ldesign/launcher'
+ *
+ * export default defineConfig({
+ *   // 开发服务器配置
+ *   server: {
+ *     host: '0.0.0.0',
+ *     port: 3000,
+ *     open: true,
+ *     cors: true,
+ *   },
+ *
+ *   // 构建配置
+ *   build: {
+ *     outDir: 'dist',
+ *     sourcemap: true,
+ *     minify: true,
+ *   },
+ *
+ *   // 预览服务器配置
+ *   preview: {
+ *     port: 4173,
+ *   },
+ *
+ *   // 路径别名配置
+ *   resolve: {
+ *     alias: [
+ *       { find: '@', replacement: './src' },
+ *     ],
+ *   },
+ * })
+ * ```
+ *
+ * @see {@link ViteLauncherConfig} 完整配置选项
  */
 export function defineConfig(config: ViteLauncherConfig): ViteLauncherConfig {
   return config
