@@ -456,10 +456,9 @@ export class EnvFileFinder {
  * 环境变量验证器
  */
 export class EnvValidator {
-  private logger: Logger
-
-  constructor(logger?: Logger) {
-    this.logger = logger || new Logger('EnvValidator')
+  constructor(_logger?: Logger) {
+    // Logger parameter kept for API compatibility but not currently used
+    // Can be utilized in future for logging validation details
   }
 
   /**

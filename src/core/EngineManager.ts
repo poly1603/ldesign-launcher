@@ -106,8 +106,9 @@ export class EngineManager {
       throw new Error('当前引擎不支持监听模式')
     }
 
-    this.buildWatcher = await this.currentEngine.buildWatch(config)
-    return this.buildWatcher
+    const watcher = await this.currentEngine.buildWatch(config)
+    this.buildWatcher = watcher
+    return watcher
   }
 
   /**

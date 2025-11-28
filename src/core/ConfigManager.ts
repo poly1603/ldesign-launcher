@@ -48,8 +48,9 @@ export class ConfigManager extends EventEmitter {
   constructor(options: ConfigManagerOptions = {}) {
     super()
 
-    // 设置 EventEmitter 最大监听器数量，避免内存泄漏警告
-    this.setMaxListeners(20)
+    // 设置 EventEmitter 最大监听器数量
+    // 降低到合理值以便及时发现内存泄漏
+    this.setMaxListeners(10)
 
     // 使 kitConfigManager 的方法可被 Vitest mock（如果存在 vi）
     const viRef: any = (globalThis as any).vi
@@ -163,12 +164,13 @@ export class ConfigManager extends EventEmitter {
             const jitiMod: any = await import('jiti')
             const createJiti = (jitiMod && jitiMod.default) ? jitiMod.default : jitiMod
 
-            // 禁用 jiti 缓存以支持配置热更新
-            // 注意：虽然禁用缓存会略微降低加载性能（首次~200ms，后续~150ms），
-            // 但这确保了配置文件变更时能够正确重新加载
+            // 智能缓存策略：
+            // - 在开发环境（watch模式）下禁用缓存以支持热更新
+            // - 在生产环境下启用缓存以提高性能
+            const shouldCache = !this.watchEnabled
             const jitiLoader = createJiti(process.cwd(), {
-              cache: false, // ❌ 禁用缓存，确保配置热更新生效
-              requireCache: false, // ❌ 禁用 require 缓存
+              cache: shouldCache, // 根据监听状态决定是否缓存
+              requireCache: shouldCache, // 根据监听状态决定是否缓存 require
               interopDefault: true,
               esmResolve: true,
               debug: false, // 禁用debug输出
@@ -179,6 +181,10 @@ export class ConfigManager extends EventEmitter {
                 },
               },
             })
+
+            if (this.logger.getLevel() === 'debug') {
+              this.logger.debug(`jiti 缓存策略: ${shouldCache ? '启用' : '禁用'} (watch: ${this.watchEnabled})`)
+            }
 
             this.logger.info(`📋 使用 jiti 加载配置文件`)
             const startTime = Date.now()
@@ -446,7 +452,10 @@ export class ConfigManager extends EventEmitter {
       }
       return this.deepMerge(base, override)
     }
-    catch {
+    catch (mergeError) {
+      this.logger.warn('深度合并失败，使用浅合并', {
+        error: (mergeError as Error).message
+      })
       return { ...base, ...override }
     }
   }
@@ -606,11 +615,29 @@ export class ConfigManager extends EventEmitter {
    * ```
    */
   async destroy(): Promise<void> {
+    // 记录清理前的监听器数量（用于诊断内存泄漏）
+    const listenerCounts = {
+      configLoaded: this.listenerCount('configLoaded'),
+      configSaved: this.listenerCount('configSaved'),
+      configUpdated: this.listenerCount('configUpdated'),
+      configChanged: this.listenerCount('configChanged'),
+      change: this.listenerCount('change'),
+    }
+    this.logger.debug('ConfigManager 清理前监听器数量:', listenerCounts)
+
     // 停止文件监听器
     await this.stopWatcher()
 
     // 清理所有事件监听器
     this.removeAllListeners()
+
+    // 验证清理效果
+    const remainingListeners = this.eventNames().length
+    if (remainingListeners > 0) {
+      this.logger.warn(`清理后仍有 ${remainingListeners} 个事件监听器未清除`, {
+        events: this.eventNames(),
+      })
+    }
 
     this.logger.info('ConfigManager 已销毁')
   }
@@ -902,8 +929,11 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
               warnings.push('建议使用绝对路径作为输出目录')
             }
           }
-          catch {
+          catch (pathCheckError) {
             // 简单兜底：基于正则的绝对路径判断
+            this.logger.debug('路径检查失败，使用正则判断', {
+              error: (pathCheckError as Error).message
+            })
             if (!/^(?:[a-z]:\\|\\\\|\/)/i.test(outDir)) {
               warnings.push('建议使用绝对路径作为输出目录')
             }
@@ -1078,8 +1108,11 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
     try {
       ts = require('typescript')
     }
-    catch {
+    catch (tsImportError) {
       // 如果没有 typescript，直接抛出错误给上层兜底
+      this.logger.warn('TypeScript 依赖未安装', {
+        error: (tsImportError as Error).message
+      })
       throw new Error('缺少依赖: typescript')
     }
 

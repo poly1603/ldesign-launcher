@@ -104,7 +104,7 @@ export class ProxyConfigProcessor {
           proxy.on('error', (err: Error) => {
             proxyConfigLogger.error(`API 代理错误 (${pathPrefix}): ${err.message}`)
           })
-          proxy.on('proxyReq', (proxyReq: any, req: any) => {
+          proxy.on('proxyReq', (_proxyReq: any, req: any) => {
             proxyConfigLogger.debug(`API 代理请求: ${req.method} ${req.url} -> ${target}`)
           })
         },
@@ -201,7 +201,7 @@ export class ProxyConfigProcessor {
 
       // 验证目标地址格式
       try {
-        const _parsedUrl = new URL(ruleObj.target)
+        new URL(ruleObj.target)
       }
       catch {
         errors.push(`代理规则 \"${path}\" 的目标地址格式无效: ${ruleObj.target}`)

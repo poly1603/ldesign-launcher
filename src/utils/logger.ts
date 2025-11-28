@@ -1,7 +1,7 @@
 /**
- * 日志记录器 (精简版)
+ * 日志记录器 (增强版)
  *
- * 删除了文件轮转、日志历史、性能追踪、子 logger、表格/分组输出等高级功能
+ * 支持表格输出、日志分组、spinner动画、进度条等高级功能
  * 保留基础的日志级别、颜色输出、时间戳功能
  *
  * @author LDesign Team
@@ -10,6 +10,15 @@
 
 /* eslint-disable no-console */
 
+import type { Options as BoxenOptions } from 'boxen'
+import type { Ora } from 'ora'
+import ansiEscapes from 'ansi-escapes'
+import boxen from 'boxen'
+import chalk from 'chalk'
+import Table from 'cli-table3'
+import figures from 'figures'
+import gradient from 'gradient-string'
+import ora from 'ora'
 import picocolors from 'picocolors'
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'silent'
@@ -22,6 +31,21 @@ export interface LoggerOptions {
   compact?: boolean // 简洁模式，减少冗余信息
 }
 
+export interface TableColumn {
+  header: string
+  key: string
+  width?: number
+  align?: 'left' | 'center' | 'right'
+}
+
+export interface TableOptions {
+  columns?: TableColumn[]
+  style?: {
+    head?: string[]
+    border?: string[]
+  }
+}
+
 /**
  * 日志记录器 (精简版)
  */
@@ -29,8 +53,8 @@ export class Logger {
   private level: LogLevel
   private colors: boolean
   private timestamp: boolean
-  private prefix: string
-  private compact: boolean
+  private groupDepth: number = 0
+  private activeSpinner: Ora | null = null
 
   private readonly levels: Record<LogLevel, number> = {
     debug: 0,
@@ -40,12 +64,11 @@ export class Logger {
     silent: 4,
   }
 
-  constructor(name: string = 'Logger', options: LoggerOptions = {}) {
+  constructor(_name: string = 'Logger', options: LoggerOptions = {}) {
     this.level = options.level || 'info'
     this.colors = options.colors !== false
     this.timestamp = options.timestamp !== false
-    this.prefix = options.prefix || name
-    this.compact = options.compact || false
+    // prefix 和 compact 参数保留用于未来扩展
   }
 
   /**
@@ -185,55 +208,33 @@ export class Logger {
     }
   }
 
-  /**
-   * 输出日志
-   */
-  private log(level: LogLevel, message: string, data?: any): void {
-    if (!this.shouldLog(level)) {
-      return
-    }
-
-    const formatted = this.formatMessage(level, message, data)
-    const colored = this.applyColor(level, formatted)
-
-    // 根据级别选择输出流
-    if (level === 'error') {
-      console.error(colored)
-    }
-    else if (level === 'warn') {
-      console.warn(colored)
-    }
-    else {
-      console.log(colored)
-    }
-  }
 
   /**
    * Debug 级别日志
    */
   debug(message: string, data?: any): void {
-    this.log('debug', message, data)
+    this.logWithIndent('debug', message, data)
   }
 
   /**
    * Info 级别日志
    */
   info(message: string, data?: any): void {
-    this.log('info', message, data)
+    this.logWithIndent('info', message, data)
   }
 
   /**
    * Warn 级别日志
    */
   warn(message: string, data?: any): void {
-    this.log('warn', message, data)
+    this.logWithIndent('warn', message, data)
   }
 
   /**
    * Error 级别日志
    */
   error(message: string, data?: any): void {
-    this.log('error', message, data)
+    this.logWithIndent('error', message, data)
   }
 
   /**
@@ -300,6 +301,280 @@ export class Logger {
       return
 
     console.log(message)
+  }
+
+  /**
+   * 输出表格
+   */
+  table(data: Array<Record<string, any>>, options?: TableOptions): void {
+    if (!this.shouldLog('info'))
+      return
+
+    if (!data || data.length === 0) {
+      this.warn('表格数据为空')
+      return
+    }
+
+    try {
+      // 自动提取列
+      const columns: TableColumn[] = options?.columns || Object.keys(data[0]).map(key => ({
+        header: key,
+        key,
+      }))
+
+      // 创建表格
+      const table = new Table({
+        head: columns.map(col => col.header),
+        style: {
+          head: options?.style?.head || (this.colors ? ['cyan'] : []),
+          border: options?.style?.border || (this.colors ? ['gray'] : []),
+        },
+        colWidths: columns.map(col => col.width || null) as (number | null)[],
+        colAligns: columns.map(col => col.align || 'left') as any,
+      })
+
+      // 添加数据行
+      data.forEach((row) => {
+        const values = columns.map(col => String(row[col.key] ?? ''))
+        table.push(values)
+      })
+
+      console.log(table.toString())
+    }
+    catch (error) {
+      this.error('表格输出失败', { error: (error as Error).message })
+    }
+  }
+
+  /**
+   * 日志分组开始
+   */
+  group(label: string): void {
+    if (!this.shouldLog('info'))
+      return
+
+    const indent = '  '.repeat(this.groupDepth)
+    const symbol = this.colors ? figures.info : '[GROUP]'
+    console.log(`${indent}${symbol} ${this.colors ? picocolors.bold(label) : label}`)
+    this.groupDepth++
+  }
+
+  /**
+   * 日志分组结束
+   */
+  groupEnd(): void {
+    if (this.groupDepth > 0) {
+      this.groupDepth--
+    }
+  }
+
+  /**
+   * 带自动结束的分组
+   */
+  groupCollapsed(label: string, callback: () => void): void {
+    this.group(label)
+    try {
+      callback()
+    }
+    finally {
+      this.groupEnd()
+    }
+  }
+
+  /**
+   * 创建 spinner 加载动画
+   */
+  spinner(text: string, options?: { spinner?: string }): Ora {
+    // 停止之前的 spinner
+    if (this.activeSpinner) {
+      this.activeSpinner.stop()
+    }
+
+    this.activeSpinner = ora({
+      text,
+      spinner: options?.spinner as any || 'dots',
+      color: 'cyan',
+    }).start()
+
+    return this.activeSpinner
+  }
+
+  /**
+   * 停止当前 spinner
+   */
+  stopSpinner(symbol?: 'succeed' | 'fail' | 'warn' | 'info', text?: string): void {
+    if (!this.activeSpinner)
+      return
+
+    if (symbol) {
+      this.activeSpinner[symbol](text)
+    }
+    else {
+      this.activeSpinner.stop()
+    }
+
+    this.activeSpinner = null
+  }
+
+  /**
+   * 更新同一行内容（覆盖式输出）
+   */
+  updateLine(message: string): void {
+    if (!this.shouldLog('info'))
+      return
+
+    // 使用 \r 回到行首，然后清除行内容
+    process.stdout.write(`\r\x1b[K${message}`)
+  }
+
+  /**
+   * 清除当前行
+   */
+  clearLine(): void {
+    process.stdout.write('\r\x1b[K')
+  }
+
+  /**
+   * 输出分隔线
+   */
+  divider(char: string = '─', length: number = 50): void {
+    if (!this.shouldLog('info'))
+      return
+
+    const line = char.repeat(length)
+    console.log(this.colors ? picocolors.gray(line) : line)
+  }
+
+  /**
+   * 输出空行
+   */
+  newline(count: number = 1): void {
+    if (!this.shouldLog('info'))
+      return
+
+    for (let i = 0; i < count; i++) {
+      console.log()
+    }
+  }
+
+  /**
+   * 输出边框盒子
+   */
+  box(content: string, options?: BoxenOptions): void {
+    if (!this.shouldLog('info'))
+      return
+
+    const boxOptions: BoxenOptions = {
+      padding: 1,
+      margin: { top: 1, bottom: 1, left: 0, right: 0 },
+      borderStyle: 'round',
+      borderColor: 'cyan',
+      ...options,
+    }
+    console.log(boxen(content, boxOptions))
+  }
+
+  /**
+   * 输出渐变文字
+   */
+  gradient(text: string, colors?: string[]): void {
+    if (!this.shouldLog('info'))
+      return
+
+    if (!this.colors) {
+      console.log(text)
+      return
+    }
+
+    const gradientColors = colors || ['#ff6b6b', '#4ecdc4', '#45b7d1']
+    const gradientText = gradient(gradientColors)(text)
+    console.log(gradientText)
+  }
+
+  /**
+   * 清屏
+   */
+  clearScreen(): void {
+    if (!this.shouldLog('info'))
+      return
+
+    console.log(ansiEscapes.clearScreen)
+  }
+
+  /**
+   * 移动光标到指定位置
+   */
+  cursorTo(x: number, y?: number): void {
+    if (y !== undefined) {
+      process.stdout.write(ansiEscapes.cursorTo(x, y))
+    } else {
+      process.stdout.write(ansiEscapes.cursorTo(x))
+    }
+  }
+
+  /**
+   * 输出彩色文本（使用chalk）
+   */
+  color(text: string, color: string): string {
+    if (!this.colors) return text
+    
+    // 支持链式调用，如 'bold.green'
+    const parts = color.split('.')
+    let result: any = chalk
+    for (const part of parts) {
+      result = result[part as keyof typeof chalk]
+    }
+    return typeof result === 'function' ? result(text) : text
+  }
+
+  /**
+   * 输出图标（使用figures）
+   */
+  icon(name: keyof typeof figures): string {
+    return this.colors ? figures[name] : `[${name.toUpperCase()}]`
+  }
+
+  /**
+   * 输出带图标的消息
+   */
+  iconMsg(icon: keyof typeof figures, message: string, color?: string): void {
+    if (!this.shouldLog('info'))
+      return
+
+    const iconChar = this.icon(icon)
+    const msg = `${iconChar} ${message}`
+    console.log(color ? this.color(msg, color) : msg)
+  }
+
+  /**
+   * 带缩进的日志输出
+   */
+  private getIndent(): string {
+    return '  '.repeat(this.groupDepth)
+  }
+
+  /**
+   * 输出日志（覆盖原方法，添加缩进支持）
+   */
+  private logWithIndent(level: LogLevel, message: string, data?: any): void {
+    if (!this.shouldLog(level)) {
+      return
+    }
+
+    const indent = this.getIndent()
+    const formatted = this.formatMessage(level, message, data)
+    const colored = this.applyColor(level, formatted)
+
+    // 根据级别选择输出流
+    if (level === 'error') {
+      console.error(indent + colored)
+    }
+    else if (level === 'warn') {
+      console.warn(indent + colored)
+    }
+    else {
+      console.log(indent + colored)
+    }
   }
 }
 

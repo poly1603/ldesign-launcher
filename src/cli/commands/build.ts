@@ -12,6 +12,9 @@ import type { CliCommandDefinition, CliContext } from '../../types'
 import pc from 'picocolors'
 import { DEFAULT_BUILD_TARGET, DEFAULT_OUT_DIR } from '../../constants'
 import { ViteLauncher } from '../../core/ViteLauncher'
+import { Banner } from '../../ui/Banner'
+import { Chart, type ChartData } from '../../ui/Chart'
+import { Spinner } from '../../ui/Spinner'
 import { FileSystem } from '../../utils/file-system'
 import { Logger } from '../../utils/logger'
 import { PathUtils } from '../../utils/path-utils'
@@ -181,26 +184,33 @@ export class BuildCommand implements CliCommandDefinition {
           ? '🟡 STAGING'
           : environment === 'test' ? '🔵 TEST' : '🟢 DEVELOPMENT'
 
-      // 立即输出环境标识（通过 Logger 原样输出，避免打乱布局）
+      // 显示构建横幅
       if (!context.options.silent) {
+        const banner = Banner.renderStartupBanner({
+          title: '🏗️ LDesign Builder',
+          subtitle: '生产构建工具',
+          version: '2.0.0',
+          info: [
+            { label: '环境', value: envLabel },
+            { label: '工作目录', value: context.cwd },
+            { label: '模式', value: context.options.mode || 'production' },
+            { label: '输出目录', value: context.options.outDir || DEFAULT_OUT_DIR },
+          ],
+        })
+        logger.raw(banner)
         logger.raw('')
-        logger.raw(`🏗️  ${pc.cyan('LDesign Launcher')} - ${envLabel}`)
-        logger.raw(`📁 ${pc.gray('工作目录:')} ${context.cwd}`)
-        logger.raw(`⚙️  ${pc.gray('模式:')} ${context.options.mode || 'production'}`)
-        logger.raw('')
-
-        if (context.configFile) {
-          logger.info(`📋 配置来源: 指定文件 ${context.configFile}`)
-        }
-        else {
-          logger.info('📋 配置来源: 自动加载 (.ldesign/launcher.config.*)')
-        }
       }
 
-      // 🎯 零配置特性：自动检测框架
+      // 🎯 零配置特性：自动检测框架（使用spinner）
       let detectedFramework = null
+      let spinner: Spinner | null = null
+
       if (!context.options.silent) {
-        logger.info('🔍 正在检测项目框架...')
+        spinner = new Spinner({
+          text: '正在检测项目框架...',
+          spinner: 'dots',
+          color: 'cyan',
+        })
       }
 
       try {
@@ -209,36 +219,55 @@ export class BuildCommand implements CliCommandDefinition {
         detectedFramework = await detector.detectBest(context.cwd)
 
         if (detectedFramework && detectedFramework.detected) {
-          if (!context.options.silent) {
-            const frameworkName = detectedFramework.type?.toUpperCase() || 'UNKNOWN'
-            const confidencePercent = (detectedFramework.confidence * 100).toFixed(0)
-            logger.success(
-              `✓ 检测到 ${pc.bold(pc.green(frameworkName))} 框架 `
-              + `(置信度: ${pc.cyan(`${confidencePercent}%`)})`,
+          const frameworkName = detectedFramework.type?.toUpperCase() || 'UNKNOWN'
+          const confidencePercent = (detectedFramework.confidence * 100).toFixed(0)
+          
+          if (spinner) {
+            spinner.succeed(
+              `检测到 ${pc.bold(pc.green(frameworkName))} 框架 (置信度: ${pc.cyan(`${confidencePercent}%`)})`
             )
           }
         }
         else {
-          if (!context.options.silent) {
-            logger.warn('⚠ 未检测到已知框架，将使用默认配置')
+          if (spinner) {
+            spinner.warn('未检测到已知框架，将使用默认配置')
           }
         }
       }
       catch (error) {
+        if (spinner) {
+          spinner.fail('框架检测失败')
+        }
         if (context.options.debug) {
           logger.warn(`框架检测失败: ${(error as Error).message}`)
         }
       }
 
-      logger.info('正在执行生产构建...')
-
       // 解析输出目录
       const outDir = PathUtils.resolve(context.cwd, context.options.outDir || DEFAULT_OUT_DIR)
 
-      // 检查输出目录
+      // 检查输出目录（使用spinner）
       if (context.options.emptyOutDir && await FileSystem.exists(outDir)) {
-        logger.info('正在清空输出目录...', { outDir })
+        if (!context.options.silent) {
+          spinner = new Spinner({
+            text: '正在清空输出目录...',
+            spinner: 'dots',
+            color: 'yellow',
+          })
+        }
         await FileSystem.remove(outDir)
+        if (spinner) {
+          spinner.succeed('输出目录已清空')
+        }
+      }
+
+      // 开始构建（使用spinner）
+      if (!context.options.silent) {
+        spinner = new Spinner({
+          text: '正在执行生产构建...',
+          spinner: 'dots',
+          color: 'cyan',
+        })
       }
 
       // 创建 ViteLauncher 实例
@@ -340,22 +369,139 @@ export class BuildCommand implements CliCommandDefinition {
       else {
         const result = await launcher.build()
 
+        // 停止spinner
+        if (spinner) {
+          spinner.succeed('构建完成')
+        }
+
         const duration = Date.now() - startTime
 
-        // 显示构建结果
-        logger.success(`构建成功完成! (${duration}ms)`)
+        // 分析构建产物并生成统计图表
+        if (result && 'output' in result && Array.isArray(result.output)) {
+          const output = result.output as Array<OutputAsset | OutputChunk>
+          
+          // 按类型统计文件
+          const fileStats = {
+            js: { count: 0, size: 0 },
+            css: { count: 0, size: 0 },
+            image: { count: 0, size: 0 },
+            font: { count: 0, size: 0 },
+            other: { count: 0, size: 0 },
+          }
 
-        // 显示输出目录信息
-        if (await FileSystem.exists(outDir)) {
-          const dirSize = await getDirectorySize(outDir)
+          output.forEach((file) => {
+            let size = 0
+            if ('code' in file && typeof file.code === 'string') {
+              size = file.code.length
+            }
+            else if ('source' in file) {
+              const src = file.source as string | Uint8Array
+              size = typeof src === 'string' ? src.length : src.byteLength
+            }
+
+            const type = getFileType(file.fileName)
+            if (type === 'js') {
+              fileStats.js.count++
+              fileStats.js.size += size
+            }
+            else if (type === 'css') {
+              fileStats.css.count++
+              fileStats.css.size += size
+            }
+            else if (type === 'image') {
+              fileStats.image.count++
+              fileStats.image.size += size
+            }
+            else if (type === 'font') {
+              fileStats.font.count++
+              fileStats.font.size += size
+            }
+            else {
+              fileStats.other.count++
+              fileStats.other.size += size
+            }
+          })
+
+          // 使用 Banner.renderBuildStats 显示构建统计
+          const totalSize = Object.values(fileStats).reduce((sum, stat) => sum + stat.size, 0)
+          const buildStats = Banner.renderBuildStats({
+            duration,
+            fileCount: output.length,
+            totalSize,
+            gzipSize: Math.round(totalSize * 0.32), // 估算gzip大小
+          })
+          logger.raw(buildStats)
+
+          // 显示文件类型分布图表
+          const chartData: ChartData[] = []
+          if (fileStats.js.count > 0) {
+            chartData.push({
+              label: 'JavaScript',
+              value: fileStats.js.size,
+              color: 'cyan',
+            })
+          }
+          if (fileStats.css.count > 0) {
+            chartData.push({
+              label: 'CSS',
+              value: fileStats.css.size,
+              color: 'magenta',
+            })
+          }
+          if (fileStats.image.count > 0) {
+            chartData.push({
+              label: 'Images',
+              value: fileStats.image.size,
+              color: 'green',
+            })
+          }
+          if (fileStats.font.count > 0) {
+            chartData.push({
+              label: 'Fonts',
+              value: fileStats.font.size,
+              color: 'yellow',
+            })
+          }
+          if (fileStats.other.count > 0) {
+            chartData.push({
+              label: 'Other',
+              value: fileStats.other.size,
+              color: 'blue',
+            })
+          }
+
+          if (chartData.length > 0) {
+            logger.info(pc.bold('📊 构建产物分析:'))
+            logger.raw('')
+            const chart = Chart.renderBarChart({
+              data: chartData,
+              maxWidth: 30,
+              showValue: true,
+              showPercentage: true,
+            })
+            logger.raw(chart)
+            logger.raw('')
+          }
+        }
+        else {
+          // 简单的成功消息
+          logger.success(`构建成功完成! (${duration}ms)`)
           logger.info(`输出目录: ${outDir}`)
-          logger.info(`总大小: ${formatFileSize(dirSize)}`)
         }
 
         // 生成分析报告
         if (context.options.analyze) {
-          logger.info('正在生成构建分析报告...')
+          if (!context.options.silent) {
+            spinner = new Spinner({
+              text: '正在生成构建分析报告...',
+              spinner: 'dots',
+              color: 'cyan',
+            })
+          }
           await generateAnalysisReport(result, outDir, logger)
+          if (spinner) {
+            spinner.succeed('构建分析报告已生成')
+          }
         }
 
         // 清理资源
@@ -411,54 +557,6 @@ export class BuildCommand implements CliCommandDefinition {
   }
 }
 
-/**
- * 格式化文件大小
- *
- * @param bytes - 字节数
- * @returns 格式化后的大小
- */
-function formatFileSize(bytes: number): string {
-  const units = ['B', 'KB', 'MB', 'GB']
-  let size = bytes
-  let unitIndex = 0
-
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024
-    unitIndex++
-  }
-
-  return `${size.toFixed(2)} ${units[unitIndex]}`
-}
-
-/**
- * 获取目录大小
- *
- * @param dirPath - 目录路径
- * @returns 目录大小（字节）
- */
-async function getDirectorySize(dirPath: string): Promise<number> {
-  try {
-    const files = await FileSystem.readDir(dirPath)
-    let totalSize = 0
-
-    for (const file of files) {
-      const filePath = PathUtils.join(dirPath, file)
-      const stats = await FileSystem.stat(filePath)
-
-      if (stats.isDirectory()) {
-        totalSize += await getDirectorySize(filePath)
-      }
-      else {
-        totalSize += stats.size
-      }
-    }
-
-    return totalSize
-  }
-  catch {
-    return 0
-  }
-}
 
 /**
  * 生成构建分析报告

@@ -140,10 +140,10 @@ export function getFrameworkMetadata(name: string): FrameworkMetadata | undefine
  * 
  * @returns 框架元数据数组
  */
-export function getAllFrameworkMetadata(): Array<FrameworkMetadata & { name: string, priority: number }> {
+export function getAllFrameworkMetadata(): Array<FrameworkMetadata & { frameworkName: string, priority: number }> {
   return Array.from(adapterLoaders.entries())
-    .map(([name, config]) => ({
-      name,
+    .map(([frameworkName, config]) => ({
+      frameworkName,
       ...config.metadata,
       priority: config.priority,
     }))

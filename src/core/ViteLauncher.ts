@@ -119,6 +119,9 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
   /** 初始化状态 */
   private initialized: boolean = false
 
+  /** 初始化 Promise，用于防止并发初始化 */
+  private initializationPromise: Promise<void> | null = null
+
   /** 配置变更定时器 */
   private configChangeTimer?: NodeJS.Timeout
 
@@ -133,8 +136,9 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
   constructor(options: LauncherOptions = {}) {
     super()
 
-    // 设置 EventEmitter 最大监听器数量，避免内存泄漏警告
-    this.setMaxListeners(20)
+    // 设置 EventEmitter 最大监听器数量
+    // 降低到合理值以便及时发现内存泄漏
+    this.setMaxListeners(10)
 
     // 设置工作目录
     this.cwd = options.cwd || process.cwd()
@@ -251,7 +255,11 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
         const real = err instanceof Error ? err : new Error(String(err))
         this.logger.error('运行时错误', { error: real.message, stack: real.stack })
       }
-      catch { }
+      catch (errorHandlingError) {
+        // 错误处理本身失败，记录到控制台作为最后手段
+        console.error('错误处理失败:', errorHandlingError)
+        console.error('原始错误:', err)
+      }
     })
 
     // 设置错误处理
@@ -263,52 +271,69 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
   /**
    * 异步初始化方法
    * 加载配置文件并完成完整初始化
+   *
+   * 使用 Promise 缓存机制防止并发初始化竞态条件
    */
   async initialize(): Promise<void> {
-    // 避免重复初始化
+    // 如果已经完成初始化，直接返回
     if (this.initialized) {
       return
     }
 
-    try {
-      // 优先使用显式指定的配置文件，其次自动查找
-      const specified = this.config.launcher?.configFile
-
-      // 只在debug模式下输出详细信息
-      if (this.logger.getLevel() === 'debug') {
-        this.logger.debug('ViteLauncher.initialize 开始', {
-          cwd: this.cwd,
-          environment: this.environment,
-          configFile: specified || '无',
-        })
-      }
-
-      if (specified) {
-        this.logger.info(`📋 使用指定配置文件: ${specified}`)
-        // 加载并合并用户配置到当前配置（修复：之前未合并导致用户 plugins 等失效）
-        const loaded = await this.configManager.loadConfig(specified)
-        if (loaded && typeof loaded === 'object') {
-          this.config = this.mergeConfig(this.config, loaded)
-        }
-      }
-      else {
-        this.logger.info(`📋 使用自动配置加载`)
-        try {
-          // autoLoadConfig 内部已合并到 this.config
-          await this.autoLoadConfig()
-        }
-        catch (autoLoadError) {
-          this.logger.error('自动配置加载失败', { error: (autoLoadError as Error).message })
-          throw autoLoadError
-        }
-      }
-
-      this.initialized = true
-      this.logger.info('ViteLauncher 初始化完成')
+    // 如果正在初始化中，返回正在进行的 Promise
+    if (this.initializationPromise) {
+      this.logger.debug('初始化正在进行中，等待完成...')
+      return this.initializationPromise
     }
-    catch (error) {
-      this.logger.error('配置文件加载失败，使用默认配置', { error: (error as Error).message })
-    }
+
+    // 创建初始化 Promise
+    this.initializationPromise = (async () => {
+      try {
+        // 优先使用显式指定的配置文件，其次自动查找
+        const specified = this.config.launcher?.configFile
+
+        // 只在debug模式下输出详细信息
+        if (this.logger.getLevel() === 'debug') {
+          this.logger.debug('ViteLauncher.initialize 开始', {
+            cwd: this.cwd,
+            environment: this.environment,
+            configFile: specified || '无',
+          })
+        }
+
+        if (specified) {
+          this.logger.info(`📋 使用指定配置文件: ${specified}`)
+          // 加载并合并用户配置到当前配置（修复：之前未合并导致用户 plugins 等失效）
+          const loaded = await this.configManager.loadConfig(specified)
+          if (loaded && typeof loaded === 'object') {
+            this.config = this.mergeConfig(this.config, loaded)
+          }
+        }
+        else {
+          this.logger.info(`📋 使用自动配置加载`)
+          try {
+            // autoLoadConfig 内部已合并到 this.config
+            await this.autoLoadConfig()
+          }
+          catch (autoLoadError) {
+            this.logger.error('自动配置加载失败', { error: (autoLoadError as Error).message })
+            throw autoLoadError
+          }
+        }
+
+        this.initialized = true
+        this.logger.info('ViteLauncher 初始化完成')
+      }
+      catch (error) {
+        this.logger.error('配置文件加载失败，使用默认配置', { error: (error as Error).message })
+      }
+      finally {
+        // 无论成功或失败，都清除 Promise 引用
+        this.initializationPromise = null
+      }
+    })()
+
+    return this.initializationPromise
   }
 
   /**
@@ -380,20 +405,9 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
       // 执行启动前钩子
       await this.executeHook('beforeStart')
 
-      // 打印最终的Vite配置用于调试
+      // 只在debug模式下打印详细配置
       if (this.logger.getLevel() === 'debug') {
         this.displayFinalConfig(mergedConfig)
-      }
-      else {
-        // 简洁模式只显示关键信息
-        const aliasCount = Array.isArray(mergedConfig.resolve?.alias) ? mergedConfig.resolve.alias.length : 0
-        if (aliasCount > 0) {
-          this.logger.info(`🔗 路径别名: ${aliasCount}个`)
-        }
-      }
-
-      // 只在debug模式下输出详细的watch配置信息
-      if (this.logger.getLevel() === 'debug') {
         this.logger.debug(`server.watch配置:`, {
           ignoredType: typeof mergedConfig.server?.watch?.ignored,
           usePolling: mergedConfig.server?.watch?.usePolling,
@@ -401,7 +415,10 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
         })
       }
 
-      this.logger.info('正在启动开发服务器...')
+      // 简洁模式：启动提示
+      if (this.logger.getLevel() !== 'silent') {
+        this.logger.info('🚀 启动开发服务器...')
+      }
 
       // 动态导入 Vite（优先从项目 cwd 解析）
       const { importViteFromCwd } = await import('../utils/vite-resolver')
@@ -426,7 +443,7 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
 
       mergedConfig.plugins = [appCfgPlugin, configInjectionPlugin, ...(mergedConfig.plugins || [])]
 
-      // 调试：打印服务器配置
+      // 只在debug模式下打印服务器配置
       if (this.logger.getLevel() === 'debug') {
         this.logger.debug('Vite server 配置:', {
           host: mergedConfig.server?.host,
@@ -463,7 +480,11 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
         await import('../plugins/app-config')
         this.logger.debug('app-config 插件已注入')
       }
-      catch { }
+      catch (appConfigError) {
+        this.logger.debug('app-config 插件导入失败（可忽略）', {
+          error: (appConfigError as Error).message
+        })
+      }
 
       // 更新统计信息
       this.updateStats('start')
@@ -619,9 +640,16 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
           .map((p: any) => (p && typeof p === 'object' && 'name' in p) ? (p as any).name : String(p))
         this.logger.info('已加载插件', { count: names.length, plugins: names })
       }
-      catch { }
+      catch (pluginListError) {
+        this.logger.debug('插件列表生成失败', {
+          error: (pluginListError as Error).message
+        })
+      }
 
-      this.logger.info('正在执行生产构建...')
+      // 简洁模式：构建提示
+      if (this.logger.getLevel() !== 'silent') {
+        this.logger.info('📦 执行生产构建...')
+      }
 
       // 触发构建开始事件
       this.emit(LauncherEvent.BUILD_START, {
@@ -652,13 +680,17 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
       // 输出 appConfig 大小（调试）
       try {
         const { DEFAULT_APP_CONFIG_FILES } = await import('../constants')
-        const possible = DEFAULT_APP_CONFIG_FILES.map(p => PathUtils.resolve(this.cwd, p))
-        const exist = await Promise.all(possible.map(p => FileSystem.exists(p)))
-        const found = possible.find((p, i) => exist[i])
+        const possible = DEFAULT_APP_CONFIG_FILES.map(filePath => PathUtils.resolve(this.cwd, filePath))
+        const exist = await Promise.all(possible.map(filePath => FileSystem.exists(filePath)))
+        const found = possible.find((_filePath, i) => exist[i])
         if (found)
           this.logger.debug('使用的 app.config', { path: found })
       }
-      catch { }
+      catch (appConfigCheckError) {
+        this.logger.debug('app.config 检查失败', {
+          error: (appConfigCheckError as Error).message
+        })
+      }
 
       // 设置状态
       this.setStatus(LauncherStatus.IDLE)
@@ -764,8 +796,15 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
       // 执行预览前钩子
       await this.executeHook('beforePreview')
 
-      this.logger.info('正在启动预览服务器...')
-      this.logger.debug(`Preview 配置: host=${mergedConfig.preview.host}, port=${mergedConfig.preview.port}`)
+      // 简洁模式：预览提示
+      if (this.logger.getLevel() !== 'silent') {
+        this.logger.info('👀 启动预览服务器...')
+      }
+
+      // 只在debug模式下显示详细配置
+      if (this.logger.getLevel() === 'debug') {
+        this.logger.debug(`Preview 配置: host=${mergedConfig.preview?.host}, port=${mergedConfig.preview?.port}`)
+      }
 
       // 动态导入 Vite（优先从项目 cwd 解析）
       const { importViteFromCwd } = await import('../utils/vite-resolver')
@@ -1155,7 +1194,7 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
 
     return {
       type: ServerType.DEV,
-      status: this.status as any, // 临时类型转换
+      status: this.status as unknown as import('../types').ServerStatus,
       instance: this.devServer,
       config: {
         type: ServerType.DEV,
@@ -1300,16 +1339,25 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
     if (process.env.NODE_ENV === 'test')
       return
 
-    // 监听未捕获的异常
-    process.on('uncaughtException', (error) => {
+    // 创建绑定的处理函数，便于后续移除
+    const uncaughtExceptionHandler = (error: Error) => {
       this.handleError(error, '未捕获的异常')
-    })
+    }
 
-    // 监听未处理的 Promise 拒绝
-    process.on('unhandledRejection', (reason) => {
+    const unhandledRejectionHandler = (reason: unknown) => {
       const error = reason instanceof Error ? reason : new Error(String(reason))
       this.handleError(error, '未处理的 Promise 拒绝')
-    })
+    }
+
+    // 监听未捕获的异常
+    process.on('uncaughtException', uncaughtExceptionHandler)
+
+    // 监听未处理的 Promise 拒绝
+    process.on('unhandledRejection', unhandledRejectionHandler)
+
+      // 保存处理函数引用以便清理
+      ; (this as any)._uncaughtExceptionHandler = uncaughtExceptionHandler
+      ; (this as any)._unhandledRejectionHandler = unhandledRejectionHandler
   }
 
   /**
@@ -1405,42 +1453,12 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
   /**
    * 销毁实例
    * 清理资源和事件监听器
+   *
+   * @deprecated 使用 dispose() 方法代替，该方法提供更完整的资源清理
    */
   async destroy(): Promise<void> {
-    try {
-      this.logger.info('正在销毁 ViteLauncher 实例...')
-
-      // 停止所有服务
-      if (this.devServer) {
-        await this.stopDev()
-      }
-
-      if (this.buildWatcher) {
-        this.buildWatcher.close()
-        this.buildWatcher = null
-      }
-
-      if (this.previewServer) {
-        await this.previewServer.close()
-        this.previewServer = null
-      }
-
-      // 移除所有事件监听器
-      this.removeAllListeners()
-
-      // 清理配置管理器
-      if (this.configManager) {
-        this.configManager.removeAllListeners()
-      }
-
-      this.setStatus(LauncherStatus.STOPPED)
-
-      this.logger.success('ViteLauncher 实例已销毁')
-    }
-    catch (error) {
-      this.handleError(error as Error, '销毁实例失败')
-      throw error
-    }
+    this.logger.warn('destroy() 方法已弃用，请使用 dispose() 方法')
+    return this.dispose()
   }
 
   /**
@@ -1935,7 +1953,7 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
 
   /**
    * 清理所有资源，防止内存泄漏
-   * 
+   *
    * 该方法会完整清理以下资源：
    * - 配置变更定时器
    * - 开发服务器
@@ -1943,12 +1961,13 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
    * - 构建监听器
    * - 配置管理器
    * - 所有事件监听器
-   * 
+   * - 全局进程事件监听器
+   *
    * 建议在应用退出或不再需要 launcher 实例时调用此方法。
    *
    * @returns Promise<void>
    * @throws {Error} 如果清理过程中发生错误
-   * 
+   *
    * @example
    * ```typescript
    * const launcher = new ViteLauncher()
@@ -1964,38 +1983,123 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
     try {
       this.logger.info('正在清理 ViteLauncher 资源...')
 
-      // 清理配置变更定时器
+      // 记录清理前的监听器数量（用于诊断内存泄漏）
+      const listenerCounts = {
+        error: this.listenerCount('error'),
+        configLoaded: this.listenerCount('configLoaded'),
+        serverReady: this.listenerCount(LauncherEvent.SERVER_READY),
+        statusChange: this.listenerCount(LauncherEvent.STATUS_CHANGE),
+      }
+      this.logger.debug('清理前监听器数量:', listenerCounts)
+
+      // 1. 清理定时器
       if (this.configChangeTimer) {
         clearTimeout(this.configChangeTimer)
         this.configChangeTimer = undefined
+        this.logger.debug('配置变更定时器已清理')
       }
 
-      // 停止开发服务器
+      // 2. 清理初始化 Promise
+      this.initializationPromise = null
+      this.initialized = false
+      this.logger.debug('初始化状态已重置')
+
+      // 3. 停止开发服务器（包含清理 HMR 相关资源）
       if (this.devServer) {
-        await this.stopDev()
+        try {
+          await this.stopDev()
+          this.logger.debug('开发服务器已停止')
+        }
+        catch (devServerError) {
+          this.logger.error('停止开发服务器失败', devServerError)
+        }
       }
 
-      // 停止预览服务器
+      // 4. 停止预览服务器
       if (this.previewServer) {
-        await this.previewServer.close()
-        this.previewServer = null
+        try {
+          await this.previewServer.close()
+          this.previewServer = null
+          this.logger.debug('预览服务器已关闭')
+        }
+        catch (previewServerError) {
+          this.logger.error('关闭预览服务器失败', previewServerError)
+        }
       }
 
-      // 停止构建监听器
+      // 5. 停止构建监听器
       if (this.buildWatcher) {
-        this.buildWatcher.close()
-        this.buildWatcher = null
+        try {
+          this.buildWatcher.close()
+          this.buildWatcher = null
+          this.logger.debug('构建监听器已关闭')
+        }
+        catch (watcherError) {
+          this.logger.error('关闭构建监听器失败', watcherError)
+        }
       }
 
-      // 销毁配置管理器
+      // 6. 销毁配置管理器
       if (this.configManager) {
-        await this.configManager.destroy()
+        try {
+          await this.configManager.destroy()
+          this.logger.debug('配置管理器已销毁')
+        }
+        catch (configManagerError) {
+          this.logger.error('销毁配置管理器失败', configManagerError)
+        }
       }
 
-      // 清理所有事件监听器
-      this.removeAllListeners()
+      // 7. 清理插件管理器
+      if (this.pluginManager) {
+        this.pluginManager = undefined
+        this.logger.debug('插件管理器引用已清除')
+      }
 
-      this.logger.info('ViteLauncher 资源清理完成')
+      // 8. 清理插件列表
+      if (this.plugins && this.plugins.length > 0) {
+        this.plugins = []
+        this.logger.debug('插件列表已清空')
+      }
+
+      // 9. 移除全局进程事件监听器（防止内存泄漏）
+      if (process.env.NODE_ENV !== 'test') {
+        const uncaughtHandler = (this as any)._uncaughtExceptionHandler
+        const unhandledHandler = (this as any)._unhandledRejectionHandler
+
+        if (uncaughtHandler) {
+          process.removeListener('uncaughtException', uncaughtHandler)
+          delete (this as any)._uncaughtExceptionHandler
+          this.logger.debug('全局异常处理器已移除')
+        }
+
+        if (unhandledHandler) {
+          process.removeListener('unhandledRejection', unhandledHandler)
+          delete (this as any)._unhandledRejectionHandler
+          this.logger.debug('全局 Promise 拒绝处理器已移除')
+        }
+      }
+
+      // 10. 清理所有事件监听器
+      const eventsBefore = this.eventNames()
+      this.removeAllListeners()
+      this.logger.debug(`事件监听器已清理 (清理前: ${eventsBefore.length} 个)`)
+
+      // 11. 验证清理效果
+      const remainingListeners = this.eventNames().length
+      if (remainingListeners > 0) {
+        this.logger.warn(`⚠️ 清理后仍有 ${remainingListeners} 个事件监听器未清除`, {
+          events: this.eventNames(),
+        })
+      }
+      else {
+        this.logger.debug('✅ 所有事件监听器已成功清除')
+      }
+
+      // 12. 重置状态
+      this.setStatus(LauncherStatus.STOPPED)
+
+      this.logger.info('✅ ViteLauncher 资源清理完成')
     }
     catch (error) {
       this.logger.error('清理资源时发生错误', error)

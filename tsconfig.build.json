@@ -8,19 +8,20 @@
     "rootDir": "./src",
     "skipLibCheck": true,
     "noEmit": false,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "allowUnreachableCode": true,
-    "noImplicitAny": false,
-    "strictNullChecks": false,
-    "strict": false
+    // 启用严格模式以提高类型安全
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "allowUnreachableCode": false
   },
   "include": ["src/**/*.ts"],
   "exclude": [
     "dist",
     "node_modules",
     "src/**/*.test.ts",
-    "src/**/*.spec.ts", 
+    "src/**/*.spec.ts",
     "src/**/*.bench.ts",
     "src/__tests__/**/*"
   ]

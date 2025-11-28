@@ -30,6 +30,9 @@
 - **TypeScript** - 完整的 TypeScript 支持
 - **CLI 工具** - 提供友好的命令行界面
 - **高性能** - 快速启动和热更新
+- **✨ 精美 UI** - 渐变色标题、二维码、图表、进度条等
+- **🎯 智能提示** - 友好的错误提示和解决方案建议
+- **⌨️ 快捷键** - 支持交互式快捷键操作
 
 ## 🎨 支持的框架
 
@@ -92,21 +95,34 @@ npx launcher preview
 
 ### 🎨 检测示例
 
-当你运行 `launcher dev` 时，会看到：
+当你运行 `launcher dev` 时，会看到精美的控制台界面：
 
 ```bash
-🚀 LDesign Launcher - 🟢 DEVELOPMENT
-📁 工作目录: /path/to/your/project
-⚙️  模式: development
+╭───────────────────────────────────────────────╮
+│   🚀 Launcher v2.0.0                         │
+│   ⚡ Lightning Fast Development Tool          │
+│   Framework: React 18.2.0                    │
+│   Engine: Vite 5.0                           │
+│   Node: v20.10.0                             │
+│   Started in: 342ms ⚡                        │
+╰───────────────────────────────────────────────╯
 
-🔍 正在检测项目框架...
-✓ 检测到 REACT 框架 (置信度: 95%)
-正在启动开发服务器...
+✨ Development server started
 
-✔ 开发服务器已启动
-• 本地: http://localhost:3000
-• 网络: http://192.168.1.100:3000
-• 提示: 按 Ctrl+C 停止服务器
+➜ Local:   http://localhost:3000
+➜ Network: http://192.168.1.100:3000
+
+📱 扫码访问
+[二维码 ASCII Art]
+
+Shortcuts:
+  h - 显示帮助
+  c - 清屏
+  o - 在浏览器中打开
+  r - 重启服务器
+  q - 退出
+
+✓ Local address copied to clipboard
 ```
 
 ### 📝 可选配置
@@ -325,6 +341,65 @@ export default defineConfig({
 })
 ```
 
+## ✨ UI 增强功能
+
+### 🎨 精美的控制台界面
+
+- **渐变色标题** - 使用 gradient-string 的视觉吸引力
+- **边框盒子** - boxen 组件美化信息展示
+- **二维码展示** - 扫码即可在手机上访问
+- **网络信息** - 自动检测和显示局域网地址
+- **进度条** - 实时显示构建进度
+- **数据图表** - 可视化构建统计信息
+
+### 📊 构建统计
+
+构建完成后会显示详细的统计信息:
+
+```bash
+╭───────────────────────────────────────────────╮
+│   📊 Build Statistics                         │
+│   Duration: 3.2s                              │
+│   Files: 15                                   │
+│   Total Size: 156.1 KB                        │
+│   Gzipped: 50.3 KB                            │
+╰───────────────────────────────────────────────╯
+
+📊 构建产物分析:
+JavaScript  ████████████████ 143KB (91.6%)
+CSS         ███ 12KB (7.9%)
+Images      █ 1KB (0.5%)
+```
+
+### ⌨️ 交互式快捷键
+
+开发服务器运行时支持快捷键操作:
+
+- `h` - 显示帮助信息
+- `c` - 清屏
+- `o` - 在浏览器中打开
+- `r` - 重启服务器
+- `q` - 退出
+
+### 🎯 友好的错误提示
+
+遇到错误时会显示清晰的问题描述和解决方案:
+
+```bash
+✖ 错误 (开发服务器)
+
+  端口 3000 已被占用
+
+⚠ 端口已被占用
+
+💡 可能的解决方案:
+  1. 使用不同的端口: launcher dev --port 8080
+  2. 查找并终止占用端口的进程
+  3. 使用 --strictPort 选项禁用自动端口选择
+
+📚 相关文档: https://launcher.dev/docs/troubleshooting/port-in-use
+```
+
 ## 📚 文档
 
 - [多环境配置指南](./docs/guide/environment-config.md)
@@ -335,6 +410,7 @@ export default defineConfig({
 - [CLI 参考](./docs/cli/README.md)
 - [插件开发](./docs/plugins/README.md)
 - [示例](./docs/examples/README.md)
+- [UI 功能说明](./docs/guide/ui-features.md) ✨ 新增
 
 ## 🛠️ 支持的框架
 

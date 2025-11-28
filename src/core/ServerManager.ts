@@ -11,8 +11,9 @@ import type { ViteDevServer, PreviewServer as VitePreviewServer } from 'vite'
 import type { ViteLauncherConfig } from '../types'
 import type { DevServer, PreviewServer } from '../types/engine'
 import type { Logger } from '../utils/logger'
-import qrcode from 'qrcode-terminal'
-import { getPreferredLocalIP } from '../utils/network'
+import { Banner } from '../ui/Banner'
+import { QRCode } from '../ui/QRCode'
+import { NetworkInfo } from '../utils/network-info'
 
 export interface ServerManagerOptions {
   logger: Logger
@@ -26,13 +27,12 @@ export interface ServerManagerOptions {
  */
 export class ServerManager {
   private logger: Logger
-  private cwd: string
   private devServer: ViteDevServer | null = null
   private previewServer: VitePreviewServer | null = null
 
   constructor(options: ServerManagerOptions) {
     this.logger = options.logger
-    this.cwd = options.cwd
+    // cwd 参数暂未使用,但保留以备将来扩展
   }
 
   /**
@@ -45,9 +45,13 @@ export class ServerManager {
 
     // 创建并启动服务器
     this.devServer = await createServer(config)
-    await this.devServer.listen()
+    await this.devServer!.listen()
 
     this.logger.success('开发服务器启动成功')
+
+    if (!this.devServer) {
+      throw new Error('开发服务器创建失败')
+    }
 
     return this.devServer
   }
@@ -87,6 +91,10 @@ export class ServerManager {
     this.previewServer = await preview(config)
 
     this.logger.success('预览服务器启动成功')
+
+    if (!this.previewServer) {
+      throw new Error('预览服务器创建失败')
+    }
 
     return this.previewServer
   }
@@ -168,73 +176,101 @@ export class ServerManager {
 
   /**
    * 打印服务器信息（通用版本 - 支持所有引擎）
+   * 使用增强的 UI 组件美化显示
    */
-  printServerInfo(server: DevServer | PreviewServer | ViteDevServer | VitePreviewServer, type: 'dev' | 'preview'): void {
-    const typeName = type === 'dev' ? '开发' : '预览'
-
+  printServerInfo(server: DevServer | PreviewServer | ViteDevServer | VitePreviewServer, _type: 'dev' | 'preview', framework?: string, options?: { showQRCode?: boolean, startTime?: number }): void {
+    const { showQRCode = true, startTime } = options || {}
+    
+    // 获取服务器地址信息
+    let localUrl: string
+    let port: number
+    let https = false
+    
     // 处理通用 Server 接口（来自 BuildEngine）
     if ('type' in server && 'url' in server && 'port' in server) {
-      this.logger.info(`\n🚀 ${typeName}服务器已启动`)
-      this.logger.info(`   引擎: ${server.type}`)
-      this.logger.info(`   本地访问: ${server.url}`)
-
-      const localIP = getPreferredLocalIP()
-      if (localIP && localIP !== 'localhost' && localIP !== '127.0.0.1') {
-        const protocol = server.https ? 'https' : 'http'
-        const networkUrl = `${protocol}://${localIP}:${server.port}`
-        this.logger.info(`   局域网访问: ${networkUrl}`)
-        this.printQRCode(networkUrl)
-      }
-      return
+      localUrl = server.url
+      port = server.port
+      https = server.https || false
     }
-
     // 处理 Vite 特定的 Server（向后兼容）
-    const info = this.getServerInfo(server as ViteDevServer | VitePreviewServer)
-    this.logger.info(`\n🚀 ${typeName}服务器已启动`)
-    this.logger.info(`   本地访问: ${info.url}`)
-
-    const localIP = getPreferredLocalIP()
-    if (localIP && localIP !== 'localhost' && localIP !== '127.0.0.1') {
-      const networkUrl = `http://${localIP}:${info.port}`
-      this.logger.info(`   局域网访问: ${networkUrl}`)
-      this.printQRCode(networkUrl)
+    else {
+      const info = this.getServerInfo(server as ViteDevServer | VitePreviewServer)
+      localUrl = info.url
+      port = info.port
+      https = info.https
     }
-  }
 
-  /**
-   * 打印二维码
-   */
-  private printQRCode(url: string): void {
-    if (process.env.CI)
-      return
+    // 使用 NetworkInfo 格式化地址
+    const protocol = https ? 'https' : 'http'
+    const addresses = NetworkInfo.formatUrls('localhost', port, protocol)
 
-    this.logger.info('\n   扫描二维码访问:')
-    try {
-      qrcode.generate(url, { small: true }, (qr) => {
-        qr.split('\n').forEach((line) => {
-          if (line.trim())
-            this.logger.info(`   ${line}`)
-        })
+    // 显示启动信息 Banner
+    const bannerInfo = Banner.renderStartupInfo({
+      title: 'Launcher',
+      version: '2.0.0',
+      framework: framework,
+      engine: 'Vite 5.0',
+      nodeVersion: process.version,
+      startTime: startTime,
+      useGradient: true,
+    })
+    this.logger.raw(bannerInfo)
+
+    // 显示网络地址信息
+    const networkInfo = Banner.renderNetworkInfo({
+      local: localUrl,
+      network: addresses.network,
+    })
+    this.logger.raw(networkInfo)
+
+    // 显示二维码（如果有网络地址且启用）
+    if (showQRCode && addresses.network.length > 0 && !process.env.CI) {
+      QRCode.display({
+        local: localUrl,
+        network: addresses.network,
+        showUrl: false, // URL已经在上面显示了
       })
     }
-    catch {
-      // 忽略二维码生成错误
-    }
 
-    this.logger.info('')
+    // 显示快捷键帮助
+    const shortcuts = Banner.renderShortcuts([
+      { key: 'h', description: '显示帮助' },
+      { key: 'c', description: '清屏' },
+      { key: 'o', description: '在浏览器中打开' },
+      { key: 'r', description: '重启服务器' },
+      { key: 'q', description: '退出' },
+    ])
+    this.logger.raw(shortcuts)
+
+    // 复制地址到剪贴板
+    NetworkInfo.copyToClipboard(localUrl).then(success => {
+      if (success) {
+        this.logger.raw('\n')
+      }
+    })
   }
+
 
   /**
    * 打印简化的服务器信息（用于重启）
+   * 使用Banner组件美化显示
    */
   printSimpleServerInfo(): void {
     if (this.devServer) {
       const info = this.getServerInfo(this.devServer)
-      this.logger.success(`✨ 服务器已重启: ${info.url}`)
+      const banner = Banner.renderSuccess(
+        '服务器已重启',
+        [`访问地址: ${info.url}`]
+      )
+      this.logger.raw('\n' + banner)
     }
     else if (this.previewServer) {
       const info = this.getServerInfo(this.previewServer)
-      this.logger.success(`✨ 预览服务器已重启: ${info.url}`)
+      const banner = Banner.renderSuccess(
+        '预览服务器已重启',
+        [`访问地址: ${info.url}`]
+      )
+      this.logger.raw('\n' + banner)
     }
   }
 
@@ -242,8 +278,12 @@ export class ServerManager {
    * 查找可用端口
    */
   async findAvailablePort(desiredPort: number): Promise<number | null> {
-    const { findAvailablePort } = await import('../utils/server')
-    return findAvailablePort(desiredPort)
+    try {
+      const port = await NetworkInfo.findAvailablePort(desiredPort)
+      return port
+    } catch {
+      return null
+    }
   }
 
   /**

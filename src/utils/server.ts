@@ -113,7 +113,7 @@ export function getServerUrl(
  */
 export function isValidUrl(url: string): boolean {
   try {
-    const _parsedUrl = new URL(url)
+    new URL(url)
     return true
   }
   catch {
@@ -416,5 +416,14 @@ export async function logServerInfo(url: string, port: number, host: string): Pr
  */
 export async function getNetworkInterfaces(): Promise<Record<string, any[]>> {
   const os = await import('node:os')
-  return os.networkInterfaces()
+  const interfaces = os.networkInterfaces()
+  const result: Record<string, any[]> = {}
+
+  for (const [key, value] of Object.entries(interfaces)) {
+    if (value) {
+      result[key] = value
+    }
+  }
+
+  return result
 }

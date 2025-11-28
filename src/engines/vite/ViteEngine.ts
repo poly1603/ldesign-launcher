@@ -94,7 +94,12 @@ export class ViteEngine extends BuildEngine {
       // 使用工具函数解析 host 和构建 URL
       const { resolveServerHost, getServerUrl } = await import('../../utils/server')
       const host = resolveServerHost(serverInfo.host)
-      const url = getServerUrl(this.devServerInstance, serverInfo.host, port, https)
+      const url = getServerUrl(
+        { resolvedUrls: this.devServerInstance.resolvedUrls } as any,
+        serverInfo.host,
+        port,
+        https
+      )
 
       const devServer: DevServer = {
         type: 'vite',
@@ -182,7 +187,12 @@ export class ViteEngine extends BuildEngine {
       // 使用工具函数解析 host 和构建 URL
       const { resolveServerHost, getServerUrl } = await import('../../utils/server')
       const host = resolveServerHost(serverInfo.host)
-      const url = getServerUrl(this.previewServerInstance, serverInfo.host, port, https)
+      const url = getServerUrl(
+        { resolvedUrls: this.previewServerInstance.resolvedUrls } as any,
+        serverInfo.host,
+        port,
+        https
+      )
 
       const previewServer: PreviewServer = {
         type: 'vite',

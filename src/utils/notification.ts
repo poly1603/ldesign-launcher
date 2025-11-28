@@ -50,12 +50,14 @@ export class NotificationManager {
 
     try {
       // 动态导入 node-notifier
+      // @ts-ignore - node-notifier 没有类型定义
       const notifier = await import('node-notifier')
 
       // 根据类型设置默认图标和声音
       const finalOptions = this.processOptions(options)
 
       // 发送通知 - 使用默认的 notify 方法
+      // @ts-ignore - node-notifier 没有类型定义
       notifier.default.notify({
         title: finalOptions.title,
         message: finalOptions.message,

@@ -11,9 +11,11 @@ import type { CliCommandDefinition, CliContext } from '../../types'
 import pc from 'picocolors'
 import { DEFAULT_HOST, DEFAULT_OUT_DIR } from '../../constants'
 import { ViteLauncher } from '../../core/ViteLauncher'
+import { Banner, QRCode } from '../../ui'
+import { Spinner } from '../../ui/Spinner'
 import { FileSystem } from '../../utils/file-system'
 import { Logger } from '../../utils/logger'
-import { getPreferredLocalIP } from '../../utils/network.js'
+import { NetworkInfo } from '../../utils/network-info'
 import { PathUtils } from '../../utils/path-utils'
 
 /**
@@ -158,36 +160,19 @@ export class PreviewCommand implements CliCommandDefinition {
     })
 
     try {
-      // 确定环境
+      const startTime = Date.now()
       const environment = context.options.environment || 'production'
 
-      // 显示环境标识 - 确保在最开始就显示
-      const envLabel = environment === 'production'
-        ? '🔴 PRODUCTION'
-        : environment === 'staging'
-          ? '🟡 STAGING'
-          : environment === 'test' ? '🔵 TEST' : '🟢 DEVELOPMENT'
-
-      // 立即输出环境标识（通过 Logger 原样输出，避免打乱布局）
-      if (!context.options.silent) {
-        logger.raw('')
-        logger.raw(`👁️  ${pc.cyan('LDesign Launcher')} - ${envLabel}`)
-        logger.raw(`📁 ${pc.gray('工作目录:')} ${context.cwd}`)
-        logger.raw(`⚙️  ${pc.gray('模式:')} preview`)
-        logger.raw('')
-
-        if (context.configFile) {
-          logger.info(`📋 配置来源: 指定文件 ${context.configFile}`)
-        }
-        else {
-          logger.info('📋 配置来源: 自动加载 (.ldesign/launcher.config.*)')
-        }
-      }
-
-      // 🎯 零配置特性：自动检测框架
+      // 检测框架
       let detectedFramework = null
+      let spinner: Spinner | null = null
+      
       if (!context.options.silent) {
-        logger.info('🔍 正在检测项目框架...')
+        spinner = new Spinner({
+          text: '正在检测项目框架...',
+          spinner: 'dots',
+          color: 'cyan',
+        })
       }
 
       try {
@@ -196,28 +181,33 @@ export class PreviewCommand implements CliCommandDefinition {
         detectedFramework = await detector.detectBest(context.cwd)
 
         if (detectedFramework && detectedFramework.detected) {
-          if (!context.options.silent) {
-            const frameworkName = detectedFramework.type?.toUpperCase() || 'UNKNOWN'
-            const confidencePercent = (detectedFramework.confidence * 100).toFixed(0)
-            logger.success(
-              `✓ 检测到 ${pc.bold(pc.green(frameworkName))} 框架 `
-              + `(置信度: ${pc.cyan(`${confidencePercent}%`)})`,
-            )
+          const frameworkName = detectedFramework.type?.toUpperCase() || 'UNKNOWN'
+          const confidencePercent = (detectedFramework.confidence * 100).toFixed(0)
+          if (spinner) {
+            spinner.succeed(`检测到 ${pc.bold(pc.green(frameworkName))} 框架 (置信度: ${pc.cyan(`${confidencePercent}%`)})`)
+          }
+        } else {
+          if (spinner) {
+            spinner.warn('未检测到已知框架，将使用默认配置')
           }
         }
-        else {
-          if (!context.options.silent) {
-            logger.warn('⚠ 未检测到已知框架，将使用默认配置')
-          }
+      } catch (error) {
+        if (spinner) {
+          spinner.fail('框架检测失败')
         }
-      }
-      catch (error) {
         if (context.options.debug) {
           logger.warn(`框架检测失败: ${(error as Error).message}`)
         }
       }
 
-      logger.info('正在启动预览服务器...')
+      // 启动预览服务器
+      if (!context.options.silent) {
+        spinner = new Spinner({
+          text: '正在启动预览服务器...',
+          spinner: 'dots',
+          color: 'cyan',
+        })
+      }
 
       // 创建 ViteLauncher 实例
       const launcher = new ViteLauncher({
@@ -307,178 +297,59 @@ export class PreviewCommand implements CliCommandDefinition {
       // 更新 launcher 的内部配置
       launcher.setConfig(mergedConfig)
 
-      // 渲染服务器横幅的辅助函数
-      function renderServerBanner(
-        title: string,
-        items: Array<{ label: string, value: string }>,
-      ): string[] {
-        const leftPad = '  '
-        const labelPad = 4
-        const rows = [
-          `${pc.green('✔')} ${pc.bold(title)}`,
-          ...items.map(({ label, value }) => {
-            const l = (`${label}:`).padEnd(labelPad, ' ')
-            return `${pc.dim('•')} ${pc.bold(l)} ${pc.cyan(value)}`
-          }),
-          `${pc.dim('•')} 提示: 按 ${pc.yellow('Ctrl+C')} 停止服务器`,
-        ]
-
-        // 根据内容计算盒宽度
-        const contentWidth = rows.reduce((m, s) => Math.max(m, stripAnsi(s).length), 0)
-        const width = Math.min(Math.max(contentWidth + 4, 38), 80)
-        const top = pc.dim(`┌${'─'.repeat(width - 2)}┐`)
-        const bottom = pc.dim(`└${'─'.repeat(width - 2)}┘`)
-
-        const padded = rows.map((r) => {
-          const visible = stripAnsi(r)
-          const space = width - 2 - visible.length
-          return pc.dim('│') + leftPad + r + ' '.repeat(Math.max(0, space - leftPad.length)) + pc.dim('│')
-        })
-
-        return [top, ...padded, bottom]
-      }
-
-      // 去除 ANSI 颜色后的长度计算辅助
-      function stripAnsi(str: string) {
-        // eslint-disable-next-line no-control-regex
-        const ansiRegex = /\x1B\[[0-9;]*[a-z]/gi
-        return str.replace(ansiRegex, '')
-      }
-
       // 设置事件监听器
       launcher.onReady(async () => {
-        logger.success('预览服务器启动成功!')
+        if (spinner) {
+          spinner.succeed('预览服务器启动成功')
+        }
 
-        const host = finalPreviewConfig.host
-        const port = finalPreviewConfig.port
+        const duration = Date.now() - startTime
         const protocol = finalPreviewConfig.https ? 'https' : 'http'
-        const localUrl = `${protocol}://${host}:${port}`
+        const addresses = NetworkInfo.formatUrls('localhost', finalPreviewConfig.port, protocol)
 
-        // 构建网络 URL：总是尝试生成网络地址
-        let networkUrl: string | null = null
-        const localIP = getPreferredLocalIP()
+        // 显示启动信息
+        const startupBanner = Banner.renderStartupInfo({
+          title: 'Preview Server',
+          version: '2.0.0',
+          framework: detectedFramework?.type,
+          engine: 'Vite Preview',
+          nodeVersion: process.version,
+          startTime: duration,
+          useGradient: false,
+        })
+        logger.raw(startupBanner)
 
-        if (host === '0.0.0.0') {
-          // host 是 0.0.0.0，替换为本地 IP
-          networkUrl = localUrl.replace('0.0.0.0', localIP)
-        }
-        else if (host === 'localhost' || host === '127.0.0.1') {
-          // host 是 localhost 或 127.0.0.1，生成网络地址
-          networkUrl = `${protocol}://${localIP}:${port}`
-        }
-        else {
-          // host 已经是 IP 地址，直接使用
-          networkUrl = localUrl
-        }
+        // 显示网络地址
+        const localUrl = `${protocol}://${finalPreviewConfig.host}:${finalPreviewConfig.port}`
+        const networkBanner = Banner.renderNetworkInfo({
+          local: localUrl,
+          network: addresses.network,
+        })
+        logger.raw(networkBanner)
 
-        const title = '预览服务器已启动'
-        const entries: Array<{ label: string, value: string }> = [
-          { label: '本地', value: localUrl },
-        ]
-        if (networkUrl)
-          entries.push({ label: '网络', value: networkUrl })
-        entries.push({ label: '目录', value: outDir })
-
-        const boxLines = renderServerBanner(title, entries)
-        for (const line of boxLines) logger.info(line)
-
-        // 生成二维码
-        const qrTarget = (networkUrl || localUrl)
-        try {
-          if (!qrTarget)
-            throw new Error('empty-url')
-
-          // 优先尝试使用 'qrcode' 的终端输出
-          let printed = false
-          let qrcodeNotInstalled = false
-
+        // 显示二维码
+        if (addresses.network.length > 0 && !context.options.silent) {
           try {
-            const qrlib: any = await import('qrcode')
-            const qrcode = qrlib?.default || qrlib
-
-            // 使用toString方法生成终端二维码
-            const terminalQR = await qrcode.toString(qrTarget, {
-              type: 'terminal',
-              small: true,
+            QRCode.display({
+              local: localUrl,
+              network: addresses.network,
+              showUrl: false,
             })
-
-            if (terminalQR && typeof terminalQR === 'string') {
-              logger.info(pc.dim('二维码（扫码在手机上打开）：'))
-              logger.raw('')
-              logger.raw(terminalQR)
-              logger.raw('')
-              printed = true
-            }
-          }
-          catch (e1) {
-            const errorMsg = (e1 as Error).message
-            if (errorMsg.includes('Cannot find package') || errorMsg.includes('Cannot find module')) {
-              qrcodeNotInstalled = true
-            }
-            logger.debug(`尝试使用 qrcode 生成终端二维码失败: ${errorMsg}`)
-          }
-
-          // 回退到 qrcode-terminal（如已安装）
-          if (!printed) {
-            try {
-              const mod: any = await import('qrcode-terminal')
-              const qrt = mod?.default || mod
-              let qrOutput = ''
-              qrt.generate(qrTarget, { small: true }, (q: string) => {
-                qrOutput = q
-              })
-              if (qrOutput) {
-                logger.info(pc.dim('二维码（扫码在手机上打开）：'))
-
-                // 简化处理qrcode-terminal的输出
-                const lines = qrOutput.split('\n').filter(line => line.trim())
-                if (lines.length > 0) {
-                  // 确保所有行长度一致
-                  const maxWidth = Math.max(...lines.map(line => line.length))
-                  const normalizedLines = lines.map((line) => {
-                    const padding = ' '.repeat(Math.max(0, maxWidth - line.length))
-                    return line + padding
-                  })
-
-                  // 创建简洁的边框效果
-                  const borderWidth = maxWidth + 4
-                  const topBorder = `┌${'─'.repeat(borderWidth - 2)}┐`
-                  const bottomBorder = `└${'─'.repeat(borderWidth - 2)}┘`
-                  const emptyLine = `│${' '.repeat(borderWidth - 2)}│`
-
-                  const borderedQR = [
-                    '',
-                    topBorder,
-                    emptyLine,
-                    ...normalizedLines.map(line => `│ ${line} │`),
-                    emptyLine,
-                    bottomBorder,
-                    '',
-                  ].join('\n')
-
-                  logger.raw(borderedQR)
-                  printed = true
-                }
-              }
-            }
-            catch (e2) {
-              const errorMsg = (e2 as Error).message
-              if (errorMsg.includes('Cannot find package') || errorMsg.includes('Cannot find module')) {
-                qrcodeNotInstalled = true
-              }
-              logger.debug(`尝试使用 qrcode-terminal 生成终端二维码失败: ${errorMsg}`)
-            }
-          }
-
-          // 如果二维码包未安装，提供友好的提示
-          if (!printed && qrcodeNotInstalled) {
-            logger.info(pc.dim('💡 提示: 安装 qrcode 包可显示二维码，方便手机扫码访问'))
-            logger.info(pc.dim('   运行: pnpm add -D qrcode'))
+          } catch (error) {
+            logger.debug(`二维码显示失败: ${(error as Error).message}`)
           }
         }
-        catch (e) {
-          logger.debug(`二维码生成失败: ${(e as Error).message}`)
-        }
+
+        // 显示快捷键
+        const shortcuts = Banner.renderShortcuts([
+          { key: 'h', description: '显示帮助' },
+          { key: 'o', description: '在浏览器中打开' },
+          { key: 'q', description: '退出' },
+        ])
+        logger.raw(shortcuts)
+
+        // 显示构建统计
+        await showBuildInfo(outDir, logger)
       })
 
       launcher.onError((error) => {

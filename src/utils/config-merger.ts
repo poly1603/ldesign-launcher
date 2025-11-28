@@ -92,7 +92,7 @@ export class ConfigMerger {
       // 处理对象
       if (deep && this.isPlainObject(sourceValue)) {
         if (this.isPlainObject(targetValue)) {
-          result[key] = this.deepMerge(targetValue, sourceValue, options) as any
+          result[key] = this.deepMerge(targetValue as Record<string, any>, sourceValue as Partial<Record<string, any>>, options) as any
         }
         else {
           result[key] = sourceValue as any
