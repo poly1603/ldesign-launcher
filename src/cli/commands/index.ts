@@ -18,3 +18,5 @@ export * from './help'
 
 export * from './preview'
 export * from './version'
+export * from './doctor'
+export * from './ui'

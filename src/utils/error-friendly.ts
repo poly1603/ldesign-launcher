@@ -125,6 +125,54 @@ export class FriendlyErrorHandler {
       ],
       docs: 'https://launcher.dev/docs/troubleshooting/network',
     })
+
+    // TypeScript 错误
+    this.registerSolution('TS_ERROR', {
+      problem: 'TypeScript 编译错误',
+      solutions: [
+        '检查 tsconfig.json 配置是否正确',
+        '确保所有类型定义都已安装',
+        '运行: npx tsc --noEmit 查看详细错误',
+        '检查导入的类型是否与实际类型匹配',
+      ],
+      docs: 'https://launcher.dev/docs/troubleshooting/typescript',
+    })
+
+    // Vite 预构建错误
+    this.registerSolution('OPTIMIZE_DEPS', {
+      problem: 'Vite 依赖预构建失败',
+      solutions: [
+        '删除 node_modules/.vite 目录后重试',
+        '使用 --force 参数强制重新构建依赖',
+        '检查是否有循环依赖',
+        '将问题依赖添加到 optimizeDeps.exclude 中',
+      ],
+      docs: 'https://launcher.dev/docs/troubleshooting/vite-optimize',
+    })
+
+    // 插件加载错误
+    this.registerSolution('PLUGIN_ERROR', {
+      problem: '插件加载失败',
+      solutions: [
+        '检查插件是否已正确安装',
+        '确保插件版本与 Vite 版本兼容',
+        '查看插件的 peer dependencies 是否满足',
+        '尝试更新插件到最新版本',
+      ],
+      docs: 'https://launcher.dev/docs/troubleshooting/plugins',
+    })
+
+    // 构建错误
+    this.registerSolution('BUILD_ERROR', {
+      problem: '构建失败',
+      solutions: [
+        '检查控制台中的详细错误信息',
+        '确保所有依赖都已正确安装',
+        '尝试清理缓存后重新构建',
+        '使用 --debug 参数查看更多信息',
+      ],
+      docs: 'https://launcher.dev/docs/troubleshooting/build',
+    })
   }
 
   /**

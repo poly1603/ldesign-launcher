@@ -10,6 +10,7 @@
 // 别名工具函数和类型
 export * from './aliases'
 export * from './build'
+export * from './cache-manager'
 export { formatFileSize as formatFileSizeFromBuild } from './build'
 // 导出所有工具函数
 export * from './config'
@@ -85,3 +86,9 @@ export {
 } from './validation'
 // 解决冲突的函数导出（使用别名）
 export { isValidUrl as isValidUrlFromValidation } from './validation'
+
+// 模板生成器
+export * from './template-generator'
+
+// 依赖分析器
+export * from './dependency-analyzer'

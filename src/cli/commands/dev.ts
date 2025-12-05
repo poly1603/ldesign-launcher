@@ -13,6 +13,7 @@ import { DEFAULT_HOST, DEFAULT_PORT } from '../../constants'
 import { ViteLauncher } from '../../core/ViteLauncher'
 import { Banner, QRCode } from '../../ui'
 import { Spinner } from '../../ui/Spinner'
+import { createKeyboardManager } from '../../utils/keyboard'
 import { Logger } from '../../utils/logger'
 import { NetworkInfo } from '../../utils/network-info'
 
@@ -418,6 +419,72 @@ export class DevCommand implements CliCommandDefinition {
         NetworkInfo.copyToClipboard(serverInfo.url || `http://localhost:${serverInfo.port}`).catch(() => {
           // 静默失败
         })
+
+        // 设置交互式快捷键
+        const keyboardManager = createKeyboardManager({ logger })
+        const serverUrl = serverInfo.url || `http://localhost:${serverInfo.port}`
+
+        keyboardManager.registerMultiple([
+          {
+            key: 'h',
+            description: '显示帮助',
+            handler: () => {
+              keyboardManager.showHelp()
+            },
+          },
+          {
+            key: 'c',
+            description: '清屏',
+            handler: () => {
+              console.clear()
+              logger.info('屏幕已清除')
+            },
+          },
+          {
+            key: 'o',
+            description: '在浏览器中打开',
+            handler: async () => {
+              const { openBrowser } = await import('../../utils/server')
+              await openBrowser(serverUrl)
+              logger.info(`已在浏览器中打开 ${serverUrl}`)
+            },
+          },
+          {
+            key: 'r',
+            description: '重启服务器',
+            handler: async () => {
+              logger.info('正在重启服务器...')
+              await launcher.restartDev()
+              logger.success('服务器已重启')
+            },
+          },
+          {
+            key: 'u',
+            description: '显示服务器地址',
+            handler: () => {
+              logger.raw(`\n  ➜ Local:   ${pc.cyan(serverUrl)}`)
+              if (addresses.network.length > 0) {
+                addresses.network.forEach((addr: string) => {
+                  logger.raw(`  ➜ Network: ${pc.cyan(addr)}`)
+                })
+              }
+              logger.raw('')
+            },
+          },
+          {
+            key: 'q',
+            description: '退出',
+            handler: async () => {
+              logger.info('正在停止服务器...')
+              await launcher.stopDev()
+              await launcher.destroy()
+              keyboardManager.stopListening()
+              process.exit(0)
+            },
+          },
+        ])
+
+        keyboardManager.startListening()
       }
 
       // 保持进程运行

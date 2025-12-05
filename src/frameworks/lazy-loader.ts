@@ -472,4 +472,62 @@ export function registerAllLazyFrameworks(): void {
     },
     10,
   )
+
+  // Astro
+  registerLazyFramework(
+    'astro',
+    () => import('./astro').then(m => m.astroAdapterFactory),
+    {
+      name: 'astro',
+      displayName: 'Astro',
+      description: 'Astro - 内容驱动的静态站点生成器',
+      website: 'https://astro.build',
+      documentation: 'https://docs.astro.build',
+      dependencies: ['astro'],
+      supportedEngines: ['vite'],
+      features: {
+        jsx: true,
+        sfc: true,
+        cssModules: true,
+        cssInJs: true,
+        ssr: true,
+        ssg: true,
+        hmr: true,
+        fastRefresh: true,
+      },
+      defaultPort: 4321,
+      fileExtensions: ['.astro', '.ts', '.tsx', '.js', '.jsx', '.md', '.mdx'],
+      configFiles: ['astro.config.ts', 'astro.config.mjs'],
+    },
+    9,
+  )
+
+  // Remix
+  registerLazyFramework(
+    'remix',
+    () => import('./remix').then(m => m.remixAdapterFactory),
+    {
+      name: 'remix',
+      displayName: 'Remix',
+      description: 'Remix - 全栈 Web 框架',
+      website: 'https://remix.run',
+      documentation: 'https://remix.run/docs',
+      dependencies: ['@remix-run/react', '@remix-run/node'],
+      supportedEngines: ['vite'],
+      features: {
+        jsx: true,
+        sfc: false,
+        cssModules: true,
+        cssInJs: true,
+        ssr: true,
+        ssg: false,
+        hmr: true,
+        fastRefresh: true,
+      },
+      defaultPort: 5173,
+      fileExtensions: ['.tsx', '.jsx', '.ts', '.js'],
+      configFiles: ['vite.config.ts', 'remix.config.js'],
+    },
+    9,
+  )
 }

@@ -9,7 +9,7 @@
 
 import type { Plugin } from 'vite'
 import type { Logger } from '../utils/logger'
-import { FileSystem, PathUtils } from '../utils'
+import { FileSystem, FrameworkDetectionCache, PathUtils } from '../utils'
 
 /**
  * 项目类型枚举
@@ -25,6 +25,8 @@ export enum ProjectType {
   LIT = 'lit',
   QWIK = 'qwik',
   ANGULAR = 'angular',
+  ASTRO = 'astro',
+  REMIX = 'remix',
   VANILLA = 'vanilla',
 }
 
@@ -59,10 +61,12 @@ export class PluginManager {
   private cwd: string
   private detectedType: ProjectType | null = null
   private availablePlugins: Map<string, PluginConfig> = new Map()
+  private detectionCache: FrameworkDetectionCache
 
   constructor(cwd: string, logger: Logger) {
     this.cwd = cwd
     this.logger = logger
+    this.detectionCache = new FrameworkDetectionCache(cwd, logger)
     this.initializePluginConfigs()
   }
 
@@ -213,85 +217,229 @@ export class PluginManager {
   }
 
   /**
-   * 检测项目类型
+   * 框架检测器配置
+   * 优先级越高越先匹配，置信度用于在多个匹配时选择最佳结果
+   */
+  private readonly frameworkDetectors: Array<{
+    type: ProjectType
+    priority: number
+    detectDeps: (deps: Record<string, string>) => { detected: boolean, confidence: number }
+    filePatterns?: string[]
+  }> = [
+    // Angular - 最高优先级，避免与其他框架混淆
+    {
+      type: ProjectType.ANGULAR,
+      priority: 100,
+      detectDeps: deps => ({
+        detected: !!deps['@angular/core'],
+        confidence: deps['@angular/core'] ? 0.95 : 0,
+      }),
+      filePatterns: ['**/*.component.ts'],
+    },
+    // Qwik
+    {
+      type: ProjectType.QWIK,
+      priority: 95,
+      detectDeps: deps => ({
+        detected: !!deps['@builder.io/qwik'],
+        confidence: deps['@builder.io/qwik'] ? 0.95 : 0,
+      }),
+    },
+    // Vue 3
+    {
+      type: ProjectType.VUE3,
+      priority: 90,
+      detectDeps: (deps) => {
+        const vue = deps.vue
+        if (!vue) return { detected: false, confidence: 0 }
+        const isV3 = vue.includes('^3') || vue.includes('~3') || vue.startsWith('3') || vue === 'latest' || vue === 'next'
+        return { detected: isV3, confidence: isV3 ? 0.9 : 0 }
+      },
+      filePatterns: ['**/*.vue'],
+    },
+    // Vue 2
+    {
+      type: ProjectType.VUE2,
+      priority: 89,
+      detectDeps: (deps) => {
+        const vue = deps.vue
+        if (!vue) return { detected: false, confidence: 0 }
+        const isV2 = vue.includes('^2') || vue.includes('~2') || vue.startsWith('2')
+        return { detected: isV2, confidence: isV2 ? 0.9 : 0 }
+      },
+      filePatterns: ['**/*.vue'],
+    },
+    // Preact - 必须在 React 之前检测
+    {
+      type: ProjectType.PREACT,
+      priority: 85,
+      detectDeps: deps => ({
+        detected: !!deps.preact,
+        confidence: deps.preact ? 0.9 : 0,
+      }),
+    },
+    // Solid
+    {
+      type: ProjectType.SOLID,
+      priority: 84,
+      detectDeps: deps => ({
+        detected: !!deps['solid-js'],
+        confidence: deps['solid-js'] ? 0.9 : 0,
+      }),
+    },
+    // SvelteKit - 在 Svelte 之前检测
+    {
+      type: ProjectType.SVELTEKIT,
+      priority: 83,
+      detectDeps: deps => ({
+        detected: !!deps['@sveltejs/kit'],
+        confidence: deps['@sveltejs/kit'] ? 0.95 : 0,
+      }),
+    },
+    // Svelte
+    {
+      type: ProjectType.SVELTE,
+      priority: 82,
+      detectDeps: deps => ({
+        detected: !!deps.svelte && !deps['@sveltejs/kit'],
+        confidence: deps.svelte ? 0.9 : 0,
+      }),
+      filePatterns: ['**/*.svelte'],
+    },
+    // React
+    {
+      type: ProjectType.REACT,
+      priority: 80,
+      detectDeps: deps => ({
+        detected: !!(deps.react && deps['react-dom']),
+        confidence: deps.react && deps['react-dom'] ? 0.85 : 0,
+      }),
+      filePatterns: ['**/*.jsx', '**/*.tsx'],
+    },
+    // Lit
+    {
+      type: ProjectType.LIT,
+      priority: 70,
+      detectDeps: deps => ({
+        detected: !!deps.lit,
+        confidence: deps.lit ? 0.85 : 0,
+      }),
+    },
+    // Astro
+    {
+      type: ProjectType.ASTRO,
+      priority: 92,
+      detectDeps: deps => ({
+        detected: !!deps.astro,
+        confidence: deps.astro ? 0.95 : 0,
+      }),
+      filePatterns: ['**/*.astro'],
+    },
+    // Remix
+    {
+      type: ProjectType.REMIX,
+      priority: 91,
+      detectDeps: deps => ({
+        detected: !!(deps['@remix-run/react'] || deps['@remix-run/node']),
+        confidence: deps['@remix-run/react'] ? 0.95 : 0,
+      }),
+    },
+  ]
+
+  /**
+   * 检测项目类型（并行优化版本 + 缓存）
+   *
+   * 使用并行检测提升性能，支持置信度评分选择最佳匹配
+   * 检测结果会被缓存，避免重复检测
    */
   async detectProjectType(): Promise<ProjectType> {
+    // 1. 检查内存缓存
     if (this.detectedType) {
       return this.detectedType
     }
 
-    this.logger.debug('正在检测项目类型...')
+    const startTime = Date.now()
+
+    // 2. 检查磁盘缓存
+    try {
+      const cachedFramework = await this.detectionCache.get(this.cwd)
+      if (cachedFramework && Object.values(ProjectType).includes(cachedFramework as ProjectType)) {
+        this.detectedType = cachedFramework as ProjectType
+        this.logger.debug(`使用缓存的框架检测结果: ${cachedFramework} (耗时: ${Date.now() - startTime}ms)`)
+        return this.detectedType
+      }
+    }
+    catch {
+      // 缓存读取失败，继续正常检测
+    }
+
+    this.logger.debug('正在并行检测项目类型...')
 
     try {
       // 读取 package.json
       const packageJsonPath = PathUtils.resolve(this.cwd, 'package.json')
+      let dependencies: Record<string, string> = {}
+
       if (await FileSystem.exists(packageJsonPath)) {
         const packageJson = JSON.parse(await FileSystem.readFile(packageJsonPath))
-        const dependencies = { ...packageJson.dependencies, ...packageJson.devDependencies }
-
-        // 检测 Vue 版本
-        if (dependencies.vue) {
-          const vueVersion = dependencies.vue
-          if (vueVersion.includes('^3') || vueVersion.includes('~3') || vueVersion.startsWith('3')) {
-            this.detectedType = ProjectType.VUE3
-            this.logger.info('检测到 Vue 3 项目')
-            return this.detectedType
-          }
-          else if (vueVersion.includes('^2') || vueVersion.includes('~2') || vueVersion.startsWith('2')) {
-            this.detectedType = ProjectType.VUE2
-            this.logger.info('检测到 Vue 2 项目')
-            return this.detectedType
-          }
-        }
-
-        // 检测 Preact（必须在 React 之前检测）
-        if (dependencies.preact) {
-          this.detectedType = ProjectType.PREACT
-          this.logger.info('检测到 Preact 项目')
-          return this.detectedType
-        }
-
-        // 检测 React
-        if (dependencies.react && dependencies['react-dom']) {
-          this.detectedType = ProjectType.REACT
-          this.logger.info('检测到 React 项目')
-          return this.detectedType
-        }
-
-        // 检测 Svelte
-        if (dependencies.svelte) {
-          this.detectedType = ProjectType.SVELTE
-          this.logger.info('检测到 Svelte 项目')
-          return this.detectedType
-        }
+        dependencies = { ...packageJson.dependencies, ...packageJson.devDependencies }
       }
 
-      // 如果无法从依赖检测，尝试从文件检测
-      const hasVueFiles = await this.hasFiles(['**/*.vue'])
-      if (hasVueFiles) {
-        // 默认假设是 Vue 3
-        this.detectedType = ProjectType.VUE3
-        this.logger.info('检测到 Vue 文件，假设为 Vue 3 项目')
+      // 并行执行所有依赖检测
+      const depResults = this.frameworkDetectors
+        .map((detector) => {
+          const result = detector.detectDeps(dependencies)
+          return {
+            type: detector.type,
+            priority: detector.priority,
+            ...result,
+          }
+        })
+        .filter(r => r.detected)
+        .sort((a, b) => {
+          // 先按置信度排序，再按优先级排序
+          if (b.confidence !== a.confidence) return b.confidence - a.confidence
+          return b.priority - a.priority
+        })
+
+      // 如果从依赖中检测到框架，直接返回
+      if (depResults.length > 0) {
+        const best = depResults[0]
+        this.detectedType = best.type
+        // 保存到缓存
+        await this.detectionCache.set(this.cwd, best.type).catch(() => {})
+        this.logger.info(`检测到 ${best.type} 项目 (置信度: ${(best.confidence * 100).toFixed(0)}%, 耗时: ${Date.now() - startTime}ms)`)
         return this.detectedType
       }
 
-      const hasReactFiles = await this.hasFiles(['**/*.jsx', '**/*.tsx'])
-      if (hasReactFiles) {
-        this.detectedType = ProjectType.REACT
-        this.logger.info('检测到 React 文件')
-        return this.detectedType
-      }
+      // 如果无法从依赖检测，并行检测文件
+      const fileDetectors = this.frameworkDetectors
+        .filter(d => d.filePatterns && d.filePatterns.length > 0)
+        .map(async (detector) => {
+          const hasFiles = await this.hasFiles(detector.filePatterns!)
+          return {
+            type: detector.type,
+            priority: detector.priority,
+            detected: hasFiles,
+          }
+        })
 
-      const hasSvelteFiles = await this.hasFiles(['**/*.svelte'])
-      if (hasSvelteFiles) {
-        this.detectedType = ProjectType.SVELTE
-        this.logger.info('检测到 Svelte 文件')
+      const fileResults = (await Promise.all(fileDetectors))
+        .filter(r => r.detected)
+        .sort((a, b) => b.priority - a.priority)
+
+      if (fileResults.length > 0) {
+        const best = fileResults[0]
+        this.detectedType = best.type
+        // 保存到缓存
+        await this.detectionCache.set(this.cwd, best.type).catch(() => {})
+        this.logger.info(`从文件检测到 ${best.type} 项目 (耗时: ${Date.now() - startTime}ms)`)
         return this.detectedType
       }
 
       // 默认为 vanilla 项目
       this.detectedType = ProjectType.VANILLA
-      this.logger.info('未检测到特定框架，使用 Vanilla 配置')
+      this.logger.info(`未检测到特定框架，使用 Vanilla 配置 (耗时: ${Date.now() - startTime}ms)`)
       return this.detectedType
     }
     catch (error) {

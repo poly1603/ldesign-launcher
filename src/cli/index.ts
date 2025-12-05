@@ -17,6 +17,7 @@ import { DevCommand } from './commands/dev'
 import { doctorCommand } from './commands/doctor'
 import { HelpCommand } from './commands/help'
 import { PreviewCommand } from './commands/preview'
+import { uiCommand } from './commands/ui'
 import { VersionCommand } from './commands/version'
 
 /**
@@ -123,7 +124,8 @@ export function createCli(config?: Partial<CliConfig>) {
     ['build', new BuildCommand()],
     ['preview', new PreviewCommand()],
     ['config', new ConfigCommand()],
-    ['doctor', { execute: async (ctx: any) => doctorCommand(ctx.cwd || process.cwd()) }],
+    ['doctor', { handler: async (ctx: any) => doctorCommand(ctx.cwd || process.cwd()) }],
+    ['ui', { handler: async (ctx: any) => uiCommand(ctx.options || {}) }],
     ['help', new HelpCommand()],
     ['version', new VersionCommand()],
   ])

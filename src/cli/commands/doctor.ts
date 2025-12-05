@@ -250,6 +250,218 @@ async function checkPorts(): Promise<DiagnosticResult> {
 }
 
 /**
+ * 检查框架
+ */
+async function checkFramework(cwd: string): Promise<DiagnosticResult> {
+  const items: DiagnosticItem[] = []
+  const { PluginManager } = await import('../../core/PluginManager')
+  const logger = new Logger('Doctor', { level: 'silent' })
+  const pluginManager = new PluginManager(cwd, logger)
+
+  try {
+    const projectType = await pluginManager.detectProjectType()
+
+    items.push({
+      name: '框架检测',
+      status: 'success',
+      message: `检测到 ${projectType} 项目 ✓`,
+    })
+
+    // 检查框架特定依赖
+    const frameworkDeps: Record<string, string[]> = {
+      vue3: ['vue', '@vitejs/plugin-vue'],
+      vue2: ['vue', '@vitejs/plugin-vue2'],
+      react: ['react', 'react-dom', '@vitejs/plugin-react'],
+      svelte: ['svelte', '@sveltejs/vite-plugin-svelte'],
+      solid: ['solid-js', 'vite-plugin-solid'],
+      angular: ['@angular/core', '@analogjs/vite-plugin-angular'],
+      astro: ['astro'],
+      remix: ['@remix-run/react', '@remix-run/vite'],
+    }
+
+    const requiredDeps = frameworkDeps[projectType] || []
+    for (const dep of requiredDeps) {
+      const depPath = join(cwd, 'node_modules', dep)
+      const installed = existsSync(depPath)
+      if (!installed) {
+        items.push({
+          name: `依赖 ${dep}`,
+          status: 'error',
+          message: '未安装 ✗',
+          suggestion: `运行 "pnpm add ${dep.startsWith('@') ? '' : '-D '}${dep}"`,
+        })
+      }
+    }
+  }
+  catch (error) {
+    items.push({
+      name: '框架检测',
+      status: 'warning',
+      message: '无法检测框架',
+      suggestion: (error as Error).message,
+    })
+  }
+
+  return {
+    category: '框架检查',
+    items,
+    hasIssues: items.some(item => item.status === 'error'),
+  }
+}
+
+/**
+ * 检查性能相关配置
+ */
+async function checkPerformance(cwd: string): Promise<DiagnosticResult> {
+  const items: DiagnosticItem[] = []
+  const packageJsonPath = join(cwd, 'package.json')
+
+  if (!existsSync(packageJsonPath)) {
+    return {
+      category: '性能检查',
+      items: [{
+        name: 'package.json',
+        status: 'error',
+        message: '未找到 ✗',
+      }],
+      hasIssues: true,
+    }
+  }
+
+  try {
+    const packageJson = JSON.parse(require('node:fs').readFileSync(packageJsonPath, 'utf-8'))
+    const allDeps = { ...packageJson.dependencies, ...packageJson.devDependencies }
+
+    // 检查是否有大型依赖可以按需加载
+    const heavyDeps = ['moment', 'lodash', 'antd', 'element-plus', '@mui/material']
+    const lightAlternatives: Record<string, string> = {
+      moment: 'dayjs',
+      lodash: 'lodash-es (配合 tree-shaking)',
+    }
+
+    for (const dep of heavyDeps) {
+      if (allDeps[dep]) {
+        const alternative = lightAlternatives[dep]
+        items.push({
+          name: `依赖 ${dep}`,
+          status: 'warning',
+          message: '检测到较大的依赖',
+          suggestion: alternative ? `考虑使用 ${alternative} 替代` : '确保配置了按需加载',
+        })
+      }
+    }
+
+    // 检查是否配置了 TypeScript
+    const hasTsConfig = existsSync(join(cwd, 'tsconfig.json'))
+    items.push({
+      name: 'TypeScript',
+      status: hasTsConfig ? 'success' : 'warning',
+      message: hasTsConfig ? '已配置 ✓' : '未配置',
+      suggestion: !hasTsConfig ? '推荐使用 TypeScript 以获得更好的开发体验' : undefined,
+    })
+
+    // 检查 ESLint
+    const hasEslint = existsSync(join(cwd, '.eslintrc.js'))
+      || existsSync(join(cwd, '.eslintrc.json'))
+      || existsSync(join(cwd, 'eslint.config.js'))
+      || allDeps.eslint
+    items.push({
+      name: 'ESLint',
+      status: hasEslint ? 'success' : 'warning',
+      message: hasEslint ? '已配置 ✓' : '未配置',
+      suggestion: !hasEslint ? '推荐配置 ESLint 以保证代码质量' : undefined,
+    })
+
+    // 检查构建产物大小（如果存在 dist 目录）
+    const distPath = join(cwd, 'dist')
+    if (existsSync(distPath)) {
+      items.push({
+        name: '构建产物',
+        status: 'success',
+        message: '已存在 dist 目录 ✓',
+        suggestion: '运行 "launcher build --analyze" 分析构建产物',
+      })
+    }
+
+    if (items.length === 0) {
+      items.push({
+        name: '性能配置',
+        status: 'success',
+        message: '未发现明显问题 ✓',
+      })
+    }
+  }
+  catch (error) {
+    items.push({
+      name: '性能检查',
+      status: 'error',
+      message: '检查失败 ✗',
+      suggestion: (error as Error).message,
+    })
+  }
+
+  return {
+    category: '性能检查',
+    items,
+    hasIssues: items.some(item => item.status === 'error'),
+  }
+}
+
+/**
+ * 检查安全性
+ */
+async function checkSecurity(cwd: string): Promise<DiagnosticResult> {
+  const items: DiagnosticItem[] = []
+
+  // 检查 .env 文件是否在 .gitignore 中
+  const gitignorePath = join(cwd, '.gitignore')
+  if (existsSync(gitignorePath)) {
+    const gitignoreContent = require('node:fs').readFileSync(gitignorePath, 'utf-8')
+    const hasEnvIgnored = gitignoreContent.includes('.env')
+      || gitignoreContent.includes('*.env')
+      || gitignoreContent.includes('.env.local')
+
+    items.push({
+      name: '.env 文件',
+      status: hasEnvIgnored ? 'success' : 'warning',
+      message: hasEnvIgnored ? '已在 .gitignore 中 ✓' : '可能未被 Git 忽略',
+      suggestion: !hasEnvIgnored ? '确保 .env 文件不会被提交到版本控制' : undefined,
+    })
+  }
+
+  // 检查是否有 lockfile
+  const hasLockfile = existsSync(join(cwd, 'pnpm-lock.yaml'))
+    || existsSync(join(cwd, 'package-lock.json'))
+    || existsSync(join(cwd, 'yarn.lock'))
+
+  items.push({
+    name: 'Lockfile',
+    status: hasLockfile ? 'success' : 'warning',
+    message: hasLockfile ? '已存在 ✓' : '未找到',
+    suggestion: !hasLockfile ? '建议使用 lockfile 锁定依赖版本' : undefined,
+  })
+
+  // 检查 node_modules 是否在 .gitignore 中
+  if (existsSync(gitignorePath)) {
+    const gitignoreContent = require('node:fs').readFileSync(gitignorePath, 'utf-8')
+    const hasNodeModulesIgnored = gitignoreContent.includes('node_modules')
+
+    items.push({
+      name: 'node_modules',
+      status: hasNodeModulesIgnored ? 'success' : 'error',
+      message: hasNodeModulesIgnored ? '已在 .gitignore 中 ✓' : '未被 Git 忽略 ✗',
+      suggestion: !hasNodeModulesIgnored ? '将 node_modules 添加到 .gitignore' : undefined,
+    })
+  }
+
+  return {
+    category: '安全检查',
+    items,
+    hasIssues: items.some(item => item.status === 'error'),
+  }
+}
+
+/**
  * 打印诊断结果
  */
 function printDiagnosticResult(result: DiagnosticResult, logger: Logger): void {
@@ -288,6 +500,9 @@ export async function doctorCommand(cwd: string = process.cwd()): Promise<void> 
   results.push(await checkEnvironment())
   results.push(await checkConfig(cwd))
   results.push(await checkDependencies(cwd))
+  results.push(await checkFramework(cwd))
+  results.push(await checkPerformance(cwd))
+  results.push(await checkSecurity(cwd))
   results.push(await checkPorts())
 
   // 打印结果

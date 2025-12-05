@@ -10,6 +10,7 @@
 import type { FrameworkMetadata } from '../types/framework'
 
 export * from './angular'
+export * from './astro'
 
 export * from './base'
 // 导出懒加载工具
@@ -19,6 +20,7 @@ export * from './marko'
 export * from './preact'
 export * from './qwik'
 export * from './react'
+export * from './remix'
 export * from './solid'
 export * from './svelte'
 

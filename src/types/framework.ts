@@ -29,6 +29,8 @@ export type FrameworkType
     | 'qwik'
     | 'lit'
     | 'marko'
+    | 'astro'
+    | 'remix'
     | 'vanilla'
     | 'vanilla-ts'
     | 'auto' // 自动检测
