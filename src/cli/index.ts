@@ -11,11 +11,15 @@
 import type { CliConfig, CliContext } from '../types'
 import { CliCommand } from '../types'
 import { Logger } from '../utils/logger'
+import { AnalyzeCommand } from './commands/analyze'
 import { BuildCommand } from './commands/build'
 import { ConfigCommand } from './commands/config'
+import { CreateCommand } from './commands/create'
+import { DeployCommand } from './commands/deploy'
 import { DevCommand } from './commands/dev'
 import { doctorCommand } from './commands/doctor'
 import { HelpCommand } from './commands/help'
+import { LintCommand } from './commands/lint'
 import { PreviewCommand } from './commands/preview'
 import { uiCommand } from './commands/ui'
 import { VersionCommand } from './commands/version'
@@ -123,6 +127,10 @@ export function createCli(config?: Partial<CliConfig>) {
     ['dev', new DevCommand()],
     ['build', new BuildCommand()],
     ['preview', new PreviewCommand()],
+    ['deploy', new DeployCommand()],
+    ['create', new CreateCommand()],
+    ['analyze', new AnalyzeCommand()],
+    ['lint', new LintCommand()],
     ['config', new ConfigCommand()],
     ['doctor', { handler: async (ctx: any) => doctorCommand(ctx.cwd || process.cwd()) }],
     ['ui', { handler: async (ctx: any) => uiCommand(ctx.options || {}) }],

@@ -92,3 +92,32 @@ export * from './template-generator'
 
 // 依赖分析器
 export * from './dependency-analyzer'
+
+// Bundle 分析器
+export * from './bundle-analyzer'
+
+// 依赖检查器
+export {
+  DependencyChecker,
+  checkDependencies,
+  type DependencyInfo as DepCheckerInfo,
+  type CheckResult as DepCheckResult,
+} from './dependency-checker'
+
+// 系统监控
+export * from './system-monitor'
+
+// 脚本运行器
+export * from './script-runner'
+
+// 环境变量管理
+export * from './env-manager'
+
+// 代码质量检查
+export * from './code-quality'
+
+// Git 工具
+export * from './git-utils'
+
+// 版本更新检查
+export * from './update-checker'

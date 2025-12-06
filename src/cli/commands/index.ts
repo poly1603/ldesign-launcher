@@ -7,15 +7,19 @@
  * @since 2.1.0
  */
 
+// 分析和构建
+export * from './analyze'
 export * from './build'
 // 配置
 export * from './config'
 // 核心命令
+export * from './create'
+export * from './deploy'
 export * from './dev'
 
 // 帮助和版本
 export * from './help'
-
+export * from './lint'
 export * from './preview'
 export * from './version'
 export * from './doctor'

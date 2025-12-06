@@ -7,7 +7,7 @@ import type { Server } from 'http'
 import { EventEmitter } from 'events'
 
 export interface WSMessage {
-  type: 'log' | 'status' | 'performance' | 'error' | 'project' | 'build'
+  type: 'log' | 'status' | 'performance' | 'error' | 'project' | 'build' | 'deployProgress' | 'deployStatus' | 'deployResult'
   payload: unknown
   timestamp: number
 }

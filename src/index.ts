@@ -59,6 +59,12 @@ export {
 export { FrameworkAdapter } from './frameworks/base/FrameworkAdapter'
 export { createFrameworkDetector, FrameworkDetector } from './frameworks/base/FrameworkDetector'
 
+// 导出部署模块
+export * from './deploy'
+
+// 导出 Mock 模块
+export * from './mock'
+
 // 导出开发工具插件
 export * from './plugins'
 

@@ -23,6 +23,7 @@ export * from './plugin'
 export * from './server'
 
 export * from './ui-config'
+export * from './deploy'
 // 从 ui-config 中选择性导出，避免与 config.ts 中的 EnvironmentConfig 冲突
 export type {
   getConfigFields,
