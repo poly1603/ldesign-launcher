@@ -185,7 +185,7 @@ export class DeployService extends EventEmitter {
 
         // 部署后打开 URL
         if (config.openAfterDeploy && result.url) {
-          import('open').then(({ default: open }) => open(result.url!)).catch(() => {})
+          import('open').then(({ default: open }) => open(result.url!)).catch(() => { })
         }
 
         // 执行部署后钩子
@@ -288,7 +288,7 @@ export class DeployService extends EventEmitter {
   /**
    * 运行构建
    */
-  private async runBuild(config: DeployConfig): Promise<void> {
+  private async runBuild(_config: DeployConfig): Promise<void> {
     this.updateProgress({
       phase: 'build',
       progress: 15,
@@ -304,15 +304,15 @@ export class DeployService extends EventEmitter {
       const isWindows = process.platform === 'win32'
       const child = isWindows
         ? spawn('cmd.exe', ['/c', 'pnpm', 'run', 'build'], {
-            cwd: this.config.cwd,
-            env: { ...process.env, FORCE_COLOR: '1' },
-            stdio: ['pipe', 'pipe', 'pipe'],
-          })
+          cwd: this.config.cwd,
+          env: { ...process.env, FORCE_COLOR: '1' },
+          stdio: ['pipe', 'pipe', 'pipe'],
+        })
         : spawn('pnpm', ['run', 'build'], {
-            cwd: this.config.cwd,
-            env: { ...process.env, FORCE_COLOR: '1' },
-            stdio: ['pipe', 'pipe', 'pipe'],
-          })
+          cwd: this.config.cwd,
+          env: { ...process.env, FORCE_COLOR: '1' },
+          stdio: ['pipe', 'pipe', 'pipe'],
+        })
 
       let buildProgress = 0
 

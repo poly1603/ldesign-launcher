@@ -575,11 +575,16 @@ ${result.errorDetails ? chalk.gray(result.errorDetails.slice(0, 200)) : ''}
 
     for (const entry of history.slice(0, 10)) {
       const platformInfo = getPlatformInfo(entry.platform)
-      const statusIcon = {
+      const statusIcon = ({
         success: chalk.green('✔'),
         failed: chalk.red('✖'),
         cancelled: chalk.yellow('⚠'),
-      }[entry.status] || chalk.gray('○')
+        idle: chalk.gray('○'),
+        preparing: chalk.blue('◐'),
+        building: chalk.cyan('◑'),
+        uploading: chalk.magenta('◒'),
+        processing: chalk.yellow('◓'),
+      } as Record<string, string>)[entry.status] || chalk.gray('○')
 
       const duration = entry.endTime
         ? chalk.gray(`${((entry.endTime - entry.startTime) / 1000).toFixed(1)}s`)

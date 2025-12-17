@@ -121,3 +121,6 @@ export * from './git-utils'
 
 // 版本更新检查
 export * from './update-checker'
+
+// Node.js 版本检查与 Volta 安装
+export * from './node-version-check'

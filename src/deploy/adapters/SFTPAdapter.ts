@@ -96,7 +96,7 @@ export class SFTPAdapter extends BaseAdapter<SFTPDeployConfig> {
    */
   private async uploadWithSftp(
     config: SFTPDeployConfig,
-    distDir: string,
+    _distDir: string,
     files: { relativePath: string; absolutePath: string; size: number }[],
     totalSize: number
   ): Promise<DeployResult> {
@@ -209,7 +209,7 @@ export class SFTPAdapter extends BaseAdapter<SFTPDeployConfig> {
           },
         })
       } catch (error) {
-        await sftp.end().catch(() => {})
+        await sftp.end().catch(() => { })
         throw error
       }
     } catch (error) {

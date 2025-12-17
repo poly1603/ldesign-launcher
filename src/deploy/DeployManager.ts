@@ -11,7 +11,6 @@ import type {
   DeployPlatform,
   SavedDeployConfig,
   DeployConfig,
-  DeployHistoryEntry,
 } from '../types/deploy'
 import path from 'path'
 import fs from 'fs-extra'

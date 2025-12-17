@@ -179,7 +179,7 @@ export class MockServer {
     this.watchAbortController = new AbortController()
 
     try {
-      const watcher = fs.watch(mockDir, { recursive: true }, async (eventType, filename) => {
+      const watcher = fs.watch(mockDir, { recursive: true }, async (_eventType, filename) => {
         if (filename && /\.(ts|js|mjs|cjs)$/.test(filename)) {
           this.log('info', `Mock 文件变更: ${filename}`)
           await this.loadMocks(cwd)

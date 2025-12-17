@@ -97,7 +97,7 @@ export class SSHAdapter extends BaseAdapter<SSHDeployConfig> {
     config: SSHDeployConfig,
     distDir: string,
     files: { relativePath: string; absolutePath: string; size: number }[],
-    totalSize: number
+    _totalSize: number
   ): Promise<DeployResult> {
     this.log('info', `连接到 SSH 服务器: ${config.host}:${config.port || 22}`, 'upload')
     this.updateProgress({
@@ -174,7 +174,7 @@ export class SSHAdapter extends BaseAdapter<SSHDeployConfig> {
             const baseName = path.basename(itemPath)
             return baseName !== 'node_modules' && !baseName.startsWith('.')
           },
-          tick: (localPath, remotePath, error) => {
+          tick: (localPath, _remotePath, error) => {
             if (error) {
               failed.push(localPath)
               this.log('error', `上传失败: ${localPath}`, 'upload')

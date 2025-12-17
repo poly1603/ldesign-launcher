@@ -672,14 +672,14 @@ export class CreateCommand {
       await fs.ensureDir(projectDir)
 
       // 生成 package.json
-      const packageJson = generatePackageJson(projectName, template)
+      const packageJson = generatePackageJson(projectName!, template!)
       await fs.writeFile(
         path.join(projectDir, 'package.json'),
         JSON.stringify(packageJson, null, 2),
       )
 
       // 生成模板文件
-      await generateTemplateFiles(projectDir, template, projectName)
+      await generateTemplateFiles(projectDir, template!, projectName!)
 
       spinner.succeed('项目创建成功！')
 

@@ -2,22 +2,12 @@
 
 /**
  * @ldesign/launcher CLI 入口文件
- * 
+ *
  * 这是 launcher 命令的可执行入口文件
- * 
+ *
  * @author LDesign Team
  * @since 1.0.0
  */
-
-// 检查 Node.js 版本
-const nodeVersion = process.version
-const majorVersion = parseInt(nodeVersion.slice(1).split('.')[0], 10)
-
-if (majorVersion < 16) {
-  console.error(`❌ @ldesign/launcher 需要 Node.js 16.0.0 或更高版本，当前版本: ${nodeVersion}`)
-  console.error('请升级 Node.js 版本后重试')
-  process.exit(1)
-}
 
 // 设置未捕获异常处理
 process.on('uncaughtException', (error) => {
@@ -33,41 +23,29 @@ process.on('unhandledRejection', (reason) => {
   process.exit(1)
 })
 
-// 动态导入 CLI 模块（优先 ESM，其次 CJS），兼容默认导出与具名导出
+// 动态导入 CLI 模块
 async function main() {
   try {
-    let mod
-    let createCli
-    let bootstrap
-
-    try {
-      // 直接使用 ESM 构建，因为这是一个 ESM 包
-      mod = await import('../dist/cli/index.js')
-      createCli = mod.createCli || (typeof mod.default === 'function' ? mod.default : mod.default?.createCli)
-      
-      // 导入 bootstrap 函数以初始化框架注册
-      const coreModule = await import('../dist/index.js')
-      bootstrap = coreModule.bootstrap
-
-      if (!createCli) {
-        console.log('ESM模块导出:', Object.keys(mod))
-        throw new Error('无法找到 createCli 函数')
-      }
-    } catch (esmError) {
-      // 只在非静默模式下输出错误信息
-      if (!process.argv.includes('--silent') && !process.argv.includes('-s')) {
-        console.error('ESM加载失败:', esmError.message)
-      }
-      throw new Error(`无法加载 CLI 模块: ${esmError.message}`)
+    // 首先检查 Node.js 版本（带交互式 Volta 安装）
+    const { checkAndHandleNodeVersion } = await import('../dist/utils/node-version-check.js')
+    const versionOk = await checkAndHandleNodeVersion()
+    if (!versionOk) {
+      // 版本不满足，已显示提示，优雅退出
+      process.exit(process.env.CI ? 1 : 0)
     }
 
-    if (typeof createCli !== 'function') {
-      throw new Error('无法定位 createCli 导出')
+    // 导入 CLI 模块
+    const mod = await import('../dist/cli/index.js')
+    const createCli = mod.createCli || (typeof mod.default === 'function' ? mod.default : mod.default?.createCli)
+
+    if (!createCli || typeof createCli !== 'function') {
+      throw new Error('无法找到 createCli 函数')
     }
 
-    // 初始化 Launcher 系统（注册所有引擎和框架）
-    if (typeof bootstrap === 'function') {
-      await bootstrap()
+    // 导入并执行 bootstrap 初始化
+    const coreModule = await import('../dist/index.js')
+    if (typeof coreModule.bootstrap === 'function') {
+      await coreModule.bootstrap()
     }
 
     // 创建并运行 CLI

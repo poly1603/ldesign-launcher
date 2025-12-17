@@ -330,21 +330,21 @@ export class DependencyChecker {
       if (major.length > 0) {
         console.log(chalk.red(`\n   🔴 主版本更新 (${major.length}):`))
         for (const dep of major) {
-          console.log(`      ${dep.name}: ${chalk.gray(dep.currentVersion)} → ${chalk.red(dep.latestVersion)}`)
+          console.log(`      ${dep.name}: ${chalk.gray(dep.currentVersion)} → ${chalk.red(dep.latestVersion || 'N/A')}`)
         }
       }
 
       if (minor.length > 0) {
         console.log(chalk.yellow(`\n   🟡 次版本更新 (${minor.length}):`))
         for (const dep of minor) {
-          console.log(`      ${dep.name}: ${chalk.gray(dep.currentVersion)} → ${chalk.yellow(dep.latestVersion)}`)
+          console.log(`      ${dep.name}: ${chalk.gray(dep.currentVersion)} → ${chalk.yellow(dep.latestVersion || 'N/A')}`)
         }
       }
 
       if (patch.length > 0) {
         console.log(chalk.green(`\n   🟢 补丁更新 (${patch.length}):`))
         for (const dep of patch) {
-          console.log(`      ${dep.name}: ${chalk.gray(dep.currentVersion)} → ${chalk.green(dep.latestVersion)}`)
+          console.log(`      ${dep.name}: ${chalk.gray(dep.currentVersion)} → ${chalk.green(dep.latestVersion || 'N/A')}`)
         }
       }
     }
