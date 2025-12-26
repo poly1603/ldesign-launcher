@@ -168,6 +168,9 @@ export interface LauncherConfigOptions {
 
   /** 配置变更防抖时间(毫秒，默认200) */
   configChangeDebounce?: number
+
+  /** Mock 服务配置 */
+  mock?: MockOptions
 }
 
 /**
@@ -1060,6 +1063,49 @@ export interface ToolsConfig {
     cacheStrategy?: 'cacheFirst' | 'networkFirst' | 'staleWhileRevalidate'
     offlinePage?: string
   }
+}
+
+/**
+ * Mock 服务配置接口
+ * 提供开发环境的 Mock 数据服务支持
+ */
+export interface MockOptions {
+  /** 是否启用 Mock 服务，默认 false */
+  enabled?: boolean
+
+  /** Mock 文件目录，默认 'mock' */
+  mockDir?: string
+
+  /** 是否监听 Mock 文件变化并自动重载，默认 true */
+  watchFiles?: boolean
+
+  /** 是否在控制台显示 Mock 请求日志，默认 true */
+  logger?: boolean
+
+  /** Mock 接口前缀，默认 '/api' */
+  prefix?: string
+
+  /** 是否启用本地 Mock 文件模式（不使用插件），默认 false */
+  localEnabled?: boolean
+
+  /** 是否启用生产环境 Mock，默认 false（不推荐） */
+  prodEnabled?: boolean
+
+  /** Mock 数据生成器配置 */
+  generator?: {
+    /** 是否使用 faker.js 生成随机数据 */
+    useFaker?: boolean
+    /** 默认响应延迟（毫秒） */
+    delay?: number
+    /** 默认响应状态码 */
+    defaultStatus?: number
+  }
+
+  /** 忽略的路径模式 */
+  ignore?: string[] | RegExp[]
+
+  /** 自定义 Mock 处理函数 */
+  configPath?: string
 }
 
 /**

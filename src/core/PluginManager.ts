@@ -18,6 +18,7 @@ export enum ProjectType {
   VUE3 = 'vue3',
   VUE2 = 'vue2',
   REACT = 'react',
+  REACT_SWC = 'react-swc',
   PREACT = 'preact',
   SVELTE = 'svelte',
   SVELTEKIT = 'sveltekit',
@@ -27,6 +28,7 @@ export enum ProjectType {
   ANGULAR = 'angular',
   ASTRO = 'astro',
   REMIX = 'remix',
+  MARKO = 'marko',
   VANILLA = 'vanilla',
 }
 
@@ -129,6 +131,19 @@ export class PluginManager {
       options: {},
     })
 
+    // React SWC 插件配置（更快的编译速度）
+    this.availablePlugins.set('react-swc', {
+      name: 'React SWC',
+      packageName: '@vitejs/plugin-react-swc',
+      required: true,
+      detection: {
+        dependencies: ['react', 'react-dom', '@vitejs/plugin-react-swc'],
+        filePatterns: ['**/*.jsx', '**/*.tsx'],
+        configFiles: [],
+      },
+      options: {},
+    })
+
     // Preact 插件配置
     this.availablePlugins.set('preact', {
       name: 'Preact',
@@ -196,6 +211,19 @@ export class PluginManager {
         // Qwik 插件需要特殊的导入方式
         importName: 'qwikVite',
       },
+    })
+
+    // Marko 插件配置
+    this.availablePlugins.set('marko', {
+      name: 'Marko',
+      packageName: '@marko/vite',
+      required: true,
+      detection: {
+        dependencies: ['marko'],
+        filePatterns: ['**/*.marko'],
+        configFiles: ['marko.json'],
+      },
+      options: {},
     })
 
     // Angular 插件配置
@@ -306,15 +334,35 @@ export class PluginManager {
       }),
       filePatterns: ['**/*.svelte'],
     },
+    // React SWC - 在标准 React 之前检测
+    {
+      type: ProjectType.REACT_SWC,
+      priority: 81,
+      detectDeps: deps => ({
+        detected: !!(deps.react && deps['react-dom'] && deps['@vitejs/plugin-react-swc']),
+        confidence: deps['@vitejs/plugin-react-swc'] ? 0.95 : 0,
+      }),
+      filePatterns: ['**/*.jsx', '**/*.tsx'],
+    },
     // React
     {
       type: ProjectType.REACT,
       priority: 80,
       detectDeps: deps => ({
-        detected: !!(deps.react && deps['react-dom']),
+        detected: !!(deps.react && deps['react-dom'] && !deps['@vitejs/plugin-react-swc']),
         confidence: deps.react && deps['react-dom'] ? 0.85 : 0,
       }),
       filePatterns: ['**/*.jsx', '**/*.tsx'],
+    },
+    // Marko
+    {
+      type: ProjectType.MARKO,
+      priority: 75,
+      detectDeps: deps => ({
+        detected: !!deps.marko,
+        confidence: deps.marko ? 0.9 : 0,
+      }),
+      filePatterns: ['**/*.marko'],
     },
     // Lit
     {

@@ -18,6 +18,7 @@ import { CreateCommand } from './commands/create'
 import { DeployCommand } from './commands/deploy'
 import { DevCommand } from './commands/dev'
 import { doctorCommand } from './commands/doctor'
+import { GenerateCommand } from './commands/generate'
 import { HelpCommand } from './commands/help'
 import { LintCommand } from './commands/lint'
 import { PreviewCommand } from './commands/preview'
@@ -123,12 +124,17 @@ export function createCli(config?: Partial<CliConfig>) {
   const mergedConfig = { ...defaultConfig, ...config }
 
   // 注册命令
+  const generateCommand = new GenerateCommand()
   const commands = new Map<string, any>([
     ['dev', new DevCommand()],
     ['build', new BuildCommand()],
     ['preview', new PreviewCommand()],
     ['deploy', new DeployCommand()],
     ['create', new CreateCommand()],
+    ['generate', generateCommand],
+    ['gen', generateCommand], // 别名
+    ['g', generateCommand], // 别名
+    ['init', generateCommand], // 别名
     ['analyze', new AnalyzeCommand()],
     ['lint', new LintCommand()],
     ['config', new ConfigCommand()],

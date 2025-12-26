@@ -323,6 +323,9 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
           }
         }
 
+        // 加载环境变量
+        await this.loadEnvironmentVariables()
+
         this.initialized = true
         this.logger.info('ViteLauncher 初始化完成')
       }
@@ -400,6 +403,12 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
 
       // 添加智能检测的插件
       mergedConfig = await this.enhanceConfigWithSmartPlugins(mergedConfig)
+
+      // 处理 Mock 插件配置
+      mergedConfig = await this.processMockConfig(mergedConfig)
+
+      // 处理 PWA 插件配置
+      mergedConfig = await this.processPWAConfig(mergedConfig)
 
       // 处理HTTPS配置
       mergedConfig = await this.processHTTPSConfig(mergedConfig)
@@ -632,6 +641,9 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
 
       // 添加智能检测的插件
       mergedConfig = await this.enhanceConfigWithSmartPlugins(mergedConfig)
+
+      // 处理 PWA 插件配置（构建时也需要 PWA 支持）
+      mergedConfig = await this.processPWAConfig(mergedConfig)
 
       // 执行构建前钩子
       await this.executeHook('beforeBuild')
@@ -1689,6 +1701,109 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
     }
     catch (error) {
       this.logger.warn('智能插件增强失败', { error: (error as Error).message })
+      return config
+    }
+  }
+
+  /**
+   * 处理 PWA 插件配置
+   *
+   * @param config - 原始配置
+   * @returns 处理后的配置
+   */
+  private async processPWAConfig(config: ViteLauncherConfig): Promise<ViteLauncherConfig> {
+    try {
+      const pwaOptions = config.tools?.pwa
+
+      if (!pwaOptions?.enabled) {
+        return config
+      }
+
+      this.logger.info('📱 正在加载 PWA 插件...')
+
+      const { createPWAPlugin } = await import('../plugins/pwa')
+      const pwaPlugin = await createPWAPlugin(pwaOptions, this.cwd)
+
+      if (pwaPlugin) {
+        const existingPlugins = config.plugins || []
+        return {
+          ...config,
+          plugins: [...existingPlugins, pwaPlugin],
+        }
+      }
+
+      return config
+    }
+    catch (error) {
+      this.logger.warn('PWA 插件加载失败', { error: (error as Error).message })
+      return config
+    }
+  }
+
+  /**
+   * 加载环境变量
+   *
+   * 支持 .env、.env.local、.env.[mode]、.env.[mode].local 文件
+   */
+  private async loadEnvironmentVariables(): Promise<void> {
+    try {
+      const envConfig = this.config.launcher?.env
+
+      // 如果用户没有配置环境变量选项，使用默认行为
+      const { createEnvLoader } = await import('../utils/env-loader')
+      const mode = this.environment || process.env.NODE_ENV || 'development'
+
+      const loader = createEnvLoader(this.cwd, mode, {
+        variables: envConfig?.variables,
+        envFile: envConfig?.envFile,
+        prefix: envConfig?.prefix || 'VITE_',
+        expand: envConfig?.expand ?? true,
+        defaults: envConfig?.defaults,
+        required: envConfig?.required,
+        loadLocal: true,
+        injectToProcess: true,
+      })
+
+      await loader.load()
+      this.logger.debug('环境变量加载完成')
+    }
+    catch (error) {
+      // 环境变量加载失败不应该阻止启动
+      this.logger.warn('环境变量加载失败', { error: (error as Error).message })
+    }
+  }
+
+  /**
+   * 处理 Mock 插件配置
+   *
+   * @param config - 原始配置
+   * @returns 处理后的配置
+   */
+  private async processMockConfig(config: ViteLauncherConfig): Promise<ViteLauncherConfig> {
+    try {
+      const mockOptions = config.launcher?.mock
+
+      if (!mockOptions?.enabled) {
+        return config
+      }
+
+      this.logger.info('📦 正在加载 Mock 服务插件...')
+
+      const { createMockPlugin } = await import('../plugins/mock')
+      const mockPlugin = await createMockPlugin(mockOptions, this.cwd)
+
+      if (mockPlugin) {
+        const existingPlugins = config.plugins || []
+        return {
+          ...config,
+          plugins: [mockPlugin, ...existingPlugins],
+        }
+      }
+
+      return config
+    }
+    catch (error) {
+      this.logger.warn('Mock 插件加载失败', { error: (error as Error).message })
       return config
     }
   }
