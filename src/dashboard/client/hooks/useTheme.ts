@@ -1,7 +1,7 @@
 /**
  * 主题管理 Hook
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 export type Theme = 'dark' | 'light' | 'system'
 

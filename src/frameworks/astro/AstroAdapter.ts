@@ -197,11 +197,11 @@ export class AstroAdapter extends FrameworkAdapter {
    */
   getScripts(): Record<string, string> {
     return {
-      'dev': 'astro dev',
-      'build': 'astro build',
-      'preview': 'astro preview',
-      'astro': 'astro',
-      'check': 'astro check',
+      dev: 'astro dev',
+      build: 'astro build',
+      preview: 'astro preview',
+      astro: 'astro',
+      check: 'astro check',
     }
   }
 

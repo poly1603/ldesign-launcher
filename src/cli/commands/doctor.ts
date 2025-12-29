@@ -6,29 +6,22 @@
  * @since 2.1.0
  */
 
-import { execSync } from 'node:child_process'
-import { existsSync } from 'node:fs'
-import { join } from 'node:path'
 import picocolors from 'picocolors'
-import { ConfigManager } from '../../core/ConfigManager'
+import { createHealthChecker } from '../../features/health-checker'
 import { Logger } from '../../utils/logger'
 
-interface DiagnosticResult {
-  category: string
-  items: DiagnosticItem[]
-  hasIssues: boolean
-}
+/* 保留以后使用
+// import { execSync } from 'node:child_process'
+// import { existsSync } from 'node:fs'
+// import { join } from 'node:path'
+// import { ConfigManager } from '../../core/ConfigManager'
+*/
 
-interface DiagnosticItem {
-  name: string
-  status: 'success' | 'warning' | 'error'
-  message: string
-  suggestion?: string
-}
-
-/**
+/*
  * 检查命令是否可用
+ * 保留以后使用
  */
+/*
 async function checkCommand(command: string): Promise<boolean> {
   try {
     execSync(`${command} --version`, { stdio: 'ignore' })
@@ -38,10 +31,13 @@ async function checkCommand(command: string): Promise<boolean> {
     return false
   }
 }
+*/
 
-/**
+/*
  * 检查环境
+ * 保留以后使用
  */
+/*
 async function checkEnvironment(): Promise<DiagnosticResult> {
   const items: DiagnosticItem[] = []
 
@@ -95,10 +91,13 @@ async function checkEnvironment(): Promise<DiagnosticResult> {
     hasIssues: items.some(item => item.status === 'error'),
   }
 }
+*/
 
-/**
+/*
  * 检查配置文件
+ * 保留以后使用
  */
+/*
 async function checkConfig(cwd: string): Promise<DiagnosticResult> {
   const items: DiagnosticItem[] = []
   const logger = new Logger('Doctor', { level: 'silent' })
@@ -169,10 +168,13 @@ async function checkConfig(cwd: string): Promise<DiagnosticResult> {
     hasIssues: items.some(item => item.status === 'error'),
   }
 }
+*/
 
-/**
+/*
  * 检查依赖
+ * 保留以后使用
  */
+/*
 async function checkDependencies(cwd: string): Promise<DiagnosticResult> {
   const items: DiagnosticItem[] = []
   const packageJsonPath = join(cwd, 'package.json')
@@ -222,10 +224,13 @@ async function checkDependencies(cwd: string): Promise<DiagnosticResult> {
     hasIssues: items.some(item => item.status === 'error'),
   }
 }
+*/
 
-/**
+/*
  * 检查端口
+ * 保留以后使用
  */
+/*
 async function checkPorts(): Promise<DiagnosticResult> {
   const items: DiagnosticItem[] = []
   const { isPortAvailable } = await import('../../utils/server')
@@ -248,10 +253,13 @@ async function checkPorts(): Promise<DiagnosticResult> {
     hasIssues: false, // 端口被占用不算严重问题
   }
 }
+*/
 
-/**
+/*
  * 检查框架
+ * 保留以后使用
  */
+/*
 async function checkFramework(cwd: string): Promise<DiagnosticResult> {
   const items: DiagnosticItem[] = []
   const { PluginManager } = await import('../../core/PluginManager')
@@ -308,10 +316,13 @@ async function checkFramework(cwd: string): Promise<DiagnosticResult> {
     hasIssues: items.some(item => item.status === 'error'),
   }
 }
+*/
 
-/**
+/*
  * 检查性能相关配置
+ * 保留以后使用
  */
+/*
 async function checkPerformance(cwd: string): Promise<DiagnosticResult> {
   const items: DiagnosticItem[] = []
   const packageJsonPath = join(cwd, 'package.json')
@@ -406,10 +417,13 @@ async function checkPerformance(cwd: string): Promise<DiagnosticResult> {
     hasIssues: items.some(item => item.status === 'error'),
   }
 }
+*/
 
-/**
+/*
  * 检查安全性
+ * 保留以后使用
  */
+/*
 async function checkSecurity(cwd: string): Promise<DiagnosticResult> {
   const items: DiagnosticItem[] = []
 
@@ -460,10 +474,13 @@ async function checkSecurity(cwd: string): Promise<DiagnosticResult> {
     hasIssues: items.some(item => item.status === 'error'),
   }
 }
+*/
 
-/**
+/*
  * 打印诊断结果
+ * 保留以后使用
  */
+/*
 function printDiagnosticResult(result: DiagnosticResult, logger: Logger): void {
   logger.raw(`\n${picocolors.bold(result.category)}`)
   logger.raw('─'.repeat(50))
@@ -492,37 +509,66 @@ export async function doctorCommand(cwd: string = process.cwd()): Promise<void> 
     colors: true,
   })
 
-  logger.raw(picocolors.bold('\n🔍 @ldesign/launcher 诊断工具\\n'))
+  logger.raw(picocolors.bold('\n🔍 @ldesign/launcher 诊断工具\n'))
 
-  const results: DiagnosticResult[] = []
+  // 使用新的健康检查器
+  const healthChecker = createHealthChecker(cwd)
+  const healthReport = await healthChecker.check()
 
-  // 执行所有检查
-  results.push(await checkEnvironment())
-  results.push(await checkConfig(cwd))
-  results.push(await checkDependencies(cwd))
-  results.push(await checkFramework(cwd))
-  results.push(await checkPerformance(cwd))
-  results.push(await checkSecurity(cwd))
-  results.push(await checkPorts())
+  // 按类别分组
+  const categories = new Map<string, typeof healthReport.items>()
+  for (const item of healthReport.items) {
+    if (!categories.has(item.category)) {
+      categories.set(item.category, [])
+    }
+    categories.get(item.category)!.push(item)
+  }
 
   // 打印结果
-  for (const result of results) {
-    printDiagnosticResult(result, logger)
+  for (const [category, items] of categories) {
+    logger.raw(`\n${picocolors.bold(category)}`)
+    logger.raw('─'.repeat(50))
+
+    for (const item of items) {
+      const icon = item.status === 'pass'
+        ? picocolors.green('✓')
+        : item.status === 'warn'
+          ? picocolors.yellow('⚠')
+          : item.status === 'fail'
+            ? picocolors.red('✗')
+            : picocolors.gray('○')
+
+      logger.raw(`  ${icon} ${item.name}: ${item.message}`)
+
+      if (item.suggestion) {
+        logger.raw(`    ${picocolors.gray(`→ ${item.suggestion}`)}`)
+      }
+    }
   }
 
   // 总结
-  const hasErrors = results.some(r => r.hasIssues)
-  const totalIssues = results.reduce((acc, r) =>
-    acc + r.items.filter(i => i.status === 'error' || i.status === 'warning').length, 0)
-
   logger.raw(`\n${'─'.repeat(50)}`)
+  logger.raw(`\n${picocolors.bold('📊 健康度报告:')}\n`)
+  logger.raw(`  总计: ${healthReport.summary.total} 项`)
+  logger.raw(`  ${picocolors.green('✓ 通过')}: ${healthReport.summary.passed}`)
+  logger.raw(`  ${picocolors.yellow('⚠ 警告')}: ${healthReport.summary.warnings}`)
+  logger.raw(`  ${picocolors.red('✗ 失败')}: ${healthReport.summary.failed}`)
+  logger.raw(`  ${picocolors.gray('○ 跳过')}: ${healthReport.summary.skipped}`)
 
-  if (hasErrors) {
-    logger.raw(picocolors.red(`\n✗ 发现 ${totalIssues} 个问题，请根据上述建议进行修复\n`))
+  const scoreColor = healthReport.summary.score >= 80
+    ? picocolors.green
+    : healthReport.summary.score >= 60
+      ? picocolors.yellow
+      : picocolors.red
+
+  logger.raw(`\n  ${picocolors.bold('健康度评分')}: ${scoreColor(`${healthReport.summary.score}/100`)}\n`)
+
+  if (healthReport.summary.failed > 0) {
+    logger.raw(picocolors.red(`\n✗ 发现 ${healthReport.summary.failed} 个严重问题，请根据上述建议进行修复\n`))
     process.exit(1)
   }
-  else if (totalIssues > 0) {
-    logger.raw(picocolors.yellow(`\n⚠ 发现 ${totalIssues} 个警告，建议优化\n`))
+  else if (healthReport.summary.warnings > 0) {
+    logger.raw(picocolors.yellow(`\n⚠ 发现 ${healthReport.summary.warnings} 个警告，建议优化\n`))
   }
   else {
     logger.raw(picocolors.green('\n✓ 一切正常！\n'))

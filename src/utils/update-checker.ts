@@ -9,8 +9,8 @@
 
 import https from 'node:https'
 import path from 'node:path'
-import fs from 'fs-extra'
 import chalk from 'chalk'
+import fs from 'fs-extra'
 
 /**
  * 更新信息

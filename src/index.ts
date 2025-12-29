@@ -38,11 +38,13 @@ export { PluginOrchestrator } from './core/PluginOrchestrator'
 export { ServerManager } from './core/ServerManager'
 // 导出旧架构核心类（保持向后兼容）
 export { ViteLauncher } from './core/ViteLauncher'
+// 导出部署模块
+export * from './deploy'
 export { registerAllEngines, VITE_ENGINE_METADATA } from './engines'
 // 导出引擎相关（避免与 types 冲突）
 export { BuildEngine } from './engines/base/BuildEngine'
-export { createViteEngineFactory, ViteConfigTransformer, ViteEngine } from './engines/vite'
 
+export { createViteEngineFactory, ViteConfigTransformer, ViteEngine } from './engines/vite'
 export {
   LIT_FRAMEWORK_METADATA,
   MARKO_FRAMEWORK_METADATA,
@@ -57,10 +59,8 @@ export {
 } from './frameworks'
 // 导出框架相关（避免与 types 冲突）
 export { FrameworkAdapter } from './frameworks/base/FrameworkAdapter'
-export { createFrameworkDetector, FrameworkDetector } from './frameworks/base/FrameworkDetector'
 
-// 导出部署模块
-export * from './deploy'
+export { createFrameworkDetector, FrameworkDetector } from './frameworks/base/FrameworkDetector'
 
 // 导出 Mock 模块
 export * from './mock'

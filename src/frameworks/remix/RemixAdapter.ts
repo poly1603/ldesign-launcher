@@ -161,7 +161,7 @@ export class RemixAdapter extends FrameworkAdapter {
         rollupOptions: {
           output: {
             manualChunks: {
-              'remix': ['@remix-run/react', '@remix-run/node'],
+              remix: ['@remix-run/react', '@remix-run/node'],
             },
           },
         },
@@ -215,10 +215,10 @@ export class RemixAdapter extends FrameworkAdapter {
    */
   getScripts(): Record<string, string> {
     return {
-      'dev': 'remix vite:dev',
-      'build': 'remix vite:build',
-      'start': 'remix-serve ./build/server/index.js',
-      'typecheck': 'tsc',
+      dev: 'remix vite:dev',
+      build: 'remix vite:build',
+      start: 'remix-serve ./build/server/index.js',
+      typecheck: 'tsc',
     }
   }
 

@@ -13,17 +13,17 @@ export * from './cli'
 // 导出所有类型定义
 export * from './common'
 export * from './config'
+export * from './deploy'
 // 新增：引擎和框架类型定义 (v2.0.0)
 export * from './engine'
 export * from './framework'
+
 export * from './launcher'
 
 export * from './plugin'
 
 export * from './server'
-
 export * from './ui-config'
-export * from './deploy'
 // 从 ui-config 中选择性导出，避免与 config.ts 中的 EnvironmentConfig 冲突
 export type {
   getConfigFields,

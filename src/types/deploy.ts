@@ -12,42 +12,42 @@
 /**
  * 支持的部署平台
  */
-export type DeployPlatform =
-  | 'netlify'
-  | 'vercel'
-  | 'cloudflare'
-  | 'github-pages'
-  | 'surge'
-  | 'ftp'
-  | 'sftp'
-  | 'ssh'
-  | 'custom'
+export type DeployPlatform
+  = | 'netlify'
+    | 'vercel'
+    | 'cloudflare'
+    | 'github-pages'
+    | 'surge'
+    | 'ftp'
+    | 'sftp'
+    | 'ssh'
+    | 'custom'
 
 /**
  * 部署状态
  */
-export type DeployStatus =
-  | 'idle'
-  | 'preparing'
-  | 'building'
-  | 'uploading'
-  | 'processing'
-  | 'success'
-  | 'failed'
-  | 'cancelled'
+export type DeployStatus
+  = | 'idle'
+    | 'preparing'
+    | 'building'
+    | 'uploading'
+    | 'processing'
+    | 'success'
+    | 'failed'
+    | 'cancelled'
 
 /**
  * 部署阶段
  */
-export type DeployPhase =
-  | 'init'
-  | 'validate'
-  | 'build'
-  | 'prepare'
-  | 'upload'
-  | 'process'
-  | 'verify'
-  | 'complete'
+export type DeployPhase
+  = | 'init'
+    | 'validate'
+    | 'build'
+    | 'prepare'
+    | 'upload'
+    | 'process'
+    | 'verify'
+    | 'complete'
 
 /**
  * 部署进度信息
@@ -309,16 +309,16 @@ export interface CustomDeployConfig extends BaseDeployConfig {
 /**
  * 所有部署配置类型
  */
-export type DeployConfig =
-  | NetlifyDeployConfig
-  | VercelDeployConfig
-  | CloudflareDeployConfig
-  | GitHubPagesDeployConfig
-  | SurgeDeployConfig
-  | FTPDeployConfig
-  | SFTPDeployConfig
-  | SSHDeployConfig
-  | CustomDeployConfig
+export type DeployConfig
+  = | NetlifyDeployConfig
+    | VercelDeployConfig
+    | CloudflareDeployConfig
+    | GitHubPagesDeployConfig
+    | SurgeDeployConfig
+    | FTPDeployConfig
+    | SFTPDeployConfig
+    | SSHDeployConfig
+    | CustomDeployConfig
 
 /**
  * 部署日志级别
@@ -383,35 +383,35 @@ export interface DeployAdapter<T extends BaseDeployConfig = BaseDeployConfig> {
   /**
    * 验证配置
    */
-  validateConfig(config: T): Promise<{ valid: boolean; errors: string[] }>
+  validateConfig: (config: T) => Promise<{ valid: boolean, errors: string[] }>
 
   /**
    * 执行部署
    */
-  deploy(
+  deploy: (
     config: T,
-    callbacks: DeployCallbacks
-  ): Promise<DeployResult>
+    callbacks: DeployCallbacks,
+  ) => Promise<DeployResult>
 
   /**
    * 取消部署
    */
-  cancel?(): Promise<void>
+  cancel?: () => Promise<void>
 
   /**
    * 获取部署状态
    */
-  getStatus?(deployId: string): Promise<DeployStatus>
+  getStatus?: (deployId: string) => Promise<DeployStatus>
 
   /**
    * 获取部署日志
    */
-  getLogs?(deployId: string): Promise<DeployLogEntry[]>
+  getLogs?: (deployId: string) => Promise<DeployLogEntry[]>
 
   /**
    * 回滚部署
    */
-  rollback?(deployId: string): Promise<DeployResult>
+  rollback?: (deployId: string) => Promise<DeployResult>
 }
 
 /**
@@ -491,7 +491,7 @@ export interface DeployConfigField {
   /** 帮助文本 */
   help?: string
   /** 选项（用于 select 类型） */
-  options?: Array<{ label: string; value: string }>
+  options?: Array<{ label: string, value: string }>
   /** 验证正则表达式 */
   pattern?: string
   /** 环境变量名（用于自动获取） */

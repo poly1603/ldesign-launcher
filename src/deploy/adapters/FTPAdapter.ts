@@ -6,8 +6,8 @@
  */
 
 import type {
-  DeployResult,
   DeployCallbacks,
+  DeployResult,
   FTPDeployConfig,
 } from '../../types/deploy'
 import { BaseAdapter } from './BaseAdapter'
@@ -25,7 +25,7 @@ export class FTPAdapter extends BaseAdapter<FTPDeployConfig> {
   description = '通过 FTP 上传到服务器'
   requiresBuild = true
 
-  async validateConfig(config: FTPDeployConfig): Promise<{ valid: boolean; errors: string[] }> {
+  async validateConfig(config: FTPDeployConfig): Promise<{ valid: boolean, errors: string[] }> {
     const errors: string[] = []
 
     if (!config.host) {
@@ -77,7 +77,8 @@ export class FTPAdapter extends BaseAdapter<FTPDeployConfig> {
       this.log('info', `共 ${files.length} 个文件，总大小 ${this.formatSize(totalSize)}`, 'prepare')
 
       return await this.uploadWithFtp(config, distDir, files, totalSize)
-    } catch (error) {
+    }
+    catch (error) {
       return this.createFailedResult((error as Error).message, (error as Error).stack)
     }
   }
@@ -88,8 +89,8 @@ export class FTPAdapter extends BaseAdapter<FTPDeployConfig> {
   private async uploadWithFtp(
     config: FTPDeployConfig,
     distDir: string,
-    files: { relativePath: string; absolutePath: string; size: number }[],
-    totalSize: number
+    files: { relativePath: string, absolutePath: string, size: number }[],
+    totalSize: number,
   ): Promise<DeployResult> {
     this.log('info', `连接到 FTP 服务器: ${config.host}:${config.port || 21}`, 'upload')
     this.updateProgress({
@@ -123,7 +124,8 @@ export class FTPAdapter extends BaseAdapter<FTPDeployConfig> {
           try {
             await client.ensureDir(config.remotePath)
             await client.clearWorkingDir()
-          } catch {
+          }
+          catch {
             // 目录可能不存在，忽略错误
           }
         }
@@ -184,13 +186,15 @@ export class FTPAdapter extends BaseAdapter<FTPDeployConfig> {
             filesUploaded: uploadedCount,
           },
         })
-      } catch (error) {
+      }
+      catch (error) {
         client.close()
         throw error
       }
-    } catch (error) {
+    }
+    catch (error) {
       // 如果 basic-ftp 不可用，尝试使用 ftp-deploy
-      if ((error as Error).message.includes("Cannot find module 'basic-ftp'")) {
+      if ((error as Error).message.includes('Cannot find module \'basic-ftp\'')) {
         this.log('warn', 'basic-ftp 不可用，尝试使用 ftp-deploy...', 'upload')
         return this.uploadWithFtpDeploy(config, distDir, files.length)
       }
@@ -204,15 +208,20 @@ export class FTPAdapter extends BaseAdapter<FTPDeployConfig> {
   private async uploadWithFtpDeploy(
     config: FTPDeployConfig,
     distDir: string,
-    fileCount: number
+    fileCount: number,
   ): Promise<DeployResult> {
     const args = [
       'ftp-deploy',
-      '--server', config.host,
-      '--username', config.username,
-      '--password', config.password,
-      '--local-dir', distDir,
-      '--server-dir', config.remotePath,
+      '--server',
+      config.host,
+      '--username',
+      config.username,
+      '--password',
+      config.password,
+      '--local-dir',
+      distDir,
+      '--server-dir',
+      config.remotePath,
     ]
 
     if (config.port) {
@@ -227,7 +236,7 @@ export class FTPAdapter extends BaseAdapter<FTPDeployConfig> {
       onStdout: (data) => {
         const lines = data.split('\n').filter(Boolean)
         for (const line of lines) {
-          const cleanLine = line.replace(/\x1b\[[0-9;]*m/g, '').trim()
+          const cleanLine = line.replace(/\x1B\[[0-9;]*m/g, '').trim()
           if (cleanLine) {
             this.log('info', cleanLine, 'upload')
           }
@@ -236,7 +245,7 @@ export class FTPAdapter extends BaseAdapter<FTPDeployConfig> {
       onStderr: (data) => {
         const lines = data.split('\n').filter(Boolean)
         for (const line of lines) {
-          const cleanLine = line.replace(/\x1b\[[0-9;]*m/g, '').trim()
+          const cleanLine = line.replace(/\x1B\[[0-9;]*m/g, '').trim()
           if (cleanLine && !cleanLine.includes('npm warn')) {
             this.log('warn', cleanLine, 'upload')
           }

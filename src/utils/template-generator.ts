@@ -2,8 +2,8 @@
  * 项目模板生成器
  * 用于从模板快速创建新项目
  */
-import { promises as fs } from 'fs'
-import path from 'path'
+import { promises as fs } from 'node:fs'
+import path from 'node:path'
 
 export interface TemplateConfig {
   id: string
@@ -40,8 +40,8 @@ export const templates: Record<string, TemplateConfig> = {
     devDependencies: {
       '@ldesign/launcher': 'latest',
       '@vitejs/plugin-vue': '^5.0.0',
-      typescript: '^5.3.0',
-      vite: '^5.4.0',
+      'typescript': '^5.3.0',
+      'vite': '^5.4.0',
     },
     scripts: {
       dev: 'launcher dev',
@@ -118,7 +118,7 @@ declare module '*.vue' {
     icon: '⚛️',
     framework: 'react',
     dependencies: {
-      react: '^18.2.0',
+      'react': '^18.2.0',
       'react-dom': '^18.2.0',
     },
     devDependencies: {
@@ -126,8 +126,8 @@ declare module '*.vue' {
       '@types/react': '^18.2.0',
       '@types/react-dom': '^18.2.0',
       '@vitejs/plugin-react': '^4.2.0',
-      typescript: '^5.3.0',
-      vite: '^5.4.0',
+      'typescript': '^5.3.0',
+      'vite': '^5.4.0',
     },
     scripts: {
       dev: 'launcher dev',
@@ -203,8 +203,8 @@ export default App
     devDependencies: {
       '@ldesign/launcher': 'latest',
       '@sveltejs/vite-plugin-svelte': '^3.0.0',
-      typescript: '^5.3.0',
-      vite: '^5.4.0',
+      'typescript': '^5.3.0',
+      'vite': '^5.4.0',
     },
     scripts: {
       dev: 'launcher dev',
@@ -268,8 +268,8 @@ export default {
     },
     devDependencies: {
       '@ldesign/launcher': 'latest',
-      typescript: '^5.3.0',
-      vite: '^5.4.0',
+      'typescript': '^5.3.0',
+      'vite': '^5.4.0',
       'vite-plugin-solid': '^2.8.0',
     },
     scripts: {
@@ -335,8 +335,8 @@ export default App
     dependencies: {},
     devDependencies: {
       '@ldesign/launcher': 'latest',
-      typescript: '^5.3.0',
-      vite: '^5.4.0',
+      'typescript': '^5.3.0',
+      'vite': '^5.4.0',
     },
     scripts: {
       dev: 'launcher dev',
@@ -435,7 +435,8 @@ export class TemplateGenerator {
     try {
       await fs.access(projectDir)
       throw new Error(`Directory "${projectDir}" already exists`)
-    } catch (error) {
+    }
+    catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
         throw error
       }
@@ -458,7 +459,7 @@ export class TemplateGenerator {
 
     await fs.writeFile(
       path.join(projectDir, 'package.json'),
-      JSON.stringify(packageJson, null, 2)
+      JSON.stringify(packageJson, null, 2),
     )
 
     // 生成模板文件
@@ -480,7 +481,7 @@ export class TemplateGenerator {
 dist
 .DS_Store
 *.local
-`
+`,
     )
 
     return projectDir

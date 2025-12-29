@@ -1205,16 +1205,17 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
     }
 
     const resolvedHost = getResolvedHost(this.config.server?.host)
-    
+
     // 获取实际运行的URL和端口
     const serverUrl = this.getServerUrl(this.devServer)
     let actualPort = this.config.server?.port || DEFAULT_PORT
     try {
       const urlObj = new URL(serverUrl)
       if (urlObj.port) {
-        actualPort = parseInt(urlObj.port, 10)
+        actualPort = Number.parseInt(urlObj.port, 10)
       }
-    } catch {
+    }
+    catch {
       // 解析失败时使用配置端口
     }
 

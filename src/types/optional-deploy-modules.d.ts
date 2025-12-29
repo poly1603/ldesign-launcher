@@ -1,6 +1,6 @@
 /**
  * 可选部署模块的类型声明
- * 
+ *
  * 这些模块是可选依赖，用户只有在需要特定功能时才需安装
  */
 
@@ -22,7 +22,7 @@ declare module 'ssh2-sftp-client' {
     rmdir(remotePath: string, recursive?: boolean): Promise<string>
     put(localPath: string, remotePath: string, options?: object): Promise<string>
     get(remotePath: string, localPath: string, options?: object): Promise<string>
-    list(remotePath: string): Promise<Array<{ name: string; type: string; size: number }>>
+    list(remotePath: string): Promise<Array<{ name: string, type: string, size: number }>>
     end(): Promise<void>
   }
 }

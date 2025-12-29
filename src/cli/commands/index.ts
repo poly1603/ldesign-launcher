@@ -17,10 +17,10 @@ export * from './create'
 export * from './deploy'
 export * from './dev'
 
+export * from './doctor'
 // 帮助和版本
 export * from './help'
 export * from './lint'
 export * from './preview'
-export * from './version'
-export * from './doctor'
 export * from './ui'
+export * from './version'

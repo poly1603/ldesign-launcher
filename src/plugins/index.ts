@@ -10,6 +10,6 @@
 export * from './app-config'
 // 核心插件
 export * from './config-injection'
-export * from './presets'
 // 开发日志插件
 export * from './dev-logger'
+export * from './presets'

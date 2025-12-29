@@ -171,6 +171,7 @@
     "cli-table3": "^0.6.5",
     "clipboardy": "^4.0.0",
     "detect-port": "^1.6.1",
+    "esbuild": "^0.24.0",
     "fast-glob": "^3.3.3",
     "figures": "^6.1.0",
     "fs-extra": "^11.3.2",

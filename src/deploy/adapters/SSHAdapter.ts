@@ -6,13 +6,13 @@
  */
 
 import type {
-  DeployResult,
   DeployCallbacks,
+  DeployResult,
   SSHDeployConfig,
 } from '../../types/deploy'
-import { BaseAdapter } from './BaseAdapter'
+import path from 'node:path'
 import fs from 'fs-extra'
-import path from 'path'
+import { BaseAdapter } from './BaseAdapter'
 
 /**
  * SSH/SCP 部署适配器
@@ -27,7 +27,7 @@ export class SSHAdapter extends BaseAdapter<SSHDeployConfig> {
   description = '通过 SSH/SCP 部署到服务器'
   requiresBuild = true
 
-  async validateConfig(config: SSHDeployConfig): Promise<{ valid: boolean; errors: string[] }> {
+  async validateConfig(config: SSHDeployConfig): Promise<{ valid: boolean, errors: string[] }> {
     const errors: string[] = []
 
     if (!config.host) {
@@ -85,7 +85,8 @@ export class SSHAdapter extends BaseAdapter<SSHDeployConfig> {
       this.log('info', `共 ${files.length} 个文件，总大小 ${this.formatSize(totalSize)}`, 'prepare')
 
       return await this.deployWithSSH(config, distDir, files, totalSize)
-    } catch (error) {
+    }
+    catch (error) {
       return this.createFailedResult((error as Error).message, (error as Error).stack)
     }
   }
@@ -96,8 +97,8 @@ export class SSHAdapter extends BaseAdapter<SSHDeployConfig> {
   private async deployWithSSH(
     config: SSHDeployConfig,
     distDir: string,
-    files: { relativePath: string; absolutePath: string; size: number }[],
-    _totalSize: number
+    files: { relativePath: string, absolutePath: string, size: number }[],
+    _totalSize: number,
   ): Promise<DeployResult> {
     this.log('info', `连接到 SSH 服务器: ${config.host}:${config.port || 22}`, 'upload')
     this.updateProgress({
@@ -178,7 +179,8 @@ export class SSHAdapter extends BaseAdapter<SSHDeployConfig> {
             if (error) {
               failed.push(localPath)
               this.log('error', `上传失败: ${localPath}`, 'upload')
-            } else {
+            }
+            else {
               successful.push(localPath)
               uploadedCount++
               const progress = Math.round((uploadedCount / files.length) * 100)
@@ -239,16 +241,18 @@ export class SSHAdapter extends BaseAdapter<SSHDeployConfig> {
             filesFailed: failed.length,
           },
         })
-      } catch (error) {
+      }
+      catch (error) {
         ssh.dispose()
         throw error
       }
-    } catch (error) {
+    }
+    catch (error) {
       // 如果 node-ssh 不可用，提示用户安装
-      if ((error as Error).message.includes("Cannot find module 'node-ssh'")) {
+      if ((error as Error).message.includes('Cannot find module \'node-ssh\'')) {
         return this.createFailedResult(
           'SSH 功能需要安装 node-ssh: npm i node-ssh',
-          '请运行: npm install node-ssh 或 pnpm add node-ssh'
+          '请运行: npm install node-ssh 或 pnpm add node-ssh',
         )
       }
       throw error

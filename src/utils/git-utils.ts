@@ -199,11 +199,11 @@ export async function getRecentCommits(
   cwd: string,
   count: number = 10,
 ): Promise<Array<{
-    hash: string
-    message: string
-    author: string
-    date: Date
-  }>> {
+  hash: string
+  message: string
+  author: string
+  date: Date
+}>> {
   try {
     const log = await execGit(
       ['log', `-${count}`, '--pretty=format:%H|%s|%an|%ct'],

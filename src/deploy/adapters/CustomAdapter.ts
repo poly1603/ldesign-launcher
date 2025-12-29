@@ -6,9 +6,9 @@
  */
 
 import type {
-  DeployResult,
-  DeployCallbacks,
   CustomDeployConfig,
+  DeployCallbacks,
+  DeployResult,
 } from '../../types/deploy'
 import { BaseAdapter } from './BaseAdapter'
 
@@ -25,7 +25,7 @@ export class CustomAdapter extends BaseAdapter<CustomDeployConfig> {
   description = '使用自定义命令部署'
   requiresBuild = true
 
-  async validateConfig(config: CustomDeployConfig): Promise<{ valid: boolean; errors: string[] }> {
+  async validateConfig(config: CustomDeployConfig): Promise<{ valid: boolean, errors: string[] }> {
     const errors: string[] = []
 
     if (!config.command) {
@@ -49,7 +49,8 @@ export class CustomAdapter extends BaseAdapter<CustomDeployConfig> {
 
     try {
       return await this.executeCustomCommand(config)
-    } catch (error) {
+    }
+    catch (error) {
       return this.createFailedResult((error as Error).message, (error as Error).stack)
     }
   }
@@ -78,7 +79,8 @@ export class CustomAdapter extends BaseAdapter<CustomDeployConfig> {
     if (args.length > 0) {
       cmd = command
       cmdArgs = args
-    } else {
+    }
+    else {
       // 尝试解析命令字符串
       const parts = command.split(/\s+/)
       cmd = parts[0]
@@ -98,7 +100,7 @@ export class CustomAdapter extends BaseAdapter<CustomDeployConfig> {
       onStdout: (data) => {
         const lines = data.split('\n').filter(Boolean)
         for (const line of lines) {
-          const cleanLine = line.replace(/\x1b\[[0-9;]*m/g, '').trim()
+          const cleanLine = line.replace(/\x1B\[[0-9;]*m/g, '').trim()
           if (cleanLine) {
             hasOutput = true
             this.log('info', cleanLine, 'upload')
@@ -107,7 +109,7 @@ export class CustomAdapter extends BaseAdapter<CustomDeployConfig> {
             if (cleanLine.includes('%')) {
               const match = cleanLine.match(/(\d+)%/)
               if (match) {
-                const progress = parseInt(match[1], 10)
+                const progress = Number.parseInt(match[1], 10)
                 this.updateProgress({
                   phase: 'upload',
                   progress: 50 + progress * 0.45,
@@ -122,11 +124,12 @@ export class CustomAdapter extends BaseAdapter<CustomDeployConfig> {
       onStderr: (data) => {
         const lines = data.split('\n').filter(Boolean)
         for (const line of lines) {
-          const cleanLine = line.replace(/\x1b\[[0-9;]*m/g, '').trim()
+          const cleanLine = line.replace(/\x1B\[[0-9;]*m/g, '').trim()
           if (cleanLine) {
             if (cleanLine.toLowerCase().includes('error')) {
               this.log('error', cleanLine, 'upload')
-            } else {
+            }
+            else {
               this.log('warn', cleanLine, 'upload')
             }
           }
@@ -137,7 +140,7 @@ export class CustomAdapter extends BaseAdapter<CustomDeployConfig> {
     if (result.code !== 0) {
       return this.createFailedResult(
         `命令执行失败，退出码: ${result.code}`,
-        result.stderr || result.stdout
+        result.stderr || result.stdout,
       )
     }
 
@@ -150,7 +153,7 @@ export class CustomAdapter extends BaseAdapter<CustomDeployConfig> {
 
     // 尝试从输出中提取 URL
     let deployUrl: string | undefined
-    const urlMatch = result.stdout.match(/(https?:\/\/[^\s]+)/g)
+    const urlMatch = result.stdout.match(/(https?:\/\/\S+)/g)
     if (urlMatch && urlMatch.length > 0) {
       // 取最后一个 URL（通常是部署后的地址）
       deployUrl = urlMatch[urlMatch.length - 1]

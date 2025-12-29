@@ -8,21 +8,21 @@
  */
 
 import type {
+  DeployAdapter,
+  DeployCallbacks,
   DeployConfig,
-  DeployResult,
-  DeployProgress,
-  DeployStatus,
-  DeployPhase,
+  DeployHistoryEntry,
   DeployLogEntry,
   DeployLogLevel,
-  DeployHistoryEntry,
-  DeployCallbacks,
-  DeployServiceConfig,
-  DeployAdapter,
+  DeployPhase,
   DeployPlatform,
+  DeployProgress,
+  DeployResult,
+  DeployServiceConfig,
+  DeployStatus,
 } from '../types/deploy'
-import { EventEmitter } from 'events'
-import path from 'path'
+import { EventEmitter } from 'node:events'
+import path from 'node:path'
 import fs from 'fs-extra'
 import { Logger } from '../utils/logger'
 import { getAdapter, getPlatformInfo, SUPPORTED_PLATFORMS } from './adapters'
@@ -44,6 +44,7 @@ export class DeployService extends EventEmitter {
     startTime: number
     adapter?: DeployAdapter
   } | null = null
+
   private history: DeployHistoryEntry[] = []
   private isCancelled = false
 
@@ -80,7 +81,7 @@ export class DeployService extends EventEmitter {
   /**
    * 验证部署配置
    */
-  async validateConfig(config: DeployConfig): Promise<{ valid: boolean; errors: string[] }> {
+  async validateConfig(config: DeployConfig): Promise<{ valid: boolean, errors: string[] }> {
     const adapter = getAdapter(config.platform)
     if (!adapter) {
       return { valid: false, errors: [`不支持的部署平台: ${config.platform}`] }
@@ -112,9 +113,9 @@ export class DeployService extends EventEmitter {
     }
 
     const callbacks: DeployCallbacks = {
-      onProgress: (progress) => this.updateProgress(progress),
-      onLog: (entry) => this.addLog(entry),
-      onStatusChange: (status) => this.updateStatus(status),
+      onProgress: progress => this.updateProgress(progress),
+      onLog: entry => this.addLog(entry),
+      onStatusChange: status => this.updateStatus(status),
     }
 
     try {
@@ -192,7 +193,8 @@ export class DeployService extends EventEmitter {
         if (config.afterDeploy) {
           await config.afterDeploy(finalResult)
         }
-      } else {
+      }
+      else {
         this.updateStatus('failed')
         this.log('error', `部署失败: ${result.error}`, 'complete')
         this.emit('failed', finalResult)
@@ -202,7 +204,8 @@ export class DeployService extends EventEmitter {
       this.saveToHistory(finalResult)
 
       return finalResult
-    } catch (error) {
+    }
+    catch (error) {
       const errorMessage = (error as Error).message
       this.updateStatus('failed')
       this.log('error', `部署出错: ${errorMessage}`, 'complete')
@@ -220,7 +223,8 @@ export class DeployService extends EventEmitter {
       this.saveToHistory(failedResult)
 
       return failedResult
-    } finally {
+    }
+    finally {
       this.currentDeployment = null
     }
   }
@@ -298,37 +302,39 @@ export class DeployService extends EventEmitter {
     this.log('info', '开始构建项目...', 'build')
     this.updateStatus('building')
 
-    const { spawn } = await import('child_process')
+    const { spawn } = await import('node:child_process')
 
     return new Promise((resolve, reject) => {
       const isWindows = process.platform === 'win32'
       const child = isWindows
         ? spawn('cmd.exe', ['/c', 'pnpm', 'run', 'build'], {
-          cwd: this.config.cwd,
-          env: { ...process.env, FORCE_COLOR: '1' },
-          stdio: ['pipe', 'pipe', 'pipe'],
-        })
+            cwd: this.config.cwd,
+            env: { ...process.env, FORCE_COLOR: '1' },
+            stdio: ['pipe', 'pipe', 'pipe'],
+          })
         : spawn('pnpm', ['run', 'build'], {
-          cwd: this.config.cwd,
-          env: { ...process.env, FORCE_COLOR: '1' },
-          stdio: ['pipe', 'pipe', 'pipe'],
-        })
+            cwd: this.config.cwd,
+            env: { ...process.env, FORCE_COLOR: '1' },
+            stdio: ['pipe', 'pipe', 'pipe'],
+          })
 
       let buildProgress = 0
 
       child.stdout?.on('data', (data: Buffer) => {
         const lines = data.toString().split('\n').filter(Boolean)
         lines.forEach((line) => {
-          const cleanLine = line.replace(/\x1b\[[0-9;]*m/g, '').trim()
+          const cleanLine = line.replace(/\x1B\[[0-9;]*m/g, '').trim()
           if (cleanLine) {
             this.log('info', cleanLine, 'build')
 
             // 解析构建进度
             if (cleanLine.includes('transforming')) {
               buildProgress = 30
-            } else if (cleanLine.includes('rendering') || cleanLine.includes('bundling')) {
+            }
+            else if (cleanLine.includes('rendering') || cleanLine.includes('bundling')) {
               buildProgress = 60
-            } else if (cleanLine.includes('computing gzip') || cleanLine.includes('built in')) {
+            }
+            else if (cleanLine.includes('computing gzip') || cleanLine.includes('built in')) {
               buildProgress = 90
             }
 
@@ -345,11 +351,12 @@ export class DeployService extends EventEmitter {
       child.stderr?.on('data', (data: Buffer) => {
         const lines = data.toString().split('\n').filter(Boolean)
         lines.forEach((line) => {
-          const cleanLine = line.replace(/\x1b\[[0-9;]*m/g, '').trim()
+          const cleanLine = line.replace(/\x1B\[[0-9;]*m/g, '').trim()
           if (cleanLine) {
             if (cleanLine.toLowerCase().includes('error')) {
               this.log('error', cleanLine, 'build')
-            } else {
+            }
+            else {
               this.log('warn', cleanLine, 'build')
             }
           }
@@ -366,7 +373,8 @@ export class DeployService extends EventEmitter {
             message: '构建完成',
           })
           resolve()
-        } else {
+        }
+        else {
           reject(new Error(`构建失败，退出码: ${code}`))
         }
       })
@@ -463,7 +471,8 @@ export class DeployService extends EventEmitter {
    * 保存到历史记录
    */
   private saveToHistory(result: DeployResult): void {
-    if (!this.currentDeployment) return
+    if (!this.currentDeployment)
+      return
 
     const entry: DeployHistoryEntry = {
       id: this.currentDeployment.id,
@@ -511,7 +520,8 @@ export class DeployService extends EventEmitter {
         const data = fs.readFileSync(this.config.historyPath, 'utf-8')
         this.history = JSON.parse(data)
       }
-    } catch (error) {
+    }
+    catch (error) {
       this.logger.warn('加载部署历史记录失败:', error)
       this.history = []
     }
@@ -524,7 +534,8 @@ export class DeployService extends EventEmitter {
     try {
       await fs.ensureDir(path.dirname(this.config.historyPath))
       await fs.writeFile(this.config.historyPath, JSON.stringify(this.history, null, 2))
-    } catch (error) {
+    }
+    catch (error) {
       this.logger.warn('保存部署历史记录失败:', error)
     }
   }

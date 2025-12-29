@@ -6,15 +6,15 @@
  */
 
 export {
-  MockServer,
   createMockMiddleware,
   Mock,
+  MockServer,
 } from './MockServer'
 
 export type {
+  MockConfig,
   MockHandler,
-  MockRoute,
   MockRequest,
   MockResponse,
-  MockConfig,
+  MockRoute,
 } from './MockServer'

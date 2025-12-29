@@ -1,10 +1,10 @@
+import type { Server } from 'node:http'
+import { EventEmitter } from 'node:events'
 /**
  * Dashboard WebSocket 服务器
  * 用于实时推送日志、状态和性能数据
  */
-import { WebSocketServer, WebSocket } from 'ws'
-import type { Server } from 'http'
-import { EventEmitter } from 'events'
+import { WebSocket, WebSocketServer } from 'ws'
 
 export interface WSMessage {
   type: 'log' | 'status' | 'performance' | 'error' | 'project' | 'build' | 'deployProgress' | 'deployStatus' | 'deployResult'
@@ -53,13 +53,14 @@ export class DashboardWebSocket extends EventEmitter {
       })
 
       // 发送历史日志
-      this.logBuffer.forEach((log) => this.sendToClient(ws, log))
+      this.logBuffer.forEach(log => this.sendToClient(ws, log))
 
       ws.on('message', (data) => {
         try {
           const message = JSON.parse(data.toString())
           this.handleClientMessage(ws, message)
-        } catch {
+        }
+        catch {
           console.error('[Dashboard WS] Invalid message received')
         }
       })
@@ -81,7 +82,7 @@ export class DashboardWebSocket extends EventEmitter {
   /**
    * 处理客户端消息
    */
-  private handleClientMessage(ws: WebSocket, message: { action: string; payload?: unknown }): void {
+  private handleClientMessage(ws: WebSocket, message: { action: string, payload?: unknown }): void {
     switch (message.action) {
       case 'ping':
         this.sendToClient(ws, { type: 'status', payload: { pong: true }, timestamp: Date.now() })
@@ -225,7 +226,7 @@ export class DashboardWebSocket extends EventEmitter {
    * 关闭服务器
    */
   close(): void {
-    this.clients.forEach((ws) => ws.close())
+    this.clients.forEach(ws => ws.close())
     this.clients.clear()
     this.wss?.close()
     this.wss = null

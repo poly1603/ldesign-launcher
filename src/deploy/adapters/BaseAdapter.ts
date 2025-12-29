@@ -6,26 +6,25 @@
  */
 
 import type {
-  DeployPlatform,
+  BaseDeployConfig,
   DeployAdapter,
-  DeployResult,
   DeployCallbacks,
-  DeployProgress,
   DeployLogEntry,
   DeployLogLevel,
   DeployPhase,
-  BaseDeployConfig,
+  DeployPlatform,
+  DeployProgress,
+  DeployResult,
 } from '../../types/deploy'
 import path from 'node:path'
-import fs from 'fs-extra'
 import fg from 'fast-glob'
+import fs from 'fs-extra'
 
 /**
  * 适配器基类
  */
 export abstract class BaseAdapter<T extends BaseDeployConfig = BaseDeployConfig>
-  implements DeployAdapter<T>
-{
+implements DeployAdapter<T> {
   abstract name: string
   abstract platform: DeployPlatform
   abstract displayName: string
@@ -39,7 +38,7 @@ export abstract class BaseAdapter<T extends BaseDeployConfig = BaseDeployConfig>
   /**
    * 验证配置
    */
-  abstract validateConfig(config: T): Promise<{ valid: boolean; errors: string[] }>
+  abstract validateConfig(config: T): Promise<{ valid: boolean, errors: string[] }>
 
   /**
    * 执行部署
@@ -94,7 +93,7 @@ export abstract class BaseAdapter<T extends BaseDeployConfig = BaseDeployConfig>
   /**
    * 验证构建目录存在
    */
-  protected async validateDistDir(distDir: string): Promise<{ valid: boolean; error?: string }> {
+  protected async validateDistDir(distDir: string): Promise<{ valid: boolean, error?: string }> {
     if (!await fs.pathExists(distDir)) {
       return { valid: false, error: `构建目录不存在: ${distDir}` }
     }
@@ -112,8 +111,8 @@ export abstract class BaseAdapter<T extends BaseDeployConfig = BaseDeployConfig>
    */
   protected async getFilesToUpload(
     distDir: string,
-    options?: { exclude?: string[]; include?: string[] }
-  ): Promise<{ relativePath: string; absolutePath: string; size: number }[]> {
+    options?: { exclude?: string[], include?: string[] },
+  ): Promise<{ relativePath: string, absolutePath: string, size: number }[]> {
     const patterns = options?.include || ['**/*']
     const ignore = options?.exclude || []
 
@@ -124,7 +123,7 @@ export abstract class BaseAdapter<T extends BaseDeployConfig = BaseDeployConfig>
       onlyFiles: true,
     })
 
-    const result: { relativePath: string; absolutePath: string; size: number }[] = []
+    const result: { relativePath: string, absolutePath: string, size: number }[] = []
 
     for (const file of files) {
       const absolutePath = path.join(distDir, file)
@@ -150,8 +149,10 @@ export abstract class BaseAdapter<T extends BaseDeployConfig = BaseDeployConfig>
    * 格式化文件大小
    */
   protected formatSize(bytes: number): string {
-    if (bytes < 1024) return `${bytes} B`
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`
+    if (bytes < 1024)
+      return `${bytes} B`
+    if (bytes < 1024 * 1024)
+      return `${(bytes / 1024).toFixed(2)} KB`
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
   }
 
@@ -160,7 +161,7 @@ export abstract class BaseAdapter<T extends BaseDeployConfig = BaseDeployConfig>
    */
   protected createSuccessResult(
     url?: string,
-    extra?: Partial<DeployResult>
+    extra?: Partial<DeployResult>,
   ): DeployResult {
     return {
       success: true,
@@ -193,9 +194,9 @@ export abstract class BaseAdapter<T extends BaseDeployConfig = BaseDeployConfig>
       env?: Record<string, string>
       onStdout?: (data: string) => void
       onStderr?: (data: string) => void
-    }
-  ): Promise<{ code: number; stdout: string; stderr: string }> {
-    const { spawn } = await import('child_process')
+    },
+  ): Promise<{ code: number, stdout: string, stderr: string }> {
+    const { spawn } = await import('node:child_process')
 
     return new Promise((resolve, reject) => {
       const isWindows = process.platform === 'win32'

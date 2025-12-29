@@ -2,7 +2,7 @@
  * WebSocket Hook
  * 用于连接 Dashboard 后端并接收实时数据
  */
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 export interface WSMessage {
   type: 'log' | 'status' | 'performance' | 'error' | 'project' | 'build'
@@ -52,7 +52,8 @@ export function useWebSocket(url?: string): UseWebSocketReturn {
   const wsUrl = url || `ws://${window.location.host}/ws`
 
   const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return
+    if (wsRef.current?.readyState === WebSocket.OPEN)
+      return
 
     const ws = new WebSocket(wsUrl)
 
@@ -78,7 +79,8 @@ export function useWebSocket(url?: string): UseWebSocketReturn {
       try {
         const message: WSMessage = JSON.parse(event.data)
         handleMessage(message)
-      } catch (error) {
+      }
+      catch (error) {
         console.error('[WS] Parse error:', error)
       }
     }
@@ -101,10 +103,11 @@ export function useWebSocket(url?: string): UseWebSocketReturn {
         if (message.payload && typeof message.payload === 'object') {
           const project = message.payload as ProjectStatus & { removed?: boolean }
           if (project.removed) {
-            setProjects((prev) => prev.filter((p) => p.id !== project.id))
-          } else {
+            setProjects(prev => prev.filter(p => p.id !== project.id))
+          }
+          else {
             setProjects((prev) => {
-              const index = prev.findIndex((p) => p.id === project.id)
+              const index = prev.findIndex(p => p.id === project.id)
               if (index >= 0) {
                 const updated = [...prev]
                 updated[index] = project
@@ -119,7 +122,7 @@ export function useWebSocket(url?: string): UseWebSocketReturn {
       case 'log':
         if (message.payload && typeof message.payload === 'object') {
           const log = message.payload as Omit<LogEntry, 'timestamp'>
-          setLogs((prev) => [
+          setLogs(prev => [
             ...prev.slice(-999), // 保留最近1000条
             { ...log, timestamp: message.timestamp },
           ])
@@ -148,22 +151,22 @@ export function useWebSocket(url?: string): UseWebSocketReturn {
 
   const startProject = useCallback(
     (projectId: string) => sendMessage('startProject', { projectId }),
-    [sendMessage]
+    [sendMessage],
   )
 
   const stopProject = useCallback(
     (projectId: string) => sendMessage('stopProject', { projectId }),
-    [sendMessage]
+    [sendMessage],
   )
 
   const restartProject = useCallback(
     (projectId: string) => sendMessage('restartProject', { projectId }),
-    [sendMessage]
+    [sendMessage],
   )
 
   const buildProject = useCallback(
     (projectId: string) => sendMessage('buildProject', { projectId }),
-    [sendMessage]
+    [sendMessage],
   )
 
   const clearLogs = useCallback(() => setLogs([]), [])

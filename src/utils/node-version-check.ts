@@ -9,20 +9,20 @@
 
 import { execSync, spawn, spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { createInterface } from 'node:readline'
 import { join } from 'node:path'
+import { createInterface } from 'node:readline'
 
 // ANSI 颜色代码
 const colors = {
-  reset: '\x1b[0m',
-  bright: '\x1b[1m',
-  dim: '\x1b[2m',
-  red: '\x1b[31m',
-  green: '\x1b[32m',
-  yellow: '\x1b[33m',
-  blue: '\x1b[34m',
-  cyan: '\x1b[36m',
-  magenta: '\x1b[35m',
+  reset: '\x1B[0m',
+  bright: '\x1B[1m',
+  dim: '\x1B[2m',
+  red: '\x1B[31m',
+  green: '\x1B[32m',
+  yellow: '\x1B[33m',
+  blue: '\x1B[34m',
+  cyan: '\x1B[36m',
+  magenta: '\x1B[35m',
 }
 
 // 最低版本要求
@@ -48,11 +48,11 @@ export function checkNodeVersion(): {
   const major = versionParts[0]
   const minor = versionParts[1]
 
-  const supported =
-    (major === 20 && minor >= MIN_NODE_VERSION.major20.minor) ||
-    major === 21 ||
-    (major >= 22 && minor >= MIN_NODE_VERSION.major22.minor) ||
-    major >= 23
+  const supported
+    = (major === 20 && minor >= MIN_NODE_VERSION.major20.minor)
+      || major === 21
+      || (major >= 22 && minor >= MIN_NODE_VERSION.major22.minor)
+      || major >= 23
 
   return { supported, current: nodeVersion, major, minor }
 }
@@ -64,7 +64,8 @@ export function isVoltaInstalled(): boolean {
   try {
     execSync('volta --version', { stdio: 'ignore' })
     return true
-  } catch {
+  }
+  catch {
     return false
   }
 }
@@ -112,10 +113,11 @@ export function ensureVoltaConfig(pkgJsonPath?: string): {
 
     // 保持格式化
     const indent = content.match(/^(\s+)/m)?.[1] || '  '
-    writeFileSync(targetPath, JSON.stringify(pkg, null, indent) + '\n', 'utf-8')
+    writeFileSync(targetPath, `${JSON.stringify(pkg, null, indent)}\n`, 'utf-8')
 
     return { added: true, path: targetPath }
-  } catch {
+  }
+  catch {
     return { added: false, path: targetPath }
   }
 }
@@ -156,16 +158,18 @@ async function installVolta(): Promise<boolean> {
           stdio: 'inherit',
         })
         return true
-      } catch {
+      }
+      catch {
         // 回退到 PowerShell 脚本
         console.log(`  ${colors.dim}winget 不可用，尝试使用 PowerShell 安装...${colors.reset}`)
         execSync(
           'powershell -Command "irm https://get.volta.sh | iex"',
-          { stdio: 'inherit' }
+          { stdio: 'inherit' },
         )
         return true
       }
-    } else {
+    }
+    else {
       // macOS / Linux: 使用 curl 脚本
       return new Promise((resolve) => {
         const child = spawn('sh', ['-c', 'curl https://get.volta.sh | bash'], {
@@ -179,7 +183,8 @@ async function installVolta(): Promise<boolean> {
         })
       })
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.log(`  ${colors.red}❌ Volta 安装失败${colors.reset}`)
     console.log(`  ${colors.dim}请手动访问 https://volta.sh 安装${colors.reset}`)
     return false
@@ -255,11 +260,13 @@ function showManualUpgradeHint(): void {
 }
 
 function hasProjectVoltaConfig(pkgJsonPath?: string | null): boolean {
-  if (!pkgJsonPath) return false
+  if (!pkgJsonPath)
+    return false
   try {
     const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'))
     return !!pkg.volta?.node
-  } catch {
+  }
+  catch {
     return false
   }
 }
@@ -349,7 +356,7 @@ export async function checkAndHandleNodeVersion(): Promise<boolean> {
   console.log('')
 
   const answer = await askQuestion(
-    `  ${colors.cyan}?${colors.reset} 是否自动安装 Volta？${colors.dim}(Y/n)${colors.reset} `
+    `  ${colors.cyan}?${colors.reset} 是否自动安装 Volta？${colors.dim}(Y/n)${colors.reset} `,
   )
 
   if (answer === '' || answer === 'y' || answer === 'yes') {

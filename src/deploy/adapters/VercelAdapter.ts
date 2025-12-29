@@ -6,8 +6,8 @@
  */
 
 import type {
-  DeployResult,
   DeployCallbacks,
+  DeployResult,
   VercelDeployConfig,
 } from '../../types/deploy'
 import { BaseAdapter } from './BaseAdapter'
@@ -23,7 +23,7 @@ export class VercelAdapter extends BaseAdapter<VercelDeployConfig> {
   description = '部署到 Vercel'
   requiresBuild = true
 
-  async validateConfig(config: VercelDeployConfig): Promise<{ valid: boolean; errors: string[] }> {
+  async validateConfig(config: VercelDeployConfig): Promise<{ valid: boolean, errors: string[] }> {
     const errors: string[] = []
 
     if (!config.token && !process.env.VERCEL_TOKEN) {
@@ -60,7 +60,8 @@ export class VercelAdapter extends BaseAdapter<VercelDeployConfig> {
       this.log('info', `共 ${files.length} 个文件，总大小 ${this.formatSize(totalSize)}`, 'prepare')
 
       return await this.deployWithCli(config, distDir)
-    } catch (error) {
+    }
+    catch (error) {
       return this.createFailedResult((error as Error).message, (error as Error).stack)
     }
   }
@@ -105,12 +106,12 @@ export class VercelAdapter extends BaseAdapter<VercelDeployConfig> {
       onStdout: (data) => {
         const lines = data.split('\n').filter(Boolean)
         for (const line of lines) {
-          const cleanLine = line.replace(/\x1b\[[0-9;]*m/g, '').trim()
+          const cleanLine = line.replace(/\x1B\[[0-9;]*m/g, '').trim()
           if (cleanLine) {
             this.log('info', cleanLine, 'upload')
 
             // 解析 URL
-            const urlMatch = cleanLine.match(/(https?:\/\/[^\s]+\.vercel\.app)/)
+            const urlMatch = cleanLine.match(/(https?:\/\/\S+\.vercel\.app)/)
             if (urlMatch) {
               deployUrl = urlMatch[1]
             }
@@ -123,14 +124,16 @@ export class VercelAdapter extends BaseAdapter<VercelDeployConfig> {
                 phaseProgress: 30,
                 message: '正在上传文件...',
               })
-            } else if (cleanLine.includes('Building')) {
+            }
+            else if (cleanLine.includes('Building')) {
               this.updateProgress({
                 phase: 'process',
                 progress: 75,
                 phaseProgress: 50,
                 message: 'Vercel 构建中...',
               })
-            } else if (cleanLine.includes('Ready')) {
+            }
+            else if (cleanLine.includes('Ready')) {
               this.updateProgress({
                 phase: 'complete',
                 progress: 100,
@@ -144,7 +147,7 @@ export class VercelAdapter extends BaseAdapter<VercelDeployConfig> {
       onStderr: (data) => {
         const lines = data.split('\n').filter(Boolean)
         for (const line of lines) {
-          const cleanLine = line.replace(/\x1b\[[0-9;]*m/g, '').trim()
+          const cleanLine = line.replace(/\x1B\[[0-9;]*m/g, '').trim()
           if (cleanLine && !cleanLine.includes('npm warn')) {
             this.log('warn', cleanLine, 'upload')
           }

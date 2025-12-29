@@ -106,4 +106,3 @@ export interface WebSocketServerOptions {
   /** 心跳间隔（毫秒） */
   heartbeatInterval?: number
 }
-

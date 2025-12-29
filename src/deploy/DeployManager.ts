@@ -8,11 +8,11 @@
  */
 
 import type {
+  DeployConfig,
   DeployPlatform,
   SavedDeployConfig,
-  DeployConfig,
 } from '../types/deploy'
-import path from 'path'
+import path from 'node:path'
 import fs from 'fs-extra'
 import { Logger } from '../utils/logger'
 import { SUPPORTED_PLATFORMS } from './adapters'
@@ -66,7 +66,7 @@ export class DeployManager {
    * 获取已保存的配置列表
    */
   getSavedConfigs(): SavedDeployConfig[] {
-    return this.savedConfigs.map((config) => ({
+    return this.savedConfigs.map(config => ({
       ...config,
       config: this.sanitizeConfig(config.config),
     }))
@@ -76,7 +76,7 @@ export class DeployManager {
    * 获取指定配置
    */
   getConfig(name: string): SavedDeployConfig | undefined {
-    const config = this.savedConfigs.find((c) => c.name === name)
+    const config = this.savedConfigs.find(c => c.name === name)
     if (config) {
       return {
         ...config,
@@ -90,7 +90,7 @@ export class DeployManager {
    * 获取默认配置
    */
   getDefaultConfig(): SavedDeployConfig | undefined {
-    const config = this.savedConfigs.find((c) => c.isDefault)
+    const config = this.savedConfigs.find(c => c.isDefault)
     if (config) {
       return {
         ...config,
@@ -104,7 +104,7 @@ export class DeployManager {
    * 保存配置
    */
   async saveConfig(name: string, platform: DeployPlatform, config: Partial<DeployConfig>, isDefault = false): Promise<void> {
-    const existingIndex = this.savedConfigs.findIndex((c) => c.name === name)
+    const existingIndex = this.savedConfigs.findIndex(c => c.name === name)
     const now = Date.now()
 
     const encryptedConfig = this.encryptConfig(config)
@@ -120,7 +120,8 @@ export class DeployManager {
 
     if (existingIndex >= 0) {
       this.savedConfigs[existingIndex] = savedConfig
-    } else {
+    }
+    else {
       this.savedConfigs.push(savedConfig)
     }
 
@@ -141,7 +142,7 @@ export class DeployManager {
    * 删除配置
    */
   async deleteConfig(name: string): Promise<boolean> {
-    const index = this.savedConfigs.findIndex((c) => c.name === name)
+    const index = this.savedConfigs.findIndex(c => c.name === name)
     if (index >= 0) {
       this.savedConfigs.splice(index, 1)
       await this.saveConfigs()
@@ -155,7 +156,7 @@ export class DeployManager {
    * 设置默认配置
    */
   async setDefaultConfig(name: string): Promise<boolean> {
-    const config = this.savedConfigs.find((c) => c.name === name)
+    const config = this.savedConfigs.find(c => c.name === name)
     if (!config) {
       return false
     }
@@ -172,7 +173,7 @@ export class DeployManager {
    * 更新最后部署时间
    */
   async updateLastDeployTime(name: string): Promise<void> {
-    const config = this.savedConfigs.find((c) => c.name === name)
+    const config = this.savedConfigs.find(c => c.name === name)
     if (config) {
       config.lastDeployAt = Date.now()
       await this.saveConfigs()
@@ -191,7 +192,7 @@ export class DeployManager {
         if (await fs.pathExists(configPath)) {
           const content = await fs.readFile(configPath, 'utf-8')
           // 简单解析 deploy 配置
-          const deployMatch = content.match(/deploy\s*:\s*\{([^}]+(?:\{[^}]*\}[^}]*)*)\}/s)
+          const deployMatch = content.match(/deploy\s*:\s*\{([^}]+(?:\{[^}]*\}[^}]*)*)\}/)
           if (deployMatch) {
             // 这里可以使用更复杂的解析逻辑
             // 简化起见，我们返回 null 并建议用户使用 CLI 或 UI
@@ -199,7 +200,8 @@ export class DeployManager {
             return null
           }
         }
-      } catch (error) {
+      }
+      catch (error) {
         continue
       }
     }
@@ -296,7 +298,8 @@ export class DeployManager {
         const data = fs.readFileSync(this.configPath, 'utf-8')
         this.savedConfigs = JSON.parse(data)
       }
-    } catch (error) {
+    }
+    catch (error) {
       this.logger.warn('加载部署配置失败:', error)
       this.savedConfigs = []
     }
@@ -309,7 +312,8 @@ export class DeployManager {
     try {
       await fs.ensureDir(path.dirname(this.configPath))
       await fs.writeFile(this.configPath, JSON.stringify(this.savedConfigs, null, 2))
-    } catch (error) {
+    }
+    catch (error) {
       this.logger.warn('保存部署配置失败:', error)
     }
   }

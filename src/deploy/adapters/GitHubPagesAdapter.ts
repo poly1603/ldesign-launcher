@@ -6,13 +6,13 @@
  */
 
 import type {
-  DeployResult,
   DeployCallbacks,
+  DeployResult,
   GitHubPagesDeployConfig,
 } from '../../types/deploy'
-import { BaseAdapter } from './BaseAdapter'
+import path from 'node:path'
 import fs from 'fs-extra'
-import path from 'path'
+import { BaseAdapter } from './BaseAdapter'
 
 /**
  * GitHub Pages 部署适配器
@@ -25,7 +25,7 @@ export class GitHubPagesAdapter extends BaseAdapter<GitHubPagesDeployConfig> {
   description = '部署到 GitHub Pages'
   requiresBuild = true
 
-  async validateConfig(config: GitHubPagesDeployConfig): Promise<{ valid: boolean; errors: string[] }> {
+  async validateConfig(config: GitHubPagesDeployConfig): Promise<{ valid: boolean, errors: string[] }> {
     const errors: string[] = []
 
     if (!config.token && !process.env.GITHUB_TOKEN && !process.env.GH_TOKEN) {
@@ -34,7 +34,8 @@ export class GitHubPagesAdapter extends BaseAdapter<GitHubPagesDeployConfig> {
 
     if (!config.repo) {
       errors.push('需要提供仓库名称 (repo)，格式: owner/repo')
-    } else if (!config.repo.includes('/')) {
+    }
+    else if (!config.repo.includes('/')) {
       errors.push('仓库名称格式错误，应为: owner/repo')
     }
 
@@ -84,7 +85,8 @@ export class GitHubPagesAdapter extends BaseAdapter<GitHubPagesDeployConfig> {
       }
 
       return await this.deployWithGhPages(config, distDir)
-    } catch (error) {
+    }
+    catch (error) {
       return this.createFailedResult((error as Error).message, (error as Error).stack)
     }
   }
@@ -109,9 +111,12 @@ export class GitHubPagesAdapter extends BaseAdapter<GitHubPagesDeployConfig> {
     // 使用 gh-pages CLI
     const args = [
       'gh-pages',
-      '-d', distDir,
-      '-b', branch,
-      '-m', commitMessage,
+      '-d',
+      distDir,
+      '-b',
+      branch,
+      '-m',
+      commitMessage,
     ]
 
     if (token) {
@@ -125,7 +130,7 @@ export class GitHubPagesAdapter extends BaseAdapter<GitHubPagesDeployConfig> {
       onStdout: (data) => {
         const lines = data.split('\n').filter(Boolean)
         for (const line of lines) {
-          const cleanLine = line.replace(/\x1b\[[0-9;]*m/g, '').trim()
+          const cleanLine = line.replace(/\x1B\[[0-9;]*m/g, '').trim()
           if (cleanLine) {
             this.log('info', cleanLine, 'upload')
 
@@ -136,21 +141,24 @@ export class GitHubPagesAdapter extends BaseAdapter<GitHubPagesDeployConfig> {
                 phaseProgress: 10,
                 message: '克隆仓库...',
               })
-            } else if (cleanLine.includes('Copying')) {
+            }
+            else if (cleanLine.includes('Copying')) {
               this.updateProgress({
                 phase: 'upload',
                 progress: 65,
                 phaseProgress: 40,
                 message: '复制文件...',
               })
-            } else if (cleanLine.includes('Pushing')) {
+            }
+            else if (cleanLine.includes('Pushing')) {
               this.updateProgress({
                 phase: 'upload',
                 progress: 80,
                 phaseProgress: 70,
                 message: '推送到 GitHub...',
               })
-            } else if (cleanLine.includes('Published')) {
+            }
+            else if (cleanLine.includes('Published')) {
               this.updateProgress({
                 phase: 'complete',
                 progress: 100,
@@ -164,7 +172,7 @@ export class GitHubPagesAdapter extends BaseAdapter<GitHubPagesDeployConfig> {
       onStderr: (data) => {
         const lines = data.split('\n').filter(Boolean)
         for (const line of lines) {
-          const cleanLine = line.replace(/\x1b\[[0-9;]*m/g, '').trim()
+          const cleanLine = line.replace(/\x1B\[[0-9;]*m/g, '').trim()
           if (cleanLine && !cleanLine.includes('npm warn')) {
             this.log('warn', cleanLine, 'upload')
           }
@@ -179,11 +187,13 @@ export class GitHubPagesAdapter extends BaseAdapter<GitHubPagesDeployConfig> {
     // 构建部署 URL
     if (config.cname) {
       deployUrl = `https://${config.cname}`
-    } else {
+    }
+    else {
       // 判断是否是 username.github.io 仓库
       if (repoName === `${owner}.github.io`) {
         deployUrl = `https://${owner}.github.io`
-      } else {
+      }
+      else {
         deployUrl = `https://${owner}.github.io/${repoName}`
       }
     }

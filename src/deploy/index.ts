@@ -5,36 +5,36 @@
  * @since 2.1.0
  */
 
-export { DeployService } from './DeployService'
-export { DeployManager } from './DeployManager'
-
+// 导出类型
+export type {
+  BaseDeployConfig,
+  CloudflareDeployConfig,
+  CustomDeployConfig,
+  DeployAdapter,
+  DeployCallbacks,
+  DeployConfig,
+  DeployConfigField,
+  DeployHistoryEntry,
+  DeployLogEntry,
+  DeployLogLevel,
+  DeployPhase,
+  DeployPlatform,
+  DeployPlatformInfo,
+  DeployProgress,
+  DeployResult,
+  DeployStatus,
+  FTPDeployConfig,
+  GitHubPagesDeployConfig,
+  NetlifyDeployConfig,
+  SavedDeployConfig,
+  SFTPDeployConfig,
+  SSHDeployConfig,
+  SurgeDeployConfig,
+  VercelDeployConfig,
+} from '../types/deploy'
 // 导出适配器
 export * from './adapters'
 
-// 导出类型
-export type {
-  DeployPlatform,
-  DeployStatus,
-  DeployPhase,
-  DeployProgress,
-  DeployResult,
-  DeployConfig,
-  DeployAdapter,
-  DeployCallbacks,
-  DeployLogEntry,
-  DeployLogLevel,
-  DeployHistoryEntry,
-  DeployPlatformInfo,
-  DeployConfigField,
-  SavedDeployConfig,
-  BaseDeployConfig,
-  NetlifyDeployConfig,
-  VercelDeployConfig,
-  CloudflareDeployConfig,
-  GitHubPagesDeployConfig,
-  SurgeDeployConfig,
-  FTPDeployConfig,
-  SFTPDeployConfig,
-  SSHDeployConfig,
-  CustomDeployConfig,
-} from '../types/deploy'
+export { DeployManager } from './DeployManager'
+
+export { DeployService } from './DeployService'

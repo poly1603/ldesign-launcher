@@ -6,13 +6,13 @@
  */
 
 import type {
-  DeployResult,
   DeployCallbacks,
+  DeployResult,
   SFTPDeployConfig,
 } from '../../types/deploy'
-import { BaseAdapter } from './BaseAdapter'
+import path from 'node:path'
 import fs from 'fs-extra'
-import path from 'path'
+import { BaseAdapter } from './BaseAdapter'
 
 /**
  * SFTP 部署适配器
@@ -27,7 +27,7 @@ export class SFTPAdapter extends BaseAdapter<SFTPDeployConfig> {
   description = '通过 SFTP 安全上传到服务器'
   requiresBuild = true
 
-  async validateConfig(config: SFTPDeployConfig): Promise<{ valid: boolean; errors: string[] }> {
+  async validateConfig(config: SFTPDeployConfig): Promise<{ valid: boolean, errors: string[] }> {
     const errors: string[] = []
 
     if (!config.host) {
@@ -86,7 +86,8 @@ export class SFTPAdapter extends BaseAdapter<SFTPDeployConfig> {
       this.log('info', `共 ${files.length} 个文件，总大小 ${this.formatSize(totalSize)}`, 'prepare')
 
       return await this.uploadWithSftp(config, distDir, files, totalSize)
-    } catch (error) {
+    }
+    catch (error) {
       return this.createFailedResult((error as Error).message, (error as Error).stack)
     }
   }
@@ -97,8 +98,8 @@ export class SFTPAdapter extends BaseAdapter<SFTPDeployConfig> {
   private async uploadWithSftp(
     config: SFTPDeployConfig,
     _distDir: string,
-    files: { relativePath: string; absolutePath: string; size: number }[],
-    totalSize: number
+    files: { relativePath: string, absolutePath: string, size: number }[],
+    totalSize: number,
   ): Promise<DeployResult> {
     this.log('info', `连接到 SFTP 服务器: ${config.host}:${config.port || 22}`, 'upload')
     this.updateProgress({
@@ -144,7 +145,8 @@ export class SFTPAdapter extends BaseAdapter<SFTPDeployConfig> {
             if (exists) {
               await sftp.rmdir(config.remotePath, true)
             }
-          } catch {
+          }
+          catch {
             // 目录可能不存在，忽略错误
           }
         }
@@ -167,7 +169,8 @@ export class SFTPAdapter extends BaseAdapter<SFTPDeployConfig> {
           // 确保远程目录存在
           try {
             await sftp.mkdir(remoteDir, true)
-          } catch {
+          }
+          catch {
             // 目录可能已存在
           }
 
@@ -208,16 +211,18 @@ export class SFTPAdapter extends BaseAdapter<SFTPDeployConfig> {
             filesUploaded: uploadedCount,
           },
         })
-      } catch (error) {
+      }
+      catch (error) {
         await sftp.end().catch(() => { })
         throw error
       }
-    } catch (error) {
+    }
+    catch (error) {
       // 如果 ssh2-sftp-client 不可用，提示用户安装
-      if ((error as Error).message.includes("Cannot find module 'ssh2-sftp-client'")) {
+      if ((error as Error).message.includes('Cannot find module \'ssh2-sftp-client\'')) {
         return this.createFailedResult(
           'SFTP 功能需要安装 ssh2-sftp-client: npm i ssh2-sftp-client',
-          '请运行: npm install ssh2-sftp-client 或 pnpm add ssh2-sftp-client'
+          '请运行: npm install ssh2-sftp-client 或 pnpm add ssh2-sftp-client',
         )
       }
       throw error

@@ -7,10 +7,10 @@
  * @since 2.1.0
  */
 
+import type { ViteLauncherConfig } from '../types'
 import crypto from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import type { ViteLauncherConfig } from '../types'
 import { Logger } from './logger'
 
 /**
@@ -69,7 +69,8 @@ export class CacheManager {
    * 初始化缓存目录
    */
   private async ensureInitialized(): Promise<void> {
-    if (this.initialized) return
+    if (this.initialized)
+      return
 
     if (this.enableDiskCache) {
       try {
@@ -360,7 +361,8 @@ export class FrameworkDetectionCache {
    */
   async get(cwd: string): Promise<string | null> {
     const key = await this.getCacheKey(cwd)
-    if (!key) return null
+    if (!key)
+      return null
     return this.cache.get<string>(key)
   }
 

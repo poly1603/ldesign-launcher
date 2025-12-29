@@ -1,6 +1,6 @@
 /**
  * Type declarations for chalk v5+
- * 
+ *
  * chalk v5 is ESM-only with embedded types, but module resolution may not find them.
  * This declaration provides type compatibility.
  */

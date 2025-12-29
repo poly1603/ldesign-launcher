@@ -1,11 +1,12 @@
+import type { DashboardServerOptions } from '../../dashboard/server'
+import boxen from 'boxen'
 /**
  * launcher ui 命令
  * 启动可视化 Dashboard 界面
  */
 import chalk from 'chalk'
-import boxen from 'boxen'
-import { startDashboard, type DashboardServerOptions } from '../../dashboard/server'
 import detectPort from 'detect-port'
+import { startDashboard } from '../../dashboard/server'
 
 interface UICommandOptions {
   port?: number
@@ -33,7 +34,7 @@ ${chalk.gray('Press')} ${chalk.yellow('Ctrl+C')} ${chalk.gray('to stop')}
       margin: 1,
       borderStyle: 'round',
       borderColor: 'cyan',
-    }
+    },
   )
 
   console.log(banner)
@@ -116,7 +117,8 @@ export async function uiCommand(options: UICommandOptions = {}): Promise<void> {
 
     // 保持进程运行
     await new Promise(() => {})
-  } catch (error) {
+  }
+  catch (error) {
     console.error(chalk.red('\n❌ Failed to start Dashboard:'))
     console.error(chalk.red((error as Error).message))
     process.exit(1)

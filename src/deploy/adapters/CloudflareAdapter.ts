@@ -6,9 +6,9 @@
  */
 
 import type {
-  DeployResult,
-  DeployCallbacks,
   CloudflareDeployConfig,
+  DeployCallbacks,
+  DeployResult,
 } from '../../types/deploy'
 import { BaseAdapter } from './BaseAdapter'
 
@@ -23,7 +23,7 @@ export class CloudflareAdapter extends BaseAdapter<CloudflareDeployConfig> {
   description = '部署到 Cloudflare Pages'
   requiresBuild = true
 
-  async validateConfig(config: CloudflareDeployConfig): Promise<{ valid: boolean; errors: string[] }> {
+  async validateConfig(config: CloudflareDeployConfig): Promise<{ valid: boolean, errors: string[] }> {
     const errors: string[] = []
 
     if (!config.apiToken && !process.env.CLOUDFLARE_API_TOKEN) {
@@ -68,7 +68,8 @@ export class CloudflareAdapter extends BaseAdapter<CloudflareDeployConfig> {
       this.log('info', `共 ${files.length} 个文件，总大小 ${this.formatSize(totalSize)}`, 'prepare')
 
       return await this.deployWithCli(config, distDir)
-    } catch (error) {
+    }
+    catch (error) {
       return this.createFailedResult((error as Error).message, (error as Error).stack)
     }
   }
@@ -113,12 +114,12 @@ export class CloudflareAdapter extends BaseAdapter<CloudflareDeployConfig> {
       onStdout: (data) => {
         const lines = data.split('\n').filter(Boolean)
         for (const line of lines) {
-          const cleanLine = line.replace(/\x1b\[[0-9;]*m/g, '').trim()
+          const cleanLine = line.replace(/\x1B\[[0-9;]*m/g, '').trim()
           if (cleanLine) {
             this.log('info', cleanLine, 'upload')
 
             // 解析 URL
-            const urlMatch = cleanLine.match(/(https?:\/\/[^\s]+\.pages\.dev)/)
+            const urlMatch = cleanLine.match(/(https?:\/\/\S+\.pages\.dev)/)
             if (urlMatch) {
               deployUrl = urlMatch[1]
             }
@@ -131,7 +132,8 @@ export class CloudflareAdapter extends BaseAdapter<CloudflareDeployConfig> {
                 phaseProgress: 30,
                 message: '正在上传文件...',
               })
-            } else if (cleanLine.includes('Success')) {
+            }
+            else if (cleanLine.includes('Success')) {
               this.updateProgress({
                 phase: 'complete',
                 progress: 100,
@@ -145,7 +147,7 @@ export class CloudflareAdapter extends BaseAdapter<CloudflareDeployConfig> {
       onStderr: (data) => {
         const lines = data.split('\n').filter(Boolean)
         for (const line of lines) {
-          const cleanLine = line.replace(/\x1b\[[0-9;]*m/g, '').trim()
+          const cleanLine = line.replace(/\x1B\[[0-9;]*m/g, '').trim()
           if (cleanLine && !cleanLine.includes('npm warn')) {
             this.log('warn', cleanLine, 'upload')
           }

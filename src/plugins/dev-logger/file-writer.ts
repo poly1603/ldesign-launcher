@@ -3,9 +3,9 @@
  * @description 将日志写入文件，支持文件轮转
  */
 
+import type { DevLogLevel, FileWriterOptions, LogEntry } from './types'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import type { DevLogLevel, FileWriterOptions, LogEntry } from './types'
 
 /** 日志级别名称映射 */
 const LEVEL_NAMES: Record<DevLogLevel, string> = {
@@ -133,7 +133,7 @@ export class LogFileWriter {
       }
     }
 
-    return line + '\n'
+    return `${line}\n`
   }
 
   /** 写入日志条目 */
@@ -166,4 +166,3 @@ export class LogFileWriter {
     }
   }
 }
-

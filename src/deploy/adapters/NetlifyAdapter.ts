@@ -6,8 +6,8 @@
  */
 
 import type {
-  DeployResult,
   DeployCallbacks,
+  DeployResult,
   NetlifyDeployConfig,
 } from '../../types/deploy'
 import { BaseAdapter } from './BaseAdapter'
@@ -25,7 +25,7 @@ export class NetlifyAdapter extends BaseAdapter<NetlifyDeployConfig> {
   description = '部署到 Netlify'
   requiresBuild = true
 
-  async validateConfig(config: NetlifyDeployConfig): Promise<{ valid: boolean; errors: string[] }> {
+  async validateConfig(config: NetlifyDeployConfig): Promise<{ valid: boolean, errors: string[] }> {
     const errors: string[] = []
 
     if (!config.authToken && !process.env.NETLIFY_AUTH_TOKEN) {
@@ -67,10 +67,12 @@ export class NetlifyAdapter extends BaseAdapter<NetlifyDeployConfig> {
 
       if (hasNetlifyCli) {
         return await this.deployWithCli(config, distDir, files.length)
-      } else {
+      }
+      else {
         return await this.deployWithApi(config, distDir, files)
       }
-    } catch (error) {
+    }
+    catch (error) {
       return this.createFailedResult((error as Error).message, (error as Error).stack)
     }
   }
@@ -82,7 +84,8 @@ export class NetlifyAdapter extends BaseAdapter<NetlifyDeployConfig> {
     try {
       const result = await this.execCommand('npx', ['netlify', '--version'])
       return result.code === 0
-    } catch {
+    }
+    catch {
       return false
     }
   }
@@ -93,7 +96,7 @@ export class NetlifyAdapter extends BaseAdapter<NetlifyDeployConfig> {
   private async deployWithCli(
     config: NetlifyDeployConfig,
     distDir: string,
-    fileCount: number
+    fileCount: number,
   ): Promise<DeployResult> {
     this.log('info', '使用 Netlify CLI 部署...', 'upload')
     this.updateProgress({
@@ -135,18 +138,21 @@ export class NetlifyAdapter extends BaseAdapter<NetlifyDeployConfig> {
       onStdout: (data) => {
         const lines = data.split('\n').filter(Boolean)
         for (const line of lines) {
-          const cleanLine = line.replace(/\x1b\[[0-9;]*m/g, '').trim()
+          const cleanLine = line.replace(/\x1B\[[0-9;]*m/g, '').trim()
           if (cleanLine) {
             this.log('info', cleanLine, 'upload')
 
             // 解析 URL
-            const draftMatch = cleanLine.match(/Website Draft URL:\s*(https?:\/\/[^\s]+)/)
-            const prodMatch = cleanLine.match(/Website URL:\s*(https?:\/\/[^\s]+)/)
-            const uniqueMatch = cleanLine.match(/Unique Deploy URL:\s*(https?:\/\/[^\s]+)/)
+            const draftMatch = cleanLine.match(/Website Draft URL:\s*(https?:\/\/\S+)/)
+            const prodMatch = cleanLine.match(/Website URL:\s*(https?:\/\/\S+)/)
+            const uniqueMatch = cleanLine.match(/Unique Deploy URL:\s*(https?:\/\/\S+)/)
 
-            if (draftMatch) deployUrl = draftMatch[1]
-            if (prodMatch) siteUrl = prodMatch[1]
-            if (uniqueMatch) deployUrl = uniqueMatch[1]
+            if (draftMatch)
+              deployUrl = draftMatch[1]
+            if (prodMatch)
+              siteUrl = prodMatch[1]
+            if (uniqueMatch)
+              deployUrl = uniqueMatch[1]
 
             // 解析进度
             if (cleanLine.includes('Uploading')) {
@@ -157,7 +163,8 @@ export class NetlifyAdapter extends BaseAdapter<NetlifyDeployConfig> {
                 message: '正在上传文件...',
                 totalFiles: fileCount,
               })
-            } else if (cleanLine.includes('Deploy is live')) {
+            }
+            else if (cleanLine.includes('Deploy is live')) {
               this.updateProgress({
                 phase: 'complete',
                 progress: 100,
@@ -171,7 +178,7 @@ export class NetlifyAdapter extends BaseAdapter<NetlifyDeployConfig> {
       onStderr: (data) => {
         const lines = data.split('\n').filter(Boolean)
         for (const line of lines) {
-          const cleanLine = line.replace(/\x1b\[[0-9;]*m/g, '').trim()
+          const cleanLine = line.replace(/\x1B\[[0-9;]*m/g, '').trim()
           if (cleanLine && !cleanLine.includes('npm warn')) {
             this.log('warn', cleanLine, 'upload')
           }
@@ -198,7 +205,7 @@ export class NetlifyAdapter extends BaseAdapter<NetlifyDeployConfig> {
   private async deployWithApi(
     config: NetlifyDeployConfig,
     distDir: string,
-    files: { relativePath: string; absolutePath: string; size: number }[]
+    files: { relativePath: string, absolutePath: string, size: number }[],
   ): Promise<DeployResult> {
     this.log('info', '使用 Netlify API 部署...', 'upload')
 

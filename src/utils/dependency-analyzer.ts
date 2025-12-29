@@ -1,11 +1,11 @@
+import { exec } from 'node:child_process'
 /**
  * 依赖分析器
  * 分析项目依赖、检测过期包、安全漏洞等
  */
-import { promises as fs } from 'fs'
-import path from 'path'
-import { exec } from 'child_process'
-import { promisify } from 'util'
+import { promises as fs } from 'node:fs'
+import path from 'node:path'
+import { promisify } from 'node:util'
 
 const execAsync = promisify(exec)
 
@@ -70,7 +70,8 @@ export class DependencyAnalyzer {
     try {
       const content = await fs.readFile(packageJsonPath, 'utf-8')
       packageJson = JSON.parse(content)
-    } catch {
+    }
+    catch {
       throw new Error(`Cannot read package.json at ${projectPath}`)
     }
 
@@ -104,7 +105,7 @@ export class DependencyAnalyzer {
    */
   private parseDependencies(
     deps: Record<string, string>,
-    type: DependencyInfo['type']
+    type: DependencyInfo['type'],
   ): DependencyInfo[] {
     return Object.entries(deps).map(([name, version]) => ({
       name,
@@ -122,11 +123,12 @@ export class DependencyAnalyzer {
         cwd: projectPath,
       })
 
-      if (!stdout.trim()) return []
+      if (!stdout.trim())
+        return []
 
       const outdated = JSON.parse(stdout)
       return Object.entries(outdated).map(([name, info]: [string, unknown]) => {
-        const i = info as { current: string; latest: string; wanted: string }
+        const i = info as { current: string, latest: string, wanted: string }
         return {
           name,
           version: i.current,
@@ -135,7 +137,8 @@ export class DependencyAnalyzer {
           isOutdated: true,
         }
       })
-    } catch {
+    }
+    catch {
       // npm outdated 在有过期包时会返回非零退出码
       return []
     }
@@ -150,14 +153,15 @@ export class DependencyAnalyzer {
         cwd: projectPath,
       })
 
-      if (!stdout.trim()) return []
+      if (!stdout.trim())
+        return []
 
       const audit = JSON.parse(stdout)
       const vulnerabilities: VulnerabilityInfo[] = []
 
       if (audit.vulnerabilities) {
         for (const [name, info] of Object.entries(audit.vulnerabilities) as Array<
-          [string, { severity: string; fixAvailable: boolean; via: Array<{ title: string; url: string }> }]
+          [string, { severity: string, fixAvailable: boolean, via: Array<{ title: string, url: string }> }]
         >) {
           const via = Array.isArray(info.via) ? info.via[0] : info.via
           vulnerabilities.push({
@@ -171,7 +175,8 @@ export class DependencyAnalyzer {
       }
 
       return vulnerabilities
-    } catch {
+    }
+    catch {
       return []
     }
   }
@@ -184,7 +189,8 @@ export class DependencyAnalyzer {
 
     try {
       await fs.access(distPath)
-    } catch {
+    }
+    catch {
       return []
     }
 
@@ -228,7 +234,8 @@ export class DependencyAnalyzer {
       const fullPath = path.join(dir, entry.name)
       if (entry.isDirectory()) {
         files.push(...(await this.getFilesRecursive(fullPath)))
-      } else {
+      }
+      else {
         files.push(fullPath)
       }
     }
@@ -243,7 +250,7 @@ export class DependencyAnalyzer {
     dependencies: DependencyInfo[],
     devDependencies: DependencyInfo[],
     outdated: DependencyInfo[],
-    vulnerabilities: VulnerabilityInfo[]
+    vulnerabilities: VulnerabilityInfo[],
   ): string[] {
     const suggestions: string[] = []
 
@@ -253,8 +260,8 @@ export class DependencyAnalyzer {
     }
 
     // 检查安全漏洞
-    const critical = vulnerabilities.filter((v) => v.severity === 'critical')
-    const high = vulnerabilities.filter((v) => v.severity === 'high')
+    const critical = vulnerabilities.filter(v => v.severity === 'critical')
+    const high = vulnerabilities.filter(v => v.severity === 'high')
 
     if (critical.length > 0) {
       suggestions.push(`🚨 发现 ${critical.length} 个严重安全漏洞，请立即修复！`)
@@ -268,10 +275,11 @@ export class DependencyAnalyzer {
     const allDeps = [...dependencies, ...devDependencies]
 
     for (const dep of largeDeps) {
-      if (allDeps.some((d) => d.name === dep)) {
+      if (allDeps.some(d => d.name === dep)) {
         if (dep === 'moment') {
           suggestions.push('💡 建议使用 dayjs 或 date-fns 替代 moment.js，可减小包体积')
-        } else if (dep === 'lodash') {
+        }
+        else if (dep === 'lodash') {
           suggestions.push('💡 建议使用 lodash-es 或按需引入 lodash 函数')
         }
       }
@@ -280,7 +288,7 @@ export class DependencyAnalyzer {
     // 检查 devDependencies 中不应该出现的包
     const shouldBeDev = ['typescript', 'eslint', 'prettier', 'vitest', 'jest']
     for (const name of shouldBeDev) {
-      if (dependencies.some((d) => d.name === name)) {
+      if (dependencies.some(d => d.name === name)) {
         suggestions.push(`📦 ${name} 应该放在 devDependencies 中`)
       }
     }
@@ -298,8 +306,10 @@ export class DependencyAnalyzer {
    * 格式化文件大小
    */
   formatSize(bytes: number): string {
-    if (bytes < 1024) return `${bytes} B`
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`
+    if (bytes < 1024)
+      return `${bytes} B`
+    if (bytes < 1024 * 1024)
+      return `${(bytes / 1024).toFixed(2)} KB`
     return `${(bytes / 1024 / 1024).toFixed(2)} MB`
   }
 }

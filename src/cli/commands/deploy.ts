@@ -10,14 +10,14 @@
  */
 
 import type { CliContext } from '../../types'
-import type { DeployPlatform, DeployConfig, DeployProgress, DeployLogEntry } from '../../types/deploy'
-import chalk from 'chalk'
+import type { DeployConfig, DeployLogEntry, DeployPlatform, DeployProgress } from '../../types/deploy'
 import boxen from 'boxen'
-import ora from 'ora'
+import chalk from 'chalk'
 import inquirer from 'inquirer'
-import { DeployService } from '../../deploy/DeployService'
+import ora from 'ora'
+import { getPlatformInfo, SUPPORTED_PLATFORMS } from '../../deploy/adapters'
 import { DeployManager } from '../../deploy/DeployManager'
-import { SUPPORTED_PLATFORMS, getPlatformInfo } from '../../deploy/adapters'
+import { DeployService } from '../../deploy/DeployService'
 
 interface DeployCommandOptions {
   platform?: string
@@ -57,7 +57,7 @@ ${SUPPORTED_PLATFORMS.map(p => `  ${p.icon} ${p.name}`).join('\n')}
       margin: { top: 1, bottom: 1, left: 0, right: 0 },
       borderStyle: 'round',
       borderColor: 'cyan',
-    }
+    },
   )
   console.log(banner)
 }
@@ -85,8 +85,10 @@ function showProgress(progress: DeployProgress): void {
  * 格式化文件大小
  */
 function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes}B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`
+  if (bytes < 1024)
+    return `${bytes}B`
+  if (bytes < 1024 * 1024)
+    return `${(bytes / 1024).toFixed(1)}KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`
 }
 
@@ -177,7 +179,8 @@ async function collectPlatformConfig(platform: DeployPlatform): Promise<Partial<
             },
           ])
           config[field.name] = value
-        } else {
+        }
+        else {
           const { value } = await inquirer.prompt([
             {
               type: field.type === 'password' ? 'password' : 'input',
@@ -302,7 +305,7 @@ export class DeployCommand {
 
       if (!platformInfo) {
         console.log(chalk.red(`\n❌ 不支持的平台: ${platform}`))
-        console.log(chalk.gray('支持的平台: ' + SUPPORTED_PLATFORMS.map(p => p.id).join(', ')))
+        console.log(chalk.gray(`支持的平台: ${SUPPORTED_PLATFORMS.map(p => p.id).join(', ')}`))
         return
       }
 
@@ -367,7 +370,8 @@ export class DeployCommand {
       if (status === 'building') {
         spinner.text = '构建中...'
         spinner.start()
-      } else if (status === 'uploading') {
+      }
+      else if (status === 'uploading') {
         spinner.text = '上传中...'
         spinner.start()
       }
@@ -392,7 +396,7 @@ ${result.duration ? chalk.gray(`⏱️  用时: ${(result.duration / 1000).toFix
             margin: { top: 1, bottom: 1, left: 0, right: 0 },
             borderStyle: 'round',
             borderColor: 'green',
-          }
+          },
         )
         console.log(successBox)
 
@@ -402,11 +406,13 @@ ${result.duration ? chalk.gray(`⏱️  用时: ${(result.duration / 1000).toFix
             const { default: clipboardy } = await import('clipboardy')
             await clipboardy.write(result.url)
             console.log(chalk.gray('📋 URL 已复制到剪贴板'))
-          } catch {
+          }
+          catch {
             // 剪贴板不可用
           }
         }
-      } else {
+      }
+      else {
         const failBox = boxen(
           `
 ${chalk.bold.red('❌ 部署失败')}
@@ -419,11 +425,12 @@ ${result.errorDetails ? chalk.gray(result.errorDetails.slice(0, 200)) : ''}
             margin: { top: 1, bottom: 1, left: 0, right: 0 },
             borderStyle: 'round',
             borderColor: 'red',
-          }
+          },
         )
         console.log(failBox)
       }
-    } catch (error) {
+    }
+    catch (error) {
       spinner.stop()
       console.log(chalk.red(`\n❌ 部署出错: ${(error as Error).message}`))
     }

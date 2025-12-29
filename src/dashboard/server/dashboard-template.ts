@@ -5,7 +5,7 @@
 
 export function getDashboardTemplate(projectName: string, cwd: string): string {
   const cwdPath = cwd.replace(/\\/g, '/')
-  
+
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>

@@ -5,9 +5,9 @@
 
 import type { Plugin, ViteDevServer } from 'vite'
 import type { DevLoggerPluginOptions } from './types'
-import { DevLoggerWebSocketServer } from './websocket-server'
-import { LogFileWriter } from './file-writer'
 import { createLogger } from '../../utils/logger'
+import { LogFileWriter } from './file-writer'
+import { DevLoggerWebSocketServer } from './websocket-server'
 
 /** 创建日志器实例 */
 const logger = createLogger('DevLoggerPlugin')
@@ -124,4 +124,3 @@ export function devLoggerPlugin(options: DevLoggerPluginOptions = {}): Plugin {
  * 默认导出
  */
 export default devLoggerPlugin
-

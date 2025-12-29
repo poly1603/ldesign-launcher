@@ -1,13 +1,18 @@
+import type { Server } from 'node:http'
+import type { DashboardAPI } from './api'
+import type { DashboardWebSocket } from './websocket'
+import { promises as fs } from 'node:fs'
 /**
  * Dashboard 服务器入口
  * 整合 HTTP 服务器、WebSocket 和静态文件服务
  */
-import { createServer, type Server } from 'http'
-import { promises as fs } from 'fs'
-import path from 'path'
-import { getDashboardWebSocket, type DashboardWebSocket } from './websocket'
-import { getDashboardAPI, type DashboardAPI } from './api'
+import { createServer } from 'node:http'
+import path from 'node:path'
+import { Logger } from '../../utils/logger'
+import { PerformanceMonitor } from '../../utils/performance'
+import { getDashboardAPI } from './api'
 import { getDashboardTemplate } from './dashboard-template'
+import { getDashboardWebSocket } from './websocket'
 
 interface DashboardServerOptions {
   port?: number
@@ -24,6 +29,9 @@ export class DashboardServer {
   private ws: DashboardWebSocket
   private api: DashboardAPI
   private options: Required<DashboardServerOptions>
+  private performanceMonitor: PerformanceMonitor
+  private performanceInterval: NodeJS.Timeout | null = null
+  private logger: Logger
 
   constructor(options: DashboardServerOptions = {}) {
     this.options = {
@@ -35,6 +43,8 @@ export class DashboardServer {
 
     this.ws = getDashboardWebSocket()
     this.api = getDashboardAPI()
+    this.performanceMonitor = new PerformanceMonitor()
+    this.logger = new Logger('Dashboard')
 
     // 监听项目操作事件
     this.setupEventHandlers()
@@ -45,21 +55,21 @@ export class DashboardServer {
    */
   private setupEventHandlers(): void {
     this.ws.on('startProject', async (data: { projectId: string }) => {
-      console.log(`[Dashboard] Start project requested: ${data.projectId}`)
+      this.logger.info(`Start project requested: ${data.projectId}`)
       // 这里可以调用 ViteLauncher 启动项目
     })
 
     this.ws.on('stopProject', async (data: { projectId: string }) => {
-      console.log(`[Dashboard] Stop project requested: ${data.projectId}`)
+      this.logger.info(`Stop project requested: ${data.projectId}`)
       // 这里可以停止项目进程
     })
 
     this.ws.on('restartProject', async (data: { projectId: string }) => {
-      console.log(`[Dashboard] Restart project requested: ${data.projectId}`)
+      this.logger.info(`Restart project requested: ${data.projectId}`)
     })
 
     this.ws.on('buildProject', async (data: { projectId: string }) => {
-      console.log(`[Dashboard] Build project requested: ${data.projectId}`)
+      this.logger.info(`Build project requested: ${data.projectId}`)
     })
   }
 
@@ -82,7 +92,8 @@ export class DashboardServer {
 
         // 尝试处理 API 请求
         const handled = await this.api.handleRequest(req, res)
-        if (handled) return
+        if (handled)
+          return
 
         // 静态文件服务
         await this.serveStatic(req, res)
@@ -91,12 +102,15 @@ export class DashboardServer {
       // 启动 WebSocket
       this.ws.start(this.server)
 
+      // 🚀 启动性能监控
+      this.startPerformanceMonitoring()
+
       this.server.listen(this.options.port, this.options.host, () => {
         const url = `http://localhost:${this.options.port}`
-        console.log(`\n🚀 Dashboard server running at ${url}\n`)
+        this.logger.success(`Dashboard server running at ${url}`)
 
         if (this.options.open) {
-          import('open').then(({ default: open }) => open(url)).catch(() => {})
+          import('open').then(({ default: open }) => open(url)).catch(() => { })
         }
 
         resolve(url)
@@ -113,7 +127,7 @@ export class DashboardServer {
    */
   private async serveStatic(
     req: { url?: string },
-    res: { statusCode: number; setHeader: (k: string, v: string) => void; end: (d?: string | Buffer) => void }
+    res: { statusCode: number, setHeader: (k: string, v: string) => void, end: (d?: string | Buffer) => void },
   ): Promise<void> {
     const url = new URL(req.url || '/', 'http://localhost')
     let filePath = path.join(this.options.staticDir, url.pathname)
@@ -146,14 +160,16 @@ export class DashboardServer {
 
       res.setHeader('Content-Type', mimeTypes[ext] || 'application/octet-stream')
       res.end(content)
-    } catch {
+    }
+    catch {
       // 对于 SPA，返回 index.html
       try {
         const indexPath = path.join(this.options.staticDir, 'index.html')
         const content = await fs.readFile(indexPath)
         res.setHeader('Content-Type', 'text/html')
         res.end(content)
-      } catch {
+      }
+      catch {
         res.statusCode = 404
         res.setHeader('Content-Type', 'text/html')
         res.end(this.getEmbeddedHTML())
@@ -171,18 +187,68 @@ export class DashboardServer {
   }
 
   /**
+   * 🚀 启动实时性能监控
+   * 每秒推送性能数据到 WebSocket 客户端
+   */
+  private startPerformanceMonitoring(): void {
+    // 启动性能监控（每秒更新）
+    this.performanceMonitor.start(1000)
+
+    // 每 2 秒推送一次性能数据
+    this.performanceInterval = setInterval(() => {
+      const metrics = this.performanceMonitor.getMetrics()
+
+      // 推送到所有 WebSocket 客户端
+      this.ws.broadcast({
+        type: 'performance',
+        payload: {
+          memory: {
+            used: metrics.memory.used,
+            total: metrics.memory.total,
+            percentage: metrics.memory.percentage,
+            heapUsed: metrics.memory.heapUsed,
+            heapTotal: metrics.memory.heapTotal,
+          },
+          cpu: {
+            usage: metrics.cpu.usage,
+            loadAverage: metrics.cpu.loadAverage,
+          },
+          eventLoopDelay: metrics.eventLoopDelay,
+          uptime: process.uptime(),
+        },
+        timestamp: Date.now(),
+      })
+    }, 2000)
+  }
+
+  /**
+   * 停止性能监控
+   */
+  private stopPerformanceMonitoring(): void {
+    this.performanceMonitor.stop()
+    if (this.performanceInterval) {
+      clearInterval(this.performanceInterval)
+      this.performanceInterval = null
+    }
+  }
+
+  /**
    * 停止服务器
    */
   async stop(): Promise<void> {
+    // 停止性能监控
+    this.stopPerformanceMonitoring()
+
     this.ws.close()
     return new Promise((resolve) => {
       if (this.server) {
         this.server.close(() => {
           this.server = null
-          console.log('[Dashboard] Server stopped')
+          this.logger.info('Server stopped')
           resolve()
         })
-      } else {
+      }
+      else {
         resolve()
       }
     })
@@ -205,6 +271,6 @@ export async function startDashboard(options?: DashboardServerOptions): Promise<
   return server
 }
 
-export { getDashboardWebSocket, getDashboardAPI }
+export { getDashboardAPI, getDashboardWebSocket }
 export type { ProjectStatus } from './websocket'
 export type { DashboardServerOptions }

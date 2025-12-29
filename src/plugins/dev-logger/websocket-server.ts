@@ -3,11 +3,11 @@
  * @description 接收前端日志并转发给文件写入器
  */
 
-import { WebSocketServer, WebSocket } from 'ws'
 import type { IncomingMessage } from 'node:http'
 import type { BridgeMessage, LogEntry, WebSocketServerOptions } from './types'
-import { LogFileWriter } from './file-writer'
+import { WebSocket, WebSocketServer } from 'ws'
 import { createLogger } from '../../utils/logger'
+import { LogFileWriter } from './file-writer'
 
 /** 创建日志器实例 */
 const logger = createLogger('DevLoggerWS')
@@ -122,14 +122,14 @@ export class DevLoggerWebSocketServer {
   /** 输出到控制台 */
   private outputToConsole(entry: LogEntry): void {
     const levelColors: Record<number, string> = {
-      0: '\x1b[90m',  // TRACE - gray
-      10: '\x1b[36m', // DEBUG - cyan
-      20: '\x1b[32m', // INFO - green
-      30: '\x1b[33m', // WARN - yellow
-      40: '\x1b[31m', // ERROR - red
-      50: '\x1b[35m', // FATAL - magenta
+      0: '\x1B[90m', // TRACE - gray
+      10: '\x1B[36m', // DEBUG - cyan
+      20: '\x1B[32m', // INFO - green
+      30: '\x1B[33m', // WARN - yellow
+      40: '\x1B[31m', // ERROR - red
+      50: '\x1B[35m', // FATAL - magenta
     }
-    const reset = '\x1b[0m'
+    const reset = '\x1B[0m'
     const color = levelColors[entry.level] || reset
     const source = entry.source ? `[${entry.source}]` : ''
     console.log(`${color}[Browser]${source} ${entry.message}${reset}`)
@@ -174,4 +174,3 @@ export class DevLoggerWebSocketServer {
     logger.info('[DevLogger] WebSocket 服务器已停止')
   }
 }
-

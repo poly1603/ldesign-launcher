@@ -279,7 +279,8 @@ export class PluginManager {
       priority: 90,
       detectDeps: (deps) => {
         const vue = deps.vue
-        if (!vue) return { detected: false, confidence: 0 }
+        if (!vue)
+          return { detected: false, confidence: 0 }
         const isV3 = vue.includes('^3') || vue.includes('~3') || vue.startsWith('3') || vue === 'latest' || vue === 'next'
         return { detected: isV3, confidence: isV3 ? 0.9 : 0 }
       },
@@ -291,7 +292,8 @@ export class PluginManager {
       priority: 89,
       detectDeps: (deps) => {
         const vue = deps.vue
-        if (!vue) return { detected: false, confidence: 0 }
+        if (!vue)
+          return { detected: false, confidence: 0 }
         const isV2 = vue.includes('^2') || vue.includes('~2') || vue.startsWith('2')
         return { detected: isV2, confidence: isV2 ? 0.9 : 0 }
       },
@@ -446,7 +448,8 @@ export class PluginManager {
         .filter(r => r.detected)
         .sort((a, b) => {
           // 先按置信度排序，再按优先级排序
-          if (b.confidence !== a.confidence) return b.confidence - a.confidence
+          if (b.confidence !== a.confidence)
+            return b.confidence - a.confidence
           return b.priority - a.priority
         })
 
