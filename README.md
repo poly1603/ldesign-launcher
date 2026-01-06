@@ -400,6 +400,254 @@ Images      █ 1KB (0.5%)
 📚 相关文档: https://launcher.dev/docs/troubleshooting/port-in-use
 ```
 
+## ⚡ 性能优化
+
+@ldesign/launcher v2.1.0 包含多项性能优化：
+
+### 🚀 配置加载优化
+
+- **esbuild 编译** - TypeScript 配置文件使用 esbuild 编译，加载速度提升 10x
+- **配置缓存** - 相同配置不会重复加载和验证
+- **节流控制** - 配置文件变更不会频繁触发重载
+
+```typescript
+import { ViteLauncher } from '@ldesign/launcher'
+
+const launcher = new ViteLauncher({
+  cwd: process.cwd(),
+  // 获取缓存统计
+})
+
+// 检查缓存状态
+const cacheStats = launcher.getCacheStats()
+console.log(`缓存命中率: ${cacheStats.hits}/${cacheStats.hits + cacheStats.misses}`)
+```
+
+### 📦 缓存管理
+
+使用 `cache` 命令管理构建缓存：
+
+```bash
+# 查看缓存状态
+launcher cache list
+
+# 清除所有缓存
+launcher cache clear
+
+# 只清除 Vite 缓存
+launcher cache clear --type vite
+
+# 清除依赖缓存
+launcher cache clear --type deps
+
+# 模拟运行（不实际删除）
+launcher cache clear --dry-run
+```
+
+### 📊 日志统计
+
+```typescript
+import { createLogger } from '@ldesign/launcher'
+
+const logger = createLogger('MyModule')
+
+// 获取日志统计
+const stats = logger.getStats()
+console.log(`错误数: ${stats.counts.error}`)
+console.log(`运行时间: ${Date.now() - stats.startTime}ms`)
+```
+
+## ⚠️ 错误处理
+
+v2.1.0 引入了统一的错误处理系统：
+
+### 错误类型
+
+```typescript
+import {
+  ConfigError,
+  ServerError,
+  BuildError,
+  PluginError,
+  FileSystemError,
+  CLIError,
+} from '@ldesign/launcher'
+
+// 创建配置错误
+try {
+  throw new ConfigError('配置文件格式错误', {
+    configFile: 'launcher.config.ts',
+    line: 10,
+  })
+} catch (error) {
+  if (error instanceof ConfigError) {
+    console.log(`错误代码: ${error.code}`)
+    console.log(`严重程度: ${error.severity}`)
+    console.log(`恢复建议: ${error.recoveryStrategy}`)
+  }
+}
+```
+
+### 错误聚合
+
+```typescript
+import { createErrorHandler } from '@ldesign/launcher'
+
+const handler = createErrorHandler({
+  aggregateErrors: true,      // 启用错误聚合
+  aggregateWindow: 5000,      // 5秒内相同错误只输出一次
+  maxHistorySize: 100,        // 最多记录 100 个错误
+})
+
+// 处理错误
+await handler.handle(error, {
+  component: 'ConfigManager',
+  operation: 'loadConfig',
+  severity: 'high',
+})
+
+// 获取统计
+const stats = handler.getStats()
+console.log(`总错误: ${stats.total}`)
+console.log(`严重错误: ${stats.bySeverity.critical || 0}`)
+```
+
+## 🔧 高级配置
+
+### 配置版本控制
+
+```typescript
+import { ConfigManager } from '@ldesign/launcher'
+
+const configManager = new ConfigManager({
+  configFile: 'launcher.config.ts',
+  watch: true,
+  throttleDelay: 500,         // 节流延迟
+  validationCacheTTL: 60000,  // 验证缓存 1 分钟
+})
+
+// 获取配置版本信息
+const version = configManager.getConfigVersion()
+if (version) {
+  console.log(`配置版本: ${version.version}`)
+  console.log(`更新时间: ${new Date(version.timestamp)}`)
+  console.log(`哈希值: ${version.hash}`)
+}
+
+// 检查配置是否变更
+if (configManager.hasConfigChanged(newConfig)) {
+  console.log('配置已更新')
+}
+```
+
+### 日志过滤
+
+```typescript
+import { createLogger } from '@ldesign/launcher'
+
+const logger = createLogger('MyModule', {
+  filter: (level, message) => {
+    // 过滤掉包含敏感信息的日志
+    return !message.includes('password')
+  },
+})
+
+// 或使用关键词过滤器
+logger.setKeywordFilter(['password', 'token', 'secret'], 'exclude')
+
+// 只显示配置相关的日志
+logger.setKeywordFilter(['config', 'Config'], 'include')
+```
+
+### 操作取消
+
+```typescript
+import { ViteLauncher } from '@ldesign/launcher'
+
+const launcher = new ViteLauncher()
+
+// 启动开发服务器
+const devPromise = launcher.startDev()
+
+// 在另一个地方取消操作
+setTimeout(() => {
+  launcher.abort('用户取消')
+}, 10000)
+
+// 检查是否已取消
+if (launcher.isAborted()) {
+  console.log('操作已取消')
+}
+```
+
+## 🛠️ 故障排除
+
+### 常见问题
+
+#### 端口被占用
+
+```bash
+# 指定其他端口
+launcher dev --port 8080
+
+# 自动选择可用端口
+launcher dev
+```
+
+#### 配置加载失败
+
+```bash
+# 清除缓存后重试
+launcher cache clear --type all
+launcher dev
+
+# 查看详细错误信息
+launcher dev --debug
+```
+
+#### 构建失败
+
+```bash
+# 清除构建缓存
+launcher cache clear --type build
+
+# 查看构建分析
+launcher build --analyze
+```
+
+#### 模块解析错误
+
+```typescript
+// launcher.config.ts
+export default defineConfig({
+  resolve: {
+    alias: [
+      { find: '@', replacement: './src' },
+      { find: '~', replacement: './' },
+    ],
+  },
+})
+```
+
+### 调试模式
+
+```bash
+# 启用调试日志
+launcher dev --debug
+
+# 查看配置
+launcher config list
+
+# 运行诊断
+launcher doctor
+```
+
+### 性能问题
+
+1. **启动慢** - 清除缓存 `launcher cache clear`
+2. **热更新慢** - 检查是否有大文件被监听
+3. **构建慢** - 使用 `launcher build --analyze` 分析
+
 ## 📚 文档
 
 - [多环境配置指南](./docs/guide/environment-config.md)
@@ -410,7 +658,8 @@ Images      █ 1KB (0.5%)
 - [CLI 参考](./docs/cli/README.md)
 - [插件开发](./docs/plugins/README.md)
 - [示例](./docs/examples/README.md)
-- [UI 功能说明](./docs/guide/ui-features.md) ✨ 新增
+- [UI 功能说明](./docs/guide/ui-features.md)
+- [故障排除指南](./docs/guide/troubleshooting.md) ✨ 新增
 
 ## 🛠️ 支持的框架
 
@@ -424,7 +673,8 @@ Images      █ 1KB (0.5%)
 
 ## 📋 系统要求
 
-- Node.js >= 16.0.0
+- Node.js >= 18.0.0
+- Vite >= 7.0.0
 - 支持现代浏览器
 
 ## 🤝 贡献

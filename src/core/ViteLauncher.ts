@@ -5,6 +5,7 @@
  *
  * @author LDesign Team
  * @since 1.0.0
+ * @version 2.1.0 - 添加配置缓存、abort() 方法、性能优化
  */
 
 import type { RollupOutput, RollupWatcher } from 'rollup'
@@ -23,6 +24,7 @@ import type {
   PerformanceMetrics,
   ServerInfo,
   ViteLauncherConfig,
+  Nullable,
 } from '../types'
 
 import { EventEmitter } from 'node:events'
@@ -48,6 +50,40 @@ import { AliasManager } from './AliasManager'
 import { ConfigManager } from './ConfigManager'
 
 import { PluginManager } from './PluginManager'
+
+// ==================== 配置缓存类型 ====================
+
+/**
+ * 配置缓存条目
+ */
+interface ConfigCacheEntry {
+  /** 缓存的配置 */
+  config: ViteLauncherConfig
+  /** 创建时间戳 */
+  timestamp: number
+  /** 配置文件哈希（用于失效判断） */
+  hash?: string
+}
+
+/**
+ * 取消控制器
+ */
+interface AbortController {
+  /** 取消信号 */
+  signal: AbortSignal
+  /** 触发取消 */
+  abort: (reason?: string) => void
+}
+
+/**
+ * 取消信号
+ */
+interface AbortSignal {
+  /** 是否已取消 */
+  aborted: boolean
+  /** 取消原因 */
+  reason?: string
+}
 
 /**
  * ViteLauncher 核心类
@@ -128,10 +164,31 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
   /** 重启中标志，防止并发重启 */
   private isRestarting: boolean = false
 
+  /** 配置缓存 (v2.1.0 新增) */
+  private configCache: Nullable<ConfigCacheEntry> = null
+
+  /** 配置缓存过期时间（毫秒） */
+  private readonly CONFIG_CACHE_TTL = 5000
+
+  /** 取消控制器 (v2.1.0 新增) */
+  private abortController: Nullable<AbortController> = null
+
+  /** 配置合并结果缓存 (WeakMap 使用对象作为键) */
+  private mergeConfigCache = new WeakMap<object, ViteLauncherConfig>()
+
   /**
    * 构造函数
    *
    * @param options - 启动器选项
+   *
+   * @example
+   * ```typescript
+   * const launcher = new ViteLauncher({
+   *   cwd: '/path/to/project',
+   *   environment: 'development',
+   *   config: { server: { port: 3000 } }
+   * })
+   * ```
    */
   constructor(options: LauncherOptions = {}) {
     super()
@@ -1179,6 +1236,154 @@ export class ViteLauncher extends EventEmitter implements IViteLauncher {
    */
   getPerformanceMetrics(): PerformanceMetrics {
     return { ...this.performanceMetrics }
+  }
+
+  // ==================== v2.1.0 新增方法 ====================
+
+  /**
+   * 取消当前进行中的操作
+   *
+   * 可以取消正在进行的启动、构建或预览操作。
+   * 取消后，当前操作会抛出 AbortError。
+   *
+   * @param reason - 取消原因（可选）
+   *
+   * @example
+   * ```typescript
+   * const launcher = new ViteLauncher()
+   *
+   * // 启动开发服务器
+   * const serverPromise = launcher.startDev()
+   *
+   * // 5 秒后取消
+   * setTimeout(() => {
+   *   launcher.abort('用户取消')
+   * }, 5000)
+   *
+   * try {
+   *   await serverPromise
+   * } catch (error) {
+   *   if (error.message.includes('已取消')) {
+   *     console.log('操作已取消')
+   *   }
+   * }
+   * ```
+   *
+   * @since 2.1.0
+   */
+  abort(reason?: string): void {
+    if (this.abortController) {
+      this.abortController.abort(reason || '用户取消')
+      this.logger.info(`操作已取消${reason ? `: ${reason}` : ''}`)
+    } else {
+      this.logger.warn('没有正在进行的操作可取消')
+    }
+  }
+
+  /**
+   * 检查是否已取消
+   *
+   * @returns 是否已取消
+   * @since 2.1.0
+   */
+  isAborted(): boolean {
+    return this.abortController?.signal.aborted ?? false
+  }
+
+  /**
+   * 创建取消控制器
+   *
+   * @returns 取消控制器
+   * @private
+   */
+  private createAbortController(): AbortController {
+    const signal: AbortSignal = { aborted: false }
+    return {
+      signal,
+      abort: (reason?: string) => {
+        signal.aborted = true
+        signal.reason = reason
+      },
+    }
+  }
+
+  /**
+   * 检查取消信号，如果已取消则抛出错误
+   *
+   * @throws Error 如果操作已取消
+   * @private
+   */
+  private checkAborted(): void {
+    if (this.abortController?.signal.aborted) {
+      const reason = this.abortController.signal.reason || '操作已取消'
+      throw new Error(reason)
+    }
+  }
+
+  /**
+   * 获取缓存的配置
+   *
+   * 如果缓存有效，返回缓存的配置；否则返回 null。
+   *
+   * @returns 缓存的配置或 null
+   * @since 2.1.0
+   */
+  getCachedConfig(): ViteLauncherConfig | null {
+    if (!this.configCache) {
+      return null
+    }
+
+    const now = Date.now()
+    if (now - this.configCache.timestamp > this.CONFIG_CACHE_TTL) {
+      // 缓存已过期
+      this.configCache = null
+      return null
+    }
+
+    return this.configCache.config
+  }
+
+  /**
+   * 设置配置缓存
+   *
+   * @param config - 要缓存的配置
+   * @param hash - 配置文件哈希（可选）
+   * @since 2.1.0
+   */
+  setCachedConfig(config: ViteLauncherConfig, hash?: string): void {
+    this.configCache = {
+      config,
+      timestamp: Date.now(),
+      hash,
+    }
+  }
+
+  /**
+   * 清除配置缓存
+   *
+   * @since 2.1.0
+   */
+  clearConfigCache(): void {
+    this.configCache = null
+    this.logger.debug('配置缓存已清除')
+  }
+
+  /**
+   * 获取缓存统计信息
+   *
+   * @returns 缓存统计信息
+   * @since 2.1.0
+   */
+  getCacheStats(): { hasCache: boolean; age: number | null; hash: string | null } {
+    if (!this.configCache) {
+      return { hasCache: false, age: null, hash: null }
+    }
+
+    return {
+      hasCache: true,
+      age: Date.now() - this.configCache.timestamp,
+      hash: this.configCache.hash || null,
+    }
   }
 
   /**

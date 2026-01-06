@@ -1,11 +1,44 @@
 /**
- * @ldesign/launcher - 基于 Vite JavaScript API 的前端项目启动器
+ * @ldesign/launcher - 零配置前端项目启动器
  *
- * 提供统一的开发服务器、构建工具和预览服务，支持多种前端技术栈
+ * 基于 Vite 7.0+ JavaScript API 的前端项目启动器，
+ * 提供统一的开发服务器、构建工具和预览服务。
  *
+ * 核心特性：
+ * - 🎯 零配置启动 - 自动检测框架并应用最佳配置
+ * - 🚀 多框架支持 - 支持 13+ 主流前端框架
+ * - ⚡ 性能优化 - esbuild 编译、配置缓存、节流控制
+ * - 🛡️ 类型安全 - 完整的 TypeScript 支持
+ * - 🔧 统一错误处理 - 结构化错误、错误聚合、友好提示
+ *
+ * @example
+ * ```typescript
+ * // 基础用法 - 零配置启动
+ * import { ViteLauncher } from '@ldesign/launcher'
+ *
+ * const launcher = new ViteLauncher()
+ * await launcher.startDev()  // 自动检测框架并启动
+ *
+ * // 使用配置文件
+ * const launcher = new ViteLauncher({
+ *   configFile: 'launcher.config.ts',
+ * })
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // CLI 用法
+ * // npx launcher dev          # 启动开发服务器
+ * // npx launcher build        # 生产构建
+ * // npx launcher preview      # 预览构建结果
+ * // npx launcher cache list   # 查看缓存状态
+ * ```
+ *
+ * @packageDocumentation
  * @author LDesign Team
- * @version 2.0.0
+ * @version 2.1.0
  * @since 1.0.0
+ * @license MIT
  */
 
 // 导出常量
@@ -129,6 +162,59 @@ export {
 
 export { ErrorHandler, LauncherError } from './utils/error-handler'
 
+/**
+ * 统一错误处理系统 (v2.1.0 新增)
+ *
+ * 提供结构化错误类型和工具函数，支持：
+ * - 错误分类（配置、服务器、构建、插件、文件系统、CLI）
+ * - 错误严重程度和恢复策略
+ * - 安全执行包装器
+ * - 断言和类型守卫
+ *
+ * @example
+ * ```typescript
+ * import {
+ *   ConfigError,
+ *   isLauncherError,
+ *   safeAsync,
+ * } from '@ldesign/launcher'
+ *
+ * // 抛出结构化错误
+ * throw new ConfigError('配置文件格式错误', { file: 'config.ts' })
+ *
+ * // 安全执行异步操作
+ * const result = await safeAsync(riskyOperation())
+ * if (result.success) {
+ *   console.log(result.data)
+ * } else {
+ *   console.error(result.error)
+ * }
+ * ```
+ */
+export {
+  // 错误类
+  LauncherBaseError,
+  ConfigError,
+  ServerError,
+  BuildError,
+  PluginError,
+  FileSystemError,
+  CLIError,
+  // 工具函数
+  isLauncherError,
+  isErrorType,
+  wrapError,
+  assertNonNull,
+  assert,
+  getErrorMessage,
+  safeAsync,
+  safeSync,
+  createErrorFactory,
+  // 类型
+  type ErrorContext,
+  type SerializedError,
+} from './errors'
+
 export { FileSystem } from './utils/file-system'
 
 export {
@@ -156,11 +242,29 @@ export {
   isValidUrl,
 } from './utils/server'
 
-// 导出版本信息
-export const version = '2.0.0'
+/**
+ * 当前版本号
+ *
+ * @since 2.1.0
+ */
+export const version = '2.1.0'
 
-// 为了保持导出一致性，使用 createLauncher 函数
-// 提供懒加载的方式访问所有模块
+/**
+ * 创建 Launcher 懒加载工厂
+ *
+ * 提供懒加载的方式访问所有模块，适合需要按需加载的场景。
+ *
+ * @returns 懒加载模块工厂
+ *
+ * @example
+ * ```typescript
+ * const factory = createLauncher()
+ * const Launcher = await factory.Launcher()
+ * const launcher = new Launcher()
+ * ```
+ *
+ * @since 2.0.0
+ */
 export function createLauncher() {
   return {
     version,

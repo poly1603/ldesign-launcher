@@ -42,7 +42,7 @@ export class DeployService extends EventEmitter {
     progress: DeployProgress
     logs: DeployLogEntry[]
     startTime: number
-    adapter?: DeployAdapter
+    adapter?: DeployAdapter<DeployConfig>
   } | null = null
 
   private history: DeployHistoryEntry[] = []

@@ -10,6 +10,8 @@
 // 分析和构建
 export * from './analyze'
 export * from './build'
+// 缓存管理
+export * from './cache'
 // 配置
 export * from './config'
 // 核心命令

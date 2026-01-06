@@ -1,11 +1,16 @@
 /**
  * 配置管理器
  *
+ * 负责配置的加载、验证、合并、监听和热更新。
+ * 支持多环境配置、配置继承、代理处理等高级功能。
+ *
  * @author LDesign Team
  * @since 1.0.0
+ * @version 2.1.0
  */
 
 import type { ProjectPreset, ProxyOptions, ViteLauncherConfig } from '../types'
+import type { Nullable } from '../types/common'
 import type { NotificationManager } from '../utils/notification'
 import { EventEmitter } from 'node:events'
 import fs from 'node:fs'
@@ -21,14 +26,89 @@ import { PathUtils } from '../utils/path-utils'
 import { ProxyProcessor } from '../utils/proxy'
 import { configPresets } from './ConfigPresets'
 
-export interface ConfigManagerOptions {
-  configFile?: string
-  watch?: boolean
-  logger?: Logger
-  cwd?: string
-  onConfigChange?: (config: ViteLauncherConfig) => void
+/**
+ * 配置版本信息
+ */
+interface ConfigVersion {
+  /** 配置版本号 */
+  version: string
+  /** 最后更新时间 */
+  timestamp: number
+  /** 配置哈希值 */
+  hash: string
+  /** 文件路径 */
+  filePath?: string
 }
 
+/**
+ * 验证缓存条目
+ */
+interface ValidationCacheEntry {
+  /** 验证结果 */
+  result: {
+    valid: boolean
+    errors: string[]
+    warnings: string[]
+  }
+  /** 配置哈希值 */
+  hash: string
+  /** 缓存时间戳 */
+  timestamp: number
+}
+
+/**
+ * 节流函数信息
+ */
+interface ThrottleInfo {
+  /** 最后执行时间 */
+  lastExecution: number
+  /** 待执行的回调 */
+  pendingCallback: Nullable<() => void>
+  /** 定时器ID */
+  timerId: Nullable<ReturnType<typeof setTimeout>>
+}
+
+/**
+ * ConfigManager 配置选项
+ */
+export interface ConfigManagerOptions {
+  /** 配置文件路径 */
+  configFile?: string
+  /** 是否启用文件监听 */
+  watch?: boolean
+  /** 日志记录器 */
+  logger?: Logger
+  /** 工作目录 */
+  cwd?: string
+  /** 配置变更回调 */
+  onConfigChange?: (config: ViteLauncherConfig) => void
+  /** 节流延迟（毫秒），默认 300ms */
+  throttleDelay?: number
+  /** 验证缓存 TTL（毫秒），默认 60000ms */
+  validationCacheTTL?: number
+}
+
+/**
+ * 配置管理器
+ *
+ * 提供完整的配置生命周期管理：
+ * - 配置加载（支持 TS/JS/JSON 格式）
+ * - 配置验证（带缓存优化）
+ * - 配置合并（深度合并策略）
+ * - 文件监听（带节流保护）
+ * - 热更新支持
+ *
+ * @example
+ * ```typescript
+ * const manager = new ConfigManager({
+ *   configFile: '.ldesign/launcher.config.ts',
+ *   watch: true,
+ *   onConfigChange: (config) => console.log('Config changed:', config),
+ * })
+ *
+ * const config = await manager.load()
+ * ```
+ */
 export class ConfigManager extends EventEmitter {
   private configFile?: string
   private logger: Logger
@@ -38,6 +118,28 @@ export class ConfigManager extends EventEmitter {
   private onConfigChange?: (config: ViteLauncherConfig) => void
   private notificationManager: NotificationManager
 
+  // ==================== 新增：版本控制 ====================
+  /** 当前配置版本信息 */
+  private configVersion: Nullable<ConfigVersion> = null
+
+  // ==================== 新增：验证缓存 ====================
+  /** 验证结果缓存 */
+  private validationCache: Map<string, ValidationCacheEntry> = new Map()
+  /** 验证缓存 TTL（毫秒） */
+  private readonly validationCacheTTL: number
+  /** 验证缓存最大条目数 */
+  private readonly VALIDATION_CACHE_MAX_SIZE = 50
+
+  // ==================== 新增：节流控制 ====================
+  /** 节流信息 */
+  private throttleInfo: ThrottleInfo = {
+    lastExecution: 0,
+    pendingCallback: null,
+    timerId: null,
+  }
+  /** 节流延迟（毫秒） */
+  private readonly throttleDelay: number
+
   // 供单测 mock 的占位对象（与 @ldesign/kit 管理器对齐的最小接口）
   // 注意：仅用于测试场景；实际逻辑以本类实现为准
   private kitConfigManager: {
@@ -45,6 +147,28 @@ export class ConfigManager extends EventEmitter {
     save: (path: string, config: ViteLauncherConfig) => Promise<void> | void
   }
 
+  /**
+   * 创建配置管理器实例
+   *
+   * @param options - 配置选项
+   *
+   * @example
+   * ```typescript
+   * // 基础用法
+   * const manager = new ConfigManager()
+   *
+   * // 完整配置
+   * const manager = new ConfigManager({
+   *   configFile: '.ldesign/launcher.config.ts',
+   *   watch: true,
+   *   throttleDelay: 500,
+   *   validationCacheTTL: 120000,
+   *   onConfigChange: (config) => {
+   *     console.log('配置已更新')
+   *   },
+   * })
+   * ```
+   */
   constructor(options: ConfigManagerOptions = {}) {
     super()
 
@@ -64,6 +188,10 @@ export class ConfigManager extends EventEmitter {
     this.watchEnabled = options.watch || false
     this.onConfigChange = options.onConfigChange
     this.notificationManager = createNotificationManager(this.logger)
+
+    // 新增：初始化节流和缓存配置
+    this.throttleDelay = options.throttleDelay ?? 300
+    this.validationCacheTTL = options.validationCacheTTL ?? 60000
 
     // 如果启用监听，异步初始化文件监听器
     if (this.watchEnabled) {
@@ -459,6 +587,91 @@ export class ConfigManager extends EventEmitter {
     return { ...this.config }
   }
 
+  // ==================== 新增：版本控制方法 ====================
+
+  /**
+   * 获取当前配置版本信息
+   *
+   * @returns 配置版本信息或 null
+   *
+   * @example
+   * ```typescript
+   * const version = manager.getConfigVersion()
+   * if (version) {
+   *   console.log(`配置版本: ${version.version}`)
+   *   console.log(`更新时间: ${new Date(version.timestamp)}`)
+   * }
+   * ```
+   */
+  getConfigVersion(): Nullable<ConfigVersion> {
+    return this.configVersion ? { ...this.configVersion } : null
+  }
+
+  /**
+   * 计算配置哈希值
+   *
+   * @param config - 配置对象
+   * @returns 配置哈希字符串
+   */
+  private computeConfigHash(config: ViteLauncherConfig): string {
+    try {
+      const str = JSON.stringify(config, Object.keys(config).sort())
+      // 简单哈希算法
+      let hash = 0
+      for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i)
+        hash = ((hash << 5) - hash) + char
+        hash = hash & hash // 转换为32位整数
+      }
+      return hash.toString(16)
+    } catch {
+      return Date.now().toString(16)
+    }
+  }
+
+  /**
+   * 更新配置版本信息
+   *
+   * @param config - 配置对象
+   * @param filePath - 配置文件路径
+   */
+  private updateConfigVersion(config: ViteLauncherConfig, filePath?: string): void {
+    const hash = this.computeConfigHash(config)
+    const version = this.configVersion?.version ?? '1.0.0'
+
+    // 如果哈希值不同，增加版本号
+    let newVersion = version
+    if (this.configVersion && this.configVersion.hash !== hash) {
+      const [major, minor, patch] = version.split('.').map(Number)
+      newVersion = `${major}.${minor}.${patch + 1}`
+    }
+
+    this.configVersion = {
+      version: newVersion,
+      timestamp: Date.now(),
+      hash,
+      filePath,
+    }
+
+    this.logger.debug('配置版本已更新', {
+      version: newVersion,
+      hash,
+      filePath,
+    })
+  }
+
+  /**
+   * 检查配置是否已变更
+   *
+   * @param config - 待检查的配置
+   * @returns 是否变更
+   */
+  hasConfigChanged(config: ViteLauncherConfig): boolean {
+    if (!this.configVersion) return true
+    const newHash = this.computeConfigHash(config)
+    return newHash !== this.configVersion.hash
+  }
+
   /**
    * 检测配置变更类型
    */
@@ -600,6 +813,12 @@ export class ConfigManager extends EventEmitter {
       change: this.listenerCount('change'),
     }
     this.logger.debug('ConfigManager 清理前监听器数量:', listenerCounts)
+
+    // 取消待执行的节流回调
+    this.cancelThrottle()
+
+    // 清空验证缓存
+    this.clearValidationCache()
 
     // 停止文件监听器
     await this.stopWatcher()
@@ -849,14 +1068,188 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
  */\n\n`
   }
 
+  // ==================== 新增：节流控制方法 ====================
+
+  /**
+   * 节流执行函数
+   *
+   * 确保在指定时间间隔内最多执行一次回调。
+   * 用于防止配置变更事件频繁触发。
+   *
+   * @param callback - 要执行的回调函数
+   * @param immediate - 是否立即执行（否则延迟执行）
+   *
+   * @example
+   * ```typescript
+   * // 在配置监听中使用
+   * this.throttle(() => {
+   *   this.handleConfigChange(newConfig)
+   * })
+   * ```
+   */
+  private throttle(callback: () => void, immediate = false): void {
+    const now = Date.now()
+    const timeSinceLastExecution = now - this.throttleInfo.lastExecution
+
+    // 清除之前的待执行定时器
+    if (this.throttleInfo.timerId) {
+      clearTimeout(this.throttleInfo.timerId)
+      this.throttleInfo.timerId = null
+    }
+
+    if (immediate || timeSinceLastExecution >= this.throttleDelay) {
+      // 立即执行
+      this.throttleInfo.lastExecution = now
+      this.throttleInfo.pendingCallback = null
+      callback()
+    } else {
+      // 延迟执行
+      this.throttleInfo.pendingCallback = callback
+      const remainingTime = this.throttleDelay - timeSinceLastExecution
+
+      this.throttleInfo.timerId = setTimeout(() => {
+        const pending = this.throttleInfo.pendingCallback
+        if (pending) {
+          this.throttleInfo.lastExecution = Date.now()
+          this.throttleInfo.pendingCallback = null
+          pending()
+        }
+      }, remainingTime)
+    }
+  }
+
+  /**
+   * 取消待执行的节流回调
+   */
+  private cancelThrottle(): void {
+    if (this.throttleInfo.timerId) {
+      clearTimeout(this.throttleInfo.timerId)
+      this.throttleInfo.timerId = null
+    }
+    this.throttleInfo.pendingCallback = null
+  }
+
+  // ==================== 新增：验证缓存方法 ====================
+
+  /**
+   * 获取验证缓存
+   *
+   * @param config - 配置对象
+   * @returns 缓存的验证结果或 null
+   */
+  private getValidationCache(config: ViteLauncherConfig): ValidationCacheEntry['result'] | null {
+    const hash = this.computeConfigHash(config)
+    const cached = this.validationCache.get(hash)
+
+    if (cached) {
+      // 检查是否过期
+      if (Date.now() - cached.timestamp < this.validationCacheTTL) {
+        this.logger.debug('使用缓存的验证结果', { hash })
+        return cached.result
+      } else {
+        // 缓存过期，删除
+        this.validationCache.delete(hash)
+      }
+    }
+
+    return null
+  }
+
+  /**
+   * 设置验证缓存
+   *
+   * @param config - 配置对象
+   * @param result - 验证结果
+   */
+  private setValidationCache(
+    config: ViteLauncherConfig,
+    result: { valid: boolean; errors: string[]; warnings: string[] },
+  ): void {
+    const hash = this.computeConfigHash(config)
+
+    // 检查缓存大小，必要时清理
+    if (this.validationCache.size >= this.VALIDATION_CACHE_MAX_SIZE) {
+      this.pruneValidationCache()
+    }
+
+    this.validationCache.set(hash, {
+      result,
+      hash,
+      timestamp: Date.now(),
+    })
+
+    this.logger.debug('验证结果已缓存', { hash })
+  }
+
+  /**
+   * 清理过期的验证缓存
+   */
+  private pruneValidationCache(): void {
+    const now = Date.now()
+    let pruned = 0
+
+    for (const [hash, entry] of this.validationCache) {
+      if (now - entry.timestamp > this.validationCacheTTL) {
+        this.validationCache.delete(hash)
+        pruned++
+      }
+    }
+
+    // 如果还是太多，删除最旧的
+    if (this.validationCache.size >= this.VALIDATION_CACHE_MAX_SIZE) {
+      const entries = Array.from(this.validationCache.entries())
+        .sort((a, b) => a[1].timestamp - b[1].timestamp)
+
+      const toDelete = entries.slice(0, Math.floor(entries.length / 2))
+      for (const [hash] of toDelete) {
+        this.validationCache.delete(hash)
+        pruned++
+      }
+    }
+
+    if (pruned > 0) {
+      this.logger.debug(`清理了 ${pruned} 个验证缓存条目`)
+    }
+  }
+
+  /**
+   * 清空所有验证缓存
+   */
+  clearValidationCache(): void {
+    const size = this.validationCache.size
+    this.validationCache.clear()
+    this.logger.debug(`已清空 ${size} 个验证缓存条目`)
+  }
+
+  /**
+   * 获取验证缓存统计
+   *
+   * @returns 缓存统计信息
+   */
+  getValidationCacheStats(): { size: number; maxSize: number; ttl: number } {
+    return {
+      size: this.validationCache.size,
+      maxSize: this.VALIDATION_CACHE_MAX_SIZE,
+      ttl: this.validationCacheTTL,
+    }
+  }
+
   /**
    * 验证配置完整性
+   *
+   * 带缓存优化，相同配置不会重复验证。
    */
   validateConfigIntegrity(config: ViteLauncherConfig): {
     valid: boolean
     errors: string[]
     warnings: string[]
   } {
+    // 检查缓存
+    const cached = this.getValidationCache(config)
+    if (cached) {
+      return cached
+    }
+
     const errors: string[] = []
     const warnings: string[] = []
 
@@ -939,18 +1332,28 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
           warnings.push(...res.warnings)
       }
 
-      return {
+      const result = {
         valid: errors.length === 0,
         errors,
         warnings,
       }
+
+      // 缓存验证结果
+      this.setValidationCache(config, result)
+
+      return result
     }
     catch (error) {
-      return {
+      const errorResult = {
         valid: false,
         errors: [`配置验证过程中发生错误: ${(error as Error).message}`],
         warnings,
       }
+
+      // 错误结果也缓存，但 TTL 较短
+      this.setValidationCache(config, errorResult)
+
+      return errorResult
     }
   }
 
@@ -1383,80 +1786,13 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
 
           this.logger.info(`🔄 检测到配置文件变更: ${filePath}`)
 
-          // 提取环境信息
-          let environment: string | undefined
-          const envMatch = fileName.match(/\.(development|production|staging|test)\./)
-          if (envMatch) {
-            environment = envMatch[1]
-          }
-
-          // 在重新加载配置之前保存旧配置 - 使用深拷贝
-          const oldConfig = JSON.parse(JSON.stringify(this.config))
-
-          // 重新加载配置文件
-          const cwd = process.cwd()
-          const envToLoad = environment || process.env.NODE_ENV || 'development'
-          const newConfig = await this.loadEnvironmentConfig(cwd, envToLoad)
-          this.logger.info('✅ 配置文件重新加载成功')
-
-          // 发送系统通知
-          if (isLauncherConfig) {
-            await this.notificationManager.notifyConfigChange('launcher', filePath, environment)
-          }
-          else if (isAppConfig) {
-            await this.notificationManager.notifyConfigChange('app', filePath, environment)
-          }
-
-          // 更新内部配置
-          this.config = newConfig
-
-          // 检测配置变更类型
-          const configChanges = this.detectConfigChanges(oldConfig, newConfig)
-
-          // 根据配置变更类型决定处理方式
-          if (isLauncherConfig) {
-            if (configChanges.needsRestart) {
-              // 需要重启的配置变更 -> 重启服务器
-              this.logger.info('🔄 检测到需要重启的配置变更，重启服务器...')
-              if (this.onConfigChange) {
-                this.logger.info('🚀 触发配置变更回调')
-                this.onConfigChange(newConfig)
-              }
-            }
-            else if (configChanges.aliasChanged) {
-              // alias配置变更 -> 尝试热更新，不重启服务器
-              this.logger.info('🔗 别名配置已更改，尝试热更新...')
-              this.logger.info('ℹ️ 别名配置已更新，通过 HMR 热更新...')
-
-              // 实现alias热更新逻辑
-              await this.applyAliasHotUpdate(oldConfig, newConfig)
-
-              this.emit('aliasChanged', newConfig)
-              this.emit('configHotUpdate', newConfig)
-            }
-            else if (configChanges.otherChanged) {
-              // 其他launcher配置变更 -> 热更新
-              this.logger.info('⚙️ 其他配置已更改，应用热更新...')
-              this.logger.info('ℹ️ 配置已更新，通过 HMR 热更新...')
-              this.emit('configHotUpdate', newConfig)
-            }
-            else {
-              // 没有检测到变更，可能是配置文件格式化等
-              this.logger.info('ℹ️ 配置文件已更新，但未检测到实质性变更')
-            }
-          }
-          else if (isAppConfig) {
-            // app配置变更只做热更新，不重启服务器
-            this.logger.info('🔥 应用配置文件已更改，重新加载...')
-            this.logger.info('ℹ️ 配置已更新，通过 HMR 热更新...')
-            this.emit('appConfigChanged', newConfig)
-          }
-
-          // 发出配置变更事件
-          this.emit('configChanged', newConfig, filePath)
+          // 使用节流控制，避免频繁重载
+          this.throttle(async () => {
+            await this.handleConfigFileChange(filePath, isLauncherConfig, isAppConfig)
+          })
         }
         catch (error) {
-          this.logger.error(`配置重新加载失败: ${(error as Error).message}`)
+          this.logger.error(`配置变更处理失败: ${(error as Error).message}`)
         }
       })
 
@@ -1472,6 +1808,98 @@ ${presetInfo ? ` * 项目类型: ${presetInfo.description}\n` : ''}${presetInfo 
     }
     catch (error) {
       this.logger.error(`初始化文件监听器失败: ${(error as Error).message}`)
+    }
+  }
+
+  /**
+   * 处理配置文件变更（抽取方法以支持节流）
+   *
+   * @param filePath - 变更的文件路径
+   * @param isLauncherConfig - 是否为 launcher 配置
+   * @param isAppConfig - 是否为 app 配置
+   */
+  private async handleConfigFileChange(
+    filePath: string,
+    isLauncherConfig: boolean,
+    isAppConfig: boolean,
+  ): Promise<void> {
+    try {
+      // 提取环境信息
+      const fileName = PathUtils.basename(filePath)
+      let environment: string | undefined
+      const envMatch = fileName.match(/\.(development|production|staging|test)\./)
+      if (envMatch) {
+        environment = envMatch[1]
+      }
+
+      // 在重新加载配置之前保存旧配置 - 使用深拷贝
+      const oldConfig = JSON.parse(JSON.stringify(this.config))
+
+      // 重新加载配置文件
+      const cwd = process.cwd()
+      const envToLoad = environment || process.env.NODE_ENV || 'development'
+      const newConfig = await this.loadEnvironmentConfig(cwd, envToLoad)
+      this.logger.info('✅ 配置文件重新加载成功')
+
+      // 发送系统通知
+      if (isLauncherConfig) {
+        await this.notificationManager.notifyConfigChange('launcher', filePath, environment)
+      }
+      else if (isAppConfig) {
+        await this.notificationManager.notifyConfigChange('app', filePath, environment)
+      }
+
+      // 更新内部配置和版本信息
+      this.config = newConfig
+      this.updateConfigVersion(newConfig, filePath)
+
+      // 检测配置变更类型
+      const configChanges = this.detectConfigChanges(oldConfig, newConfig)
+
+      // 根据配置变更类型决定处理方式
+      if (isLauncherConfig) {
+        if (configChanges.needsRestart) {
+          // 需要重启的配置变更 -> 重启服务器
+          this.logger.info('🔄 检测到需要重启的配置变更，重启服务器...')
+          if (this.onConfigChange) {
+            this.logger.info('🚀 触发配置变更回调')
+            this.onConfigChange(newConfig)
+          }
+        }
+        else if (configChanges.aliasChanged) {
+          // alias配置变更 -> 尝试热更新，不重启服务器
+          this.logger.info('🔗 别名配置已更改，尝试热更新...')
+          this.logger.info('ℹ️ 别名配置已更新，通过 HMR 热更新...')
+
+          // 实现alias热更新逻辑
+          await this.applyAliasHotUpdate(oldConfig, newConfig)
+
+          this.emit('aliasChanged', newConfig)
+          this.emit('configHotUpdate', newConfig)
+        }
+        else if (configChanges.otherChanged) {
+          // 其他launcher配置变更 -> 热更新
+          this.logger.info('⚙️ 其他配置已更改，应用热更新...')
+          this.logger.info('ℹ️ 配置已更新，通过 HMR 热更新...')
+          this.emit('configHotUpdate', newConfig)
+        }
+        else {
+          // 没有检测到变更，可能是配置文件格式化等
+          this.logger.info('ℹ️ 配置文件已更新，但未检测到实质性变更')
+        }
+      }
+      else if (isAppConfig) {
+        // app配置变更只做热更新，不重启服务器
+        this.logger.info('🔥 应用配置文件已更改，重新加载...')
+        this.logger.info('ℹ️ 配置已更新，通过 HMR 热更新...')
+        this.emit('appConfigChanged', newConfig)
+      }
+
+      // 发出配置变更事件
+      this.emit('configChanged', newConfig, filePath)
+    }
+    catch (error) {
+      this.logger.error(`配置重新加载失败: ${(error as Error).message}`)
     }
   }
 

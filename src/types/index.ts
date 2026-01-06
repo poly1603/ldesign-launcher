@@ -14,9 +14,20 @@ export * from './cli'
 export * from './common'
 export * from './config'
 export * from './deploy'
-// 新增：引擎和框架类型定义 (v2.0.0)
+// 新增：引擎类型定义 (v2.0.0)
 export * from './engine'
-export * from './framework'
+// 导出框架类型定义（排除与 common.ts 冲突的导出）
+export {
+  // 排除 FrameworkDetectionResult 和 FrameworkType，因为它们已在 common.ts 中导出
+  type FrameworkAdapter,
+  type FrameworkAdapterFactory,
+  type FrameworkDependencies,
+  type FrameworkDetector,
+  type FrameworkFeatures,
+  type FrameworkMetadata,
+  type FrameworkOptions,
+  type FrameworkVersion,
+} from './framework'
 
 export * from './launcher'
 
@@ -38,3 +49,9 @@ export type {
   UIEnvironmentConfig,
   validateConfigValue,
 } from './ui-config'
+
+// 导出错误类型 (v2.1.0 新增)
+export type {
+  ErrorContext,
+  SerializedError,
+} from '../errors'

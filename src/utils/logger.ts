@@ -4,8 +4,14 @@
  * 支持表格输出、日志分组、spinner动画、进度条等高级功能
  * 保留基础的日志级别、颜色输出、时间戳功能
  *
+ * 新增功能：
+ * - 日志过滤（按模块名、关键词过滤）
+ * - 日志缓冲区（批量输出优化性能）
+ * - 日志统计信息
+ *
  * @author LDesign Team
  * @since 2.1.0
+ * @version 2.1.0
  */
 
 /* eslint-disable no-console */
@@ -23,12 +29,43 @@ import picocolors from 'picocolors'
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'silent'
 
+/**
+ * 日志过滤器函数类型
+ */
+export type LogFilter = (level: LogLevel, message: string, data?: unknown) => boolean
+
+/**
+ * Logger 配置选项
+ */
 export interface LoggerOptions {
+  /** 日志级别 */
   level?: LogLevel
+  /** 是否启用颜色输出 */
   colors?: boolean
+  /** 是否显示时间戳 */
   timestamp?: boolean
+  /** 日志前缀 */
   prefix?: string
-  compact?: boolean // 简洁模式，减少冗余信息
+  /** 简洁模式，减少冗余信息 */
+  compact?: boolean
+  /** 自定义日志过滤器 */
+  filter?: LogFilter
+  /** 是否启用缓冲区（批量输出） */
+  buffered?: boolean
+  /** 缓冲区大小，默认 100 */
+  bufferSize?: number
+}
+
+/**
+ * 日志统计信息
+ */
+export interface LogStats {
+  /** 各级别日志数量 */
+  counts: Record<LogLevel, number>
+  /** 开始时间 */
+  startTime: number
+  /** 最后日志时间 */
+  lastLogTime: number
 }
 
 export interface TableColumn {
@@ -47,7 +84,26 @@ export interface TableOptions {
 }
 
 /**
- * 日志记录器 (精简版)
+ * 日志记录器 (增强版)
+ *
+ * @example
+ * ```typescript
+ * // 基础用法
+ * const logger = new Logger('MyModule')
+ * logger.info('开始处理')
+ * logger.error('出错了', { code: 'ERR_001' })
+ *
+ * // 带过滤器
+ * const logger = new Logger('MyModule', {
+ *   filter: (level, message) => !message.includes('debug'),
+ * })
+ *
+ * // 缓冲模式
+ * const logger = new Logger('MyModule', {
+ *   buffered: true,
+ *   bufferSize: 50,
+ * })
+ * ```
  */
 export class Logger {
   private level: LogLevel
@@ -55,6 +111,23 @@ export class Logger {
   private timestamp: boolean
   private groupDepth: number = 0
   private activeSpinner: Ora | null = null
+  private readonly name: string
+
+  // 新增：日志过滤
+  private filter: LogFilter | null = null
+
+  // 新增：日志缓冲区
+  private buffered: boolean = false
+  private buffer: string[] = []
+  private readonly bufferSize: number
+  private flushTimer: ReturnType<typeof setTimeout> | null = null
+
+  // 新增：日志统计
+  private stats: LogStats = {
+    counts: { debug: 0, info: 0, warn: 0, error: 0, silent: 0 },
+    startTime: Date.now(),
+    lastLogTime: Date.now(),
+  }
 
   private readonly levels: Record<LogLevel, number> = {
     debug: 0,
@@ -64,18 +137,41 @@ export class Logger {
     silent: 4,
   }
 
-  constructor(_name: string = 'Logger', options: LoggerOptions = {}) {
+  /**
+   * 创建 Logger 实例
+   *
+   * @param name - 日志器名称，用于标识日志来源
+   * @param options - 配置选项
+   */
+  constructor(name: string = 'Logger', options: LoggerOptions = {}) {
+    this.name = name
     this.level = options.level || 'info'
     this.colors = options.colors !== false
     this.timestamp = options.timestamp !== false
-    // prefix 和 compact 参数保留用于未来扩展
+    this.filter = options.filter || null
+    this.buffered = options.buffered || false
+    this.bufferSize = options.bufferSize || 100
   }
 
   /**
    * 判断是否应该输出日志
+   *
+   * @param level - 日志级别
+   * @param message - 日志消息（可选，用于过滤器）
+   * @param data - 附加数据（可选，用于过滤器）
    */
-  private shouldLog(level: LogLevel): boolean {
-    return this.levels[level] >= this.levels[this.level]
+  private shouldLog(level: LogLevel, message?: string, data?: unknown): boolean {
+    // 检查级别
+    if (this.levels[level] < this.levels[this.level]) {
+      return false
+    }
+
+    // 检查自定义过滤器
+    if (this.filter && message !== undefined) {
+      return this.filter(level, message, data)
+    }
+
+    return true
   }
 
   /**
@@ -289,6 +385,173 @@ export class Logger {
    */
   setColors(enabled: boolean): void {
     this.colors = enabled
+  }
+
+  /**
+   * 获取 Logger 名称
+   */
+  getName(): string {
+    return this.name
+  }
+
+  // ==================== 新增：日志过滤 ====================
+
+  /**
+   * 设置日志过滤器
+   *
+   * @param filter - 过滤器函数，返回 true 表示允许输出
+   *
+   * @example
+   * ```typescript
+   * // 过滤掉包含敏感信息的日志
+   * logger.setFilter((level, message) => {
+   *   return !message.includes('password')
+   * })
+   *
+   * // 只输出特定模块的日志
+   * logger.setFilter((level, message) => {
+   *   return message.startsWith('[ConfigManager]')
+   * })
+   * ```
+   */
+  setFilter(filter: LogFilter | null): void {
+    this.filter = filter
+  }
+
+  /**
+   * 获取当前过滤器
+   */
+  getFilter(): LogFilter | null {
+    return this.filter
+  }
+
+  /**
+   * 清除过滤器
+   */
+  clearFilter(): void {
+    this.filter = null
+  }
+
+  /**
+   * 创建关键词过滤器
+   *
+   * @param keywords - 要过滤的关键词列表（包含任一关键词的日志会被过滤掉）
+   * @param mode - 'exclude' 排除包含关键词的日志，'include' 只包含包含关键词的日志
+   *
+   * @example
+   * ```typescript
+   * // 排除包含敏感词的日志
+   * logger.setKeywordFilter(['password', 'token', 'secret'], 'exclude')
+   *
+   * // 只显示配置相关的日志
+   * logger.setKeywordFilter(['config', 'Config'], 'include')
+   * ```
+   */
+  setKeywordFilter(keywords: string[], mode: 'exclude' | 'include' = 'exclude'): void {
+    this.filter = (_level: LogLevel, message: string) => {
+      const hasKeyword = keywords.some(kw =>
+        message.toLowerCase().includes(kw.toLowerCase()),
+      )
+      return mode === 'exclude' ? !hasKeyword : hasKeyword
+    }
+  }
+
+  // ==================== 新增：日志统计 ====================
+
+  /**
+   * 获取日志统计信息
+   *
+   * @returns 日志统计
+   *
+   * @example
+   * ```typescript
+   * const stats = logger.getStats()
+   * console.log(`错误数: ${stats.counts.error}`)
+   * console.log(`运行时间: ${Date.now() - stats.startTime}ms`)
+   * ```
+   */
+  getStats(): LogStats {
+    return { ...this.stats }
+  }
+
+  /**
+   * 重置日志统计
+   */
+  resetStats(): void {
+    this.stats = {
+      counts: { debug: 0, info: 0, warn: 0, error: 0, silent: 0 },
+      startTime: Date.now(),
+      lastLogTime: Date.now(),
+    }
+  }
+
+  /**
+   * 更新统计信息
+   */
+  private updateStats(level: LogLevel): void {
+    this.stats.counts[level]++
+    this.stats.lastLogTime = Date.now()
+  }
+
+  // ==================== 新增：日志缓冲 ====================
+
+  /**
+   * 启用/禁用缓冲模式
+   *
+   * @param enabled - 是否启用
+   */
+  setBuffered(enabled: boolean): void {
+    if (this.buffered && !enabled) {
+      // 关闭缓冲时刷新
+      this.flush()
+    }
+    this.buffered = enabled
+  }
+
+  /**
+   * 刷新缓冲区到控制台
+   */
+  flush(): void {
+    if (this.buffer.length === 0) return
+
+    // 清除定时器
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer)
+      this.flushTimer = null
+    }
+
+    // 批量输出
+    const output = this.buffer.join('\n')
+    console.log(output)
+
+    // 清空缓冲区
+    this.buffer = []
+  }
+
+  /**
+   * 添加到缓冲区或立即输出
+   */
+  private outputOrBuffer(output: string, level: LogLevel): void {
+    if (this.buffered) {
+      this.buffer.push(output)
+
+      // 缓冲区满时自动刷新
+      if (this.buffer.length >= this.bufferSize) {
+        this.flush()
+      } else if (!this.flushTimer) {
+        // 设置定时刷新（100ms）
+        this.flushTimer = setTimeout(() => this.flush(), 100)
+      }
+    } else {
+      // 直接输出
+      if (level === 'error') {
+        console.error(output)
+      } else if (level === 'warn') {
+        console.warn(output)
+      } else {
+        console.log(output)
+      }
+    }
   }
 
   /**
@@ -555,26 +818,42 @@ export class Logger {
   }
 
   /**
-   * 输出日志（覆盖原方法，添加缩进支持）
+   * 输出日志（增强版，支持缓冲、统计、过滤）
    */
-  private logWithIndent(level: LogLevel, message: string, data?: any): void {
-    if (!this.shouldLog(level)) {
+  private logWithIndent(level: LogLevel, message: string, data?: unknown): void {
+    if (!this.shouldLog(level, message, data)) {
       return
     }
+
+    // 更新统计
+    this.updateStats(level)
 
     const indent = this.getIndent()
     const formatted = this.formatMessage(level, message, data)
     const colored = this.applyColor(level, formatted)
+    const output = indent + colored
 
-    // 根据级别选择输出流
-    if (level === 'error') {
-      console.error(indent + colored)
+    // 使用缓冲或直接输出
+    this.outputOrBuffer(output, level)
+  }
+
+  /**
+   * 销毁 Logger，清理资源
+   */
+  destroy(): void {
+    // 刷新缓冲区
+    this.flush()
+
+    // 停止 spinner
+    if (this.activeSpinner) {
+      this.activeSpinner.stop()
+      this.activeSpinner = null
     }
-    else if (level === 'warn') {
-      console.warn(indent + colored)
-    }
-    else {
-      console.log(indent + colored)
+
+    // 清除定时器
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer)
+      this.flushTimer = null
     }
   }
 }
