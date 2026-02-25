@@ -43,6 +43,10 @@ export class ViteConfigTransformer implements ConfigTransformer {
       ...viteConfig
     } = config
 
+    const serverProxy = (proxy !== undefined && proxy !== null)
+      ? this.transformProxyConfig(proxy)
+      : (viteConfig.server as any)?.proxy
+
     // 构建最终的 Vite 配置
     const transformedConfig: ViteUserConfig = {
       ...viteConfig,
@@ -51,7 +55,7 @@ export class ViteConfigTransformer implements ConfigTransformer {
       server: {
         host: '0.0.0.0', // 默认监听所有接口
         ...viteConfig.server,
-        proxy: this.transformProxyConfig(proxy),
+        proxy: serverProxy,
       },
 
       // 预览服务器配置
